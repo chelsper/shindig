@@ -151,7 +151,7 @@ export function EventHeaderEditor({
         </section>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(19rem,0.8fr)]">
-          <section className="overflow-hidden rounded-[1.75rem] border border-[#202523]/10 bg-[#fffaf1]/90 shadow-[0_18px_50px_rgba(41,56,53,0.10)]">
+          <section className="self-start overflow-hidden rounded-[1.75rem] border border-[#202523]/10 bg-[#fffaf1]/90 shadow-[0_18px_50px_rgba(41,56,53,0.10)]">
             <EventHeaderImage settings={settings} />
             <div className="p-4 sm:p-5">
               <p className="text-[0.65rem] font-bold uppercase tracking-[0.15em] text-[#202523]/45">Live crop preview</p>
