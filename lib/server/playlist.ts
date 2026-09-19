@@ -21,20 +21,22 @@ function database() {
 export async function listPublicPlaylistSuggestions(): Promise<PublicPlaylistSuggestion[]> {
   const sql = database();
   const rows = await sql`
-    SELECT provider, provider_track_id AS "providerTrackId", song_title AS "songTitle", artist,
-      album, artwork_url AS "artworkUrl", external_url AS "externalUrl", explicit, suggested_by AS "suggestedBy"
-    FROM playlist_suggestions
+    SELECT public_key AS key, provider, provider_track_id AS "providerTrackId", song_title AS "songTitle", artist,
+      album, artwork_url AS "artworkUrl", external_url AS "externalUrl", explicit, suggested_by AS "suggestedBy",
+      (SELECT count(*)::integer FROM playlist_applause a WHERE a.playlist_suggestion_id = s.id) AS "applauseCount"
+    FROM playlist_suggestions s
     WHERE event_slug = ${OYSTER_ROAST_EVENT.slug}
     ORDER BY created_at DESC, id DESC
   `;
 
   // Explicit projection also keeps database-only fields out of RSC/action payloads.
-  return rows.map(publicSuggestion);
+  return rows.map((row, index) => publicSuggestion(row, index));
 }
 
-function publicSuggestion(row: Record<string, unknown>): PublicPlaylistSuggestion {
+function publicSuggestion(row: Record<string, unknown>, newestRank: number): PublicPlaylistSuggestion {
   const provider = row.provider == null ? null : String(row.provider);
   return {
+    key: String(row.key), applauseCount: Number(row.applauseCount ?? 0), newestRank,
     provider,
     providerTrackId: row.providerTrackId == null ? null : String(row.providerTrackId),
     songTitle: String(row.songTitle),
@@ -69,15 +71,16 @@ export async function createPlaylistSuggestion(
 export async function listPlaylistSuggestionsForAdmin(): Promise<AdminPlaylistSuggestion[]> {
   const sql = database();
   const rows = await sql`
-    SELECT id::text, provider, provider_track_id AS "providerTrackId", song_title AS "songTitle", artist,
+    SELECT id::text, public_key AS key, provider, provider_track_id AS "providerTrackId", song_title AS "songTitle", artist,
       album, artwork_url AS "artworkUrl", external_url AS "externalUrl", explicit,
-      suggested_by AS "suggestedBy", created_at AS "createdAt"
-    FROM playlist_suggestions
+      suggested_by AS "suggestedBy", created_at AS "createdAt",
+      (SELECT count(*)::integer FROM playlist_applause a WHERE a.playlist_suggestion_id = s.id) AS "applauseCount"
+    FROM playlist_suggestions s
     WHERE event_slug = ${OYSTER_ROAST_EVENT.slug}
     ORDER BY created_at DESC, id DESC
   `;
-  return rows.map((row) => ({
-    ...publicSuggestion(row),
+  return rows.map((row, index) => ({
+    ...publicSuggestion(row, index),
     id: String(row.id),
     createdAt: new Date(row.createdAt).toISOString(),
   }));

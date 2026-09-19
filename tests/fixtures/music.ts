@@ -7,6 +7,7 @@ export const track: MusicTrack = {
   album: "Test Album", artworkUrl: "https://i.scdn.co/image/abc123", externalUrl: "https://open.spotify.com/track/0123456789abcdefghijkL", explicit: false,
 };
 export const legacy: PublicPlaylistSuggestion = {
+  key: "c9d6bde0-5a1a-43eb-8b11-aa058db98be4", applauseCount: 0, newestRank: 0,
   songTitle: "Legacy Song", artist: "Legacy Artist", suggestedBy: null,
   provider: null, providerTrackId: null, album: null, artworkUrl: null, externalUrl: null, explicit: null, attribution: null,
 };

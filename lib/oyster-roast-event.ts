@@ -6,6 +6,7 @@ export type EventFeatures = {
   questions: boolean;
   updates: boolean;
   potluck: boolean;
+  polls: boolean;
 };
 
 const features: EventFeatures = {
@@ -16,6 +17,7 @@ const features: EventFeatures = {
   questions: true,
   updates: true,
   potluck: false,
+  polls: true,
 };
 
 export const OYSTER_ROAST_EVENT = {

@@ -27,6 +27,7 @@ Set `ADMIN_PASSWORD` to a strong, unique password to enable the private host das
    - [`db/migrations/005_create_playlist_suggestions.sql`](db/migrations/005_create_playlist_suggestions.sql)
    - [`db/migrations/006_create_updates_and_questions.sql`](db/migrations/006_create_updates_and_questions.sql)
    - [`db/migrations/007_music_catalog.sql`](db/migrations/007_music_catalog.sql)
+   - [`db/migrations/008_guest_interactions_and_polls.sql`](db/migrations/008_guest_interactions_and_polls.sql)
 3. In the Neon project dashboard, choose **Connect** and copy the pooled Postgres connection string.
 4. Put that connection string in `.env.local`:
 
@@ -63,7 +64,7 @@ Attending confirmations offer Google Calendar, Apple Calendar, and Outlook actio
 
 ## Event Hub
 
-The public Event Hub is available at `/event`. Feature availability is controlled only by `features` in [`lib/oyster-roast-event.ts`](lib/oyster-roast-event.ts). Guest List, Playlist, Weather, Questions, and Updates are enabled; Photos and Potluck remain disabled.
+The public Event Hub is available at `/event`. Feature availability is controlled only by `features` in [`lib/oyster-roast-event.ts`](lib/oyster-roast-event.ts). Guest List, Playlist, Weather, Questions, Updates, and Polls are enabled; Photos and Potluck remain disabled. Polls have no public tab until there is an open poll or host-approved closed final result to display.
 
 The route loads public data on the server and composes the existing header with `EventModules`. Its small module registry contains only implemented modules and filters them using the canonical flags. The same filtered list supplies `HubNavigation` and its content panels, preventing orphaned tabs or placeholders. `HubNavigation` handles touch and keyboard tab switching; each feature owns its own component. To add a future feature, implement its component, register it, and enable its existing event flag. Database access stays on the server.
 
@@ -113,7 +114,7 @@ Hosts can open **Playlist** from `/admin`, or visit `/admin/playlist`, to review
 5. Deploy this code/redeploy after saving the variables; environment changes do not update an already-running deployment.
 6. Open **/event → Playlist → Suggest a Song**. Search, select a track, and confirm it appears after refresh and in **/admin/playlist**. Select the exact same track again and confirm the friendly duplicate message and a single row. Check a missing-artwork result if available. A live Spotify search/save check is still required after credentials are configured; mocked tests cannot verify the app's actual provider entitlement.
 
-No playback, previews, provider playlist creation, voting, guest authentication, or additional Event Hub modules are included.
+No playback, previews, provider playlist creation, or guest authentication are included. Shindig's anonymous playlist applause is independent of Spotify.
 
 ### Catalog verification
 
@@ -158,3 +159,43 @@ Provider calls time out after seven seconds. Historical context loads through `/
 No new environment variable is required for this **personal, non-commercial party**. Leave `OPEN_METEO_API_KEY` empty to use the free endpoints within [Open-Meteo's terms](https://open-meteo.com/en/terms). Commercial Shindig use requires the appropriate paid license; the [current plans](https://open-meteo.com/en/pricing) require Professional or higher for historical data. If applicable, obtain that access yourself and set **OPEN_METEO_API_KEY** in Vercel → Shindig → Settings → Environment Variables → Production (and the relevant Preview environment), then redeploy. The server automatically switches to `customer-api.open-meteo.com` and `customer-archive-api.open-meteo.com`. Never use a `NEXT_PUBLIC_` prefix. No subscription is purchased by this implementation.
 
 Deploy the code normally; no Neon migration or existing credential changes are needed. Check `/event` → **Weather**. Automated tests cover provider normalization, date/DST boundaries, all display states, historical completeness, null data, caching/concurrency, feature flags, privacy and outages. Future/event-day examples in tests are synthetic fixtures and are never used as live fallbacks.
+
+## Compact guest list, playlist applause, and polls
+
+Apply [`008_guest_interactions_and_polls.sql`](db/migrations/008_guest_interactions_and_polls.sql) after the existing migrations and before deploying this version. It is additive and safe to reapply: existing RSVPs/suggestions stay intact. It adds `playlist_applause`, `polls`, `poll_options`, `poll_votes`, random public song locators, derived poll aggregates, and four transactional write functions. It **does not seed or publish a production poll**. No new packages, environment variables, or services are required; retain the existing server-only `DATABASE_URL` and `ADMIN_PASSWORD`.
+
+### Shared anonymous browser marker
+
+`lib/server/guest-token.ts` creates a cryptographically random 256-bit value in a host-only, HttpOnly, SameSite=Lax cookie (`Secure` in production, one-year lifetime). JavaScript never receives the raw value. Neon stores only a domain-separated SHA-256 hash, shared by applause and poll votes. It contains no personal information and is not linked to RSVPs, names, admin sessions, IPs, or device fingerprints. This is **not authentication or proof of a unique person**: a different device/browser, private browsing, cleared cookies, or a different site hostname can produce a separate marker.
+
+The hub initializes the marker once through a server action. Public mutations require it, validate all inputs and feature flags, and use the canonical event slug plus parameterized SQL. Next.js server actions provide same-origin checks. Raw tokens, hashes, individual voters, internal row IDs and vote timestamps are never returned publicly. Browser responses contain public random locators, aggregate counts, and only that browser's own selections. The initial public poll response contains no open-poll totals; those are returned to a voted browser only when the host enables them.
+
+### Guest experience
+
+- **Who's Coming:** one compact card with the full attendance total and up to four public-name previews. Clear first/last names use the first name; household/couple labels remain intact. **See everyone →** expands the complete public list in place; **Show less ↑** collapses it. Private guests still count, and their names and declined responses never enter the public payload. Small lists do not say “+ more.”
+- **Playlist:** 👏 toggles one applause per browser/song, with an immediate optimistic count, pressed state, pending lock and retry errors. The server returns authoritative totals; a unique constraint and locked desired-state write make retries idempotent. **Popular** sorts by applause descending, then newest, then public key; **Newest** retains submission order. Popular is the default once there is applause, unless the guest explicitly chooses another sort. Host moderation still works and shows aggregate applause only; song deletion cascades to its applause.
+- **Important Research:** single-choice radios or multiple-choice checkboxes, saved selection, in-place confirmation/results, and **Change my answer**. Multiple polls share a compact Previous/Next view. Empty, draft and archived polls have no public module; closed polls appear only when the host elects to retain final results, with voting disabled. Turning `features.polls` off skips public retrieval/UI and rejects voting without deleting history or disabling host management.
+
+### Host polls and safeguards
+
+Open `/admin` → **Polls** (`/admin/polls`). The page and every mutation verify the existing host session. Create private drafts, edit questions/labels/options/order, add/remove/reorder options, choose single/multiple choice, choose live-result and closed-result visibility, open, close, reopen, archive, or explicitly confirm deletion of an unused draft. Hosts see totals/percentages, never voter identities. Archive removes a poll from the Hub and preserves responses.
+
+Votes are normalized rows, not mutable counters. Foreign keys bind each option and voting mode to its poll. Unique indexes enforce one browser/option and, for single-choice polls, one browser/poll. Vote changes atomically replace the browser's set. Row locks serialize vote changes with host edits/closure; a closed poll cannot accept a late vote. After the first vote, option membership/text and single/multiple mode are locked permanently to preserve answer meaning; safe reordering, question/label edits and visibility controls remain available. Percentages use distinct respondents as the denominator; multiple-choice percentages can sum to more than 100%. Rounded single-choice percentages may sum to 99% or 101%.
+
+### Create the initial Oyster Roast poll after deployment
+
+1. Sign in at `/admin`, choose **Polls**, then **+ Create poll**.
+2. Leave the label **IMPORTANT RESEARCH**. Enter **Best way to eat an oyster?**.
+3. Enter **Raw**, **Grilled**, **Rockefeller**, and **Absolutely not**, using **+ Add option** for the last two.
+4. Leave **Allow multiple choices** unchecked. Keep **Show live results after voting** checked. Choose whether final results should remain visible after closing (checked by default).
+5. Choose **Save draft**, review it, then **Open poll**. It appears under **Important Research** on `/event`.
+
+No additional Vercel configuration is required. For another environment, apply migration `008` to that environment's database before deploying the code. Do not use the production database for tests.
+
+### Interaction checks
+
+`npm test` includes token/cookie handling, public projections and hidden results, feature flags, validation, sorting, result percentages, guest/admin actions, failure handling, and component rendering. Existing RSVP, calendar, guest-list privacy, music catalog, questions, updates, admin security, and weather tests remain included.
+
+For real database checks, create an **isolated disposable database named `shindig_interactions_test`**, then run `psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/guest-interactions.integration.sql`. The script refuses other database names. It seeds a synthetic legacy song, applies/reapplies migrations `005`/`007`/`008`, and tests transactional writes, duplicate/foreign-key constraints, vote changes, draft editing, closure, archive and history guards. Assertions run in a rolled-back transaction; its initial synthetic legacy fixture remains in that disposable database. Never run it in production.
+
+This milestone was additionally exercised with eight concurrent requests against isolated PostgreSQL and through the local app's real server actions in a mobile browser. Browser checks cover expand/collapse, applause persistence, creating/opening/editing/closing polls, vote changes, hidden results, and narrow layouts. Production deployment checks are read-only; no synthetic production votes or polls are inserted.

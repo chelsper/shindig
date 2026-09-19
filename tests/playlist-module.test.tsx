@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../app/event/playlist-actions", () => ({ submitPlaylistSuggestion: vi.fn() }));
 vi.mock("../app/event/question-actions", () => ({ submitGuestQuestion: vi.fn() }));
+vi.mock("../app/event/interaction-actions", () => ({ loadGuestInteractions: vi.fn(), applaudSong: vi.fn(), voteInPoll: vi.fn() }));
 
 import { PlaylistModule } from "../components/event-hub/playlist-module";
 import { EventModules } from "../components/event-hub/event-modules";
@@ -16,7 +17,7 @@ describe("public Playlist module", () => {
     const html = renderToStaticMarkup(<PlaylistModule suggestions={[]} />);
     expect(html).toContain("No requests yet. Be the first to pick something.");
     expect(html).toContain("+ Suggest a Song");
-    expect(html).toContain("Help us pick the soundtrack.");
+    expect(html).toContain("Help build the soundtrack.");
   });
 
   it("only renders song, artist, and an optional public name; escaping user text", () => {
@@ -77,7 +78,7 @@ describe("public Playlist module", () => {
   });
 
   it("keeps both saved catalog and legacy tracks visible without search credentials", () => {
-    const html = renderToStaticMarkup(<PlaylistModule suggestions={[legacy, { ...track, attribution, suggestedBy: "Chelsea" }]} />);
+    const html = renderToStaticMarkup(<PlaylistModule suggestions={[legacy, { ...track, key: "e9d6bde0-5a1a-43eb-8b11-aa058db98be4", applauseCount: 0, newestRank: 1, attribution, suggestedBy: "Chelsea" }]} />);
     expect(html).toContain(legacy.songTitle);
     expect(html).toContain(track.songTitle);
     expect(html).toContain("Suggested by Chelsea");

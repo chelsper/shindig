@@ -9,6 +9,9 @@ import { WeatherModule } from "./weather-module";
 import { PlaylistModule } from "./playlist-module";
 import { QuestionsModule } from "./questions-module";
 import { UpdatesModule } from "./updates-module";
+import { PollsModule } from "./polls-module";
+import type { PublicPoll } from "../../lib/polls";
+import { GuestInteractionsProvider } from "../guest-interactions-provider";
 
 type EventModulesProps = {
   features: EventFeatures;
@@ -20,6 +23,7 @@ type EventModulesProps = {
   questionsUnavailable?: boolean;
   updates?: PublicHostUpdate[];
   updatesUnavailable?: boolean;
+  polls?: PublicPoll[];
 };
 
 type ModuleDefinition = Omit<HubModule, "content"> & {
@@ -54,6 +58,10 @@ const moduleRegistry: ModuleDefinition[] = [
     ),
   },
   {
+    id: "polls", label: "Important Research", icon: "polls",
+    render: ({ polls = [] }) => <PollsModule polls={polls} />,
+  },
+  {
     id: "updates",
     label: "Updates",
     icon: "updates",
@@ -72,7 +80,8 @@ const moduleRegistry: ModuleDefinition[] = [
 export function EventModules(props: EventModulesProps) {
   const modules = moduleRegistry
     .filter((module) => props.features[module.id])
+    .filter((module) => module.id !== "polls" || Boolean(props.polls?.length))
     .map(({ render, ...module }) => ({ ...module, content: render(props) }));
 
-  return <HubNavigation modules={modules} />;
+  return <GuestInteractionsProvider enabled={props.features.playlist || (props.features.polls && Boolean(props.polls?.length))}><HubNavigation modules={modules} /></GuestInteractionsProvider>;
 }

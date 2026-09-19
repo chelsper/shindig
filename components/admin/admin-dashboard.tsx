@@ -70,6 +70,7 @@ export function AdminDashboard({ filter, rsvps, summary }: AdminDashboardProps) 
             </p>
           </div>
           <div className="flex flex-wrap gap-2.5">
+            <Link className="inline-flex min-h-10 items-center rounded-full border border-[#355f9e]/30 bg-[#e9f2f8]/75 px-4 text-xs font-bold uppercase tracking-[0.1em] text-[#214e91] transition hover:border-[#355f9e]" href="/admin/polls">Polls</Link>
             <Link className="inline-flex min-h-10 items-center rounded-full border border-[#355f9e]/30 bg-[#e9f2f8]/75 px-4 text-xs font-bold uppercase tracking-[0.1em] text-[#214e91] transition hover:border-[#355f9e]" href="/admin/updates">Updates</Link>
             <Link className="inline-flex min-h-10 items-center rounded-full border border-[#355f9e]/30 bg-[#e9f2f8]/75 px-4 text-xs font-bold uppercase tracking-[0.1em] text-[#214e91] transition hover:border-[#355f9e]" href="/admin/questions">Questions</Link>
             <Link

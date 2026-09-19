@@ -3,11 +3,13 @@
 import { useRef, useState, useTransition, type FormEvent } from "react";
 
 import { submitPlaylistSuggestion } from "../../app/event/playlist-actions";
-import type { PublicPlaylistSuggestion } from "../../lib/playlist";
+import { sortPlaylist, type PlaylistSort, type PublicPlaylistSuggestion } from "../../lib/playlist";
 import type { MusicAttribution, MusicTrack } from "../../lib/music";
 import { MusicSearch } from "../music/music-search";
 import { SongConfirmation } from "../music/song-confirmation";
 import { TrackDetails } from "../music/track-details";
+import { ApplauseButton } from "./applause-button";
+import { useGuestInteractions } from "../guest-interactions-provider";
 
 type PlaylistModuleProps = {
   suggestions: PublicPlaylistSuggestion[];
@@ -18,6 +20,8 @@ export function PlaylistModule({ suggestions, unavailable = false }: PlaylistMod
   const [showForm, setShowForm] = useState(false);
   const [selection, setSelection] = useState<{ track: MusicTrack; attribution: MusicAttribution } | null>(null);
   const [page, setPage] = useState(0);
+  const [sort, setSort] = useState<PlaylistSort | null>(null);
+  const guest = useGuestInteractions();
   const [suggestedBy, setSuggestedBy] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
@@ -49,7 +53,7 @@ export function PlaylistModule({ suggestions, unavailable = false }: PlaylistMod
           return;
         }
         // The server action revalidates /event, returning the refreshed song list
-        // in the same response. No database IDs need to enter client state.
+        // in the same response. Public locators are separate from database IDs.
         setConfirmation(result.outcome === "added"
           ? "That’s a shuckin’ good pick! Your song is on the list."
           : "Already on the Shindig playlist 🎵");
@@ -68,14 +72,15 @@ export function PlaylistModule({ suggestions, unavailable = false }: PlaylistMod
 
   // Keep each browsable set within the catalog's 20-item display guidance.
   const currentPage = Math.min(page, Math.max(0, Math.ceil(suggestions.length / 20) - 1));
-  const visibleSuggestions = suggestions.slice(currentPage * 20, (currentPage + 1) * 20);
+  const order = sort ?? (suggestions.some((song) => song.applauseCount > 0) ? "popular" : "newest");
+  const visibleSuggestions = sortPlaylist(suggestions, order).slice(currentPage * 20, (currentPage + 1) * 20);
 
   return (
     <section aria-labelledby="playlist-heading" className="rounded-[1.75rem] border border-[#202523]/10 bg-white/48 p-5 shadow-[0_14px_40px_rgb(32_37_35_/_0.05)] sm:p-7">
       <div className="border-b border-[#202523]/10 pb-5">
         <p className="text-[0.66rem] font-bold uppercase tracking-[0.2em] text-[#355f9e]">A soundtrack, together</p>
         <h2 id="playlist-heading" className="mt-1.5 font-serif text-3xl tracking-[-0.03em] sm:text-4xl">Shuckin&apos; Playlist</h2>
-        <p className="mt-2 text-sm text-[#202523]/65">Help us pick the soundtrack.</p>
+        <p className="mt-2 text-sm leading-6 text-[#202523]/65">Help build the soundtrack. Add a song or applaud someone else’s questionable taste.</p>
         <button
           aria-controls="playlist-suggestion-form"
           aria-expanded={showForm}
@@ -116,11 +121,18 @@ export function PlaylistModule({ suggestions, unavailable = false }: PlaylistMod
         <p className="px-2 py-10 text-center font-serif text-2xl leading-snug text-[#202523]/70">No requests yet. Be the first to pick something.</p>
       ) : (
         <>
+          <div aria-label="Sort playlist" className="mt-4 flex gap-2">
+            {(["popular", "newest"] as const).map((value) => <button type="button" key={value} aria-pressed={order === value} className={`min-h-11 rounded-full border px-4 text-xs font-semibold ${order === value ? "border-[#355f9e]/30 bg-[#e9f2f8] text-[#214e91]" : "border-[#202523]/15 text-[#202523]/60"}`} onClick={() => { setSort(value); setPage(0); }}>{value === "popular" ? "Popular" : "Newest"}</button>)}
+          </div>
+          {guest.error ? <p role="status" className="mt-2 text-xs leading-5 text-[#843528]">{guest.error} Songs are still available to browse.</p> : null}
           <ol aria-label="Song suggestions" className="mt-2 divide-y divide-[#202523]/8">
             {visibleSuggestions.map((suggestion) => (
-              <li className="py-5" key={suggestion.providerTrackId ? `${suggestion.provider}:${suggestion.providerTrackId}` : `${suggestion.songTitle}-${suggestion.artist}`}>
+              <li className="py-5" key={suggestion.key}>
                 <TrackDetails attribution={suggestion.attribution} track={suggestion} />
-                {suggestion.suggestedBy ? <p className="mt-2 break-words text-xs leading-5 text-[#202523]/55">Suggested by {suggestion.suggestedBy}</p> : null}
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                  {suggestion.suggestedBy ? <p className="min-w-0 break-words text-xs leading-5 text-[#202523]/55">Suggested by {suggestion.suggestedBy}</p> : <span />}
+                  <ApplauseButton songKey={suggestion.key} songTitle={suggestion.songTitle} count={suggestion.applauseCount} />
+                </div>
               </li>
             ))}
           </ol>

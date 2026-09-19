@@ -48,6 +48,7 @@ export default async function AdminPlaylistPage() {
                     <div className="min-w-0 break-words">
                       <TrackDetails attribution={suggestion.attribution} track={suggestion} />
                       <p className="mt-2 text-xs text-[#202523]/55">{suggestion.suggestedBy ? `Suggested by ${suggestion.suggestedBy}` : "No name provided"}</p>
+                      <p className="mt-2 text-sm text-[#355f9e]">👏 {suggestion.applauseCount} applause</p>
                       <p className="mt-1 text-xs text-[#202523]/50">{new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: OYSTER_ROAST_EVENT.timeZone }).format(new Date(suggestion.createdAt))}</p>
                     </div>
                     <PlaylistDeleteButton id={suggestion.id} songTitle={suggestion.songTitle} />

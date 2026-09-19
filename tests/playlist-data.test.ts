@@ -8,6 +8,7 @@ import { createPlaylistSuggestion, deletePlaylistSuggestion, listPlaylistSuggest
 import { track, attribution, legacy } from "./fixtures/music";
 
 const suggestion = { ...track, suggestedBy: null };
+const publicFields = { key: "a9d6bde0-5a1a-43eb-8b11-aa058db98be4", applauseCount: 7, newestRank: 0 };
 const id = "4f849d18-931b-42ef-a4d4-7ec07aa73b3d";
 
 beforeEach(() => {
@@ -27,22 +28,22 @@ describe("playlist data access", () => {
   });
 
   it("selects only public song fields and strips unexpected private fields", async () => {
-    mocks.sql.mockResolvedValue([{ ...suggestion, id, createdAt: "2026-09-19T12:00:00Z", privateNote: "secret" }]);
-    await expect(listPublicPlaylistSuggestions()).resolves.toEqual([{ ...suggestion, attribution }]);
+    mocks.sql.mockResolvedValue([{ ...suggestion, ...publicFields, id, createdAt: "2026-09-19T12:00:00Z", privateNote: "secret", voter_token_hash: "private" }]);
+    await expect(listPublicPlaylistSuggestions()).resolves.toEqual([{ ...suggestion, ...publicFields, attribution }]);
     const [parts, slug] = mocks.sql.mock.calls[0];
     expect(parts.join("?").split("FROM")[0]).not.toMatch(/\b(id|created_at|createdAt|privateNote)\b/);
     expect(slug).toBe("oyster-roast-2026");
   });
 
   it("returns IDs only through the separate admin query", async () => {
-    mocks.sql.mockResolvedValue([{ ...suggestion, id, createdAt: "2026-09-19T12:00:00Z" }]);
-    await expect(listPlaylistSuggestionsForAdmin()).resolves.toEqual([{ ...suggestion, attribution, id, createdAt: "2026-09-19T12:00:00.000Z" }]);
+    mocks.sql.mockResolvedValue([{ ...suggestion, ...publicFields, id, createdAt: "2026-09-19T12:00:00Z" }]);
+    await expect(listPlaylistSuggestionsForAdmin()).resolves.toEqual([{ ...suggestion, ...publicFields, attribution, id, createdAt: "2026-09-19T12:00:00.000Z" }]);
   });
 
   it("preserves legacy suggestions without calling the catalog or requiring credentials", async () => {
     vi.stubEnv("SPOTIFY_CLIENT_ID", "");
     vi.stubEnv("SPOTIFY_CLIENT_SECRET", "");
-    mocks.sql.mockResolvedValue([{ songTitle: legacy.songTitle, artist: legacy.artist, suggestedBy: null }]);
+    mocks.sql.mockResolvedValue([{ key: legacy.key, songTitle: legacy.songTitle, artist: legacy.artist, suggestedBy: null }]);
     await expect(listPublicPlaylistSuggestions()).resolves.toEqual([legacy]);
   });
 

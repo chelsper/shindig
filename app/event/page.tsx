@@ -11,6 +11,8 @@ import type { PublicQuestion } from "../../lib/questions";
 import type { PublicHostUpdate } from "../../lib/updates";
 import { listPublicQuestions } from "../../lib/server/questions";
 import { listPublicHostUpdates } from "../../lib/server/updates";
+import { listPublicPolls } from "../../lib/server/polls";
+import type { PublicPoll } from "../../lib/polls";
 import {
   getPublicGuestList,
   type PublicGuestList,
@@ -33,6 +35,7 @@ export default async function EventPage() {
   let updates: PublicHostUpdate[] = [];
   let questionsUnavailable = false;
   let updatesUnavailable = false;
+  let polls: PublicPoll[] = [];
 
   if (!process.env.DATABASE_URL?.trim()) {
     if (OYSTER_ROAST_EVENT.features.guestList) {
@@ -79,14 +82,17 @@ export default async function EventPage() {
         playlistUnavailable = true;
       }
     }
-    const [questionsResult, updatesResult] = await Promise.allSettled([
+    const [questionsResult, updatesResult, pollsResult] = await Promise.allSettled([
       OYSTER_ROAST_EVENT.features.questions ? listPublicQuestions() : Promise.resolve([]),
       OYSTER_ROAST_EVENT.features.updates ? listPublicHostUpdates() : Promise.resolve([]),
+      OYSTER_ROAST_EVENT.features.polls ? listPublicPolls() : Promise.resolve([]),
     ]);
     if (questionsResult.status === "fulfilled") questions = questionsResult.value;
     else { questionsUnavailable = true; console.error("Public questions retrieval failed."); }
     if (updatesResult.status === "fulfilled") updates = updatesResult.value;
     else { updatesUnavailable = true; console.error("Public updates retrieval failed."); }
+    if (pollsResult.status === "fulfilled") polls = pollsResult.value;
+    else console.error("Public polls retrieval failed.");
   }
 
   return (
@@ -111,6 +117,7 @@ export default async function EventPage() {
           questionsUnavailable={questionsUnavailable}
           updates={updates}
           updatesUnavailable={updatesUnavailable}
+          polls={polls}
         />
 
         <footer className="mt-8 flex items-center justify-between border-t border-[#202523]/12 px-1 pt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#202523]/45 sm:mt-10">

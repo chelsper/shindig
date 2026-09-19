@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../app/event/playlist-actions", () => ({ submitPlaylistSuggestion: vi.fn() }));
 vi.mock("../app/event/question-actions", () => ({ submitGuestQuestion: vi.fn() }));
+vi.mock("../app/event/interaction-actions", () => ({ loadGuestInteractions: vi.fn(), applaudSong: vi.fn(), voteInPoll: vi.fn() }));
 
 import { EventModules } from "../components/event-hub/event-modules";
 import { GuestListModule } from "../components/event-hub/guest-list-module";
@@ -77,8 +78,9 @@ describe("Event Hub modules", () => {
 
     expect(html).toContain("Who’s Coming");
     expect(html).toContain("6");
-    expect(html).toContain("Visible Household");
-    expect(html).toContain("Party of 2");
+    expect(html).toContain("Visible");
+    expect(html).toContain("See everyone");
+    expect(html).not.toContain("Party of 2");
   });
 
   it("shows a friendly empty state when no names are public", () => {
