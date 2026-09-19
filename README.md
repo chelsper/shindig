@@ -24,6 +24,7 @@ Set `ADMIN_PASSWORD` to a strong, unique password to enable the private host das
    - [`db/migrations/002_add_rsvp_edit_tokens.sql`](db/migrations/002_add_rsvp_edit_tokens.sql)
    - [`db/migrations/003_add_guest_list_visibility.sql`](db/migrations/003_add_guest_list_visibility.sql)
    - [`db/migrations/004_create_event_hub_settings.sql`](db/migrations/004_create_event_hub_settings.sql)
+   - [`db/migrations/005_create_playlist_suggestions.sql`](db/migrations/005_create_playlist_suggestions.sql)
 3. In the Neon project dashboard, choose **Connect** and copy the pooled Postgres connection string.
 4. Put that connection string in `.env.local`:
 
@@ -60,7 +61,7 @@ Attending confirmations offer Google Calendar, Apple Calendar, and Outlook actio
 
 ## Event Hub
 
-The public Event Hub is available at `/event`. Feature availability is controlled only by `features` in [`lib/oyster-roast-event.ts`](lib/oyster-roast-event.ts). Guest List and Weather are enabled; Playlist, Questions, Updates, Photos, and Potluck remain disabled.
+The public Event Hub is available at `/event`. Feature availability is controlled only by `features` in [`lib/oyster-roast-event.ts`](lib/oyster-roast-event.ts). Guest List, Playlist, and Weather are enabled; Questions, Updates, Photos, and Potluck remain disabled.
 
 The route loads public data on the server and composes the existing header with `EventModules`. Its small module registry contains only implemented modules and filters them using the canonical flags. The same filtered list supplies `HubNavigation` and its content panels, preventing orphaned tabs or placeholders. `HubNavigation` handles touch and keyboard tab switching; each feature owns its own component. To add a future feature, implement its component, register it, and enable its existing event flag. Database access stays on the server.
 
@@ -79,4 +80,14 @@ npm test
 npm run build
 ```
 
-The Event Hub Foundation includes the existing Guest List and a Weather shell. Other module implementations, guest accounts, messaging, and multiple events are outside this milestone. No new environment variables or database migrations are required.
+## Collaborative Playlist V1
+
+Apply migration `005_create_playlist_suggestions.sql` to the existing Neon database before deploying this milestone. It adds `playlist_suggestions` with a UUID primary key, the event slug, song title, artist, optional suggested-by name, and creation timestamp. It uses the existing server-only `DATABASE_URL`; no new environment variables or packages are needed.
+
+Guests can suggest a song from the Playlist tab without an account or a music-provider login. Song titles are limited to 160 characters, artists to 120, and optional names to 80, with server validation and database constraints. Names entered in this form are public; no RSVP/private guest data is read or linked. Public queries and action responses never return suggestion IDs or timestamps.
+
+The submit button locks while saving. Whitespace is normalized server-side, and a case-insensitive unique song/artist index prevents repeat or concurrent submissions across server instances. A duplicate receives a friendly confirmation without changing the original suggestion. Successful actions revalidate the Event Hub so the list updates immediately. Database failures show a retry message instead of success.
+
+Hosts can open **Playlist** from `/admin`, or visit `/admin/playlist`, to review and delete suggestions after confirmation. The existing admin session protects both retrieval and deletion. Deletion is scoped to the configured event and refreshes the guest-facing list on its next load. Setting `features.playlist` to false removes the tab, form, and songs from the Hub, skips its public query, and rejects public submissions. Host moderation remains available.
+
+This milestone adds song suggestions only: no playback, music-provider APIs, voting, guest authentication, or other Event Hub modules.

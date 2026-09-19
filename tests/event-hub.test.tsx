@@ -1,5 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("../app/event/playlist-actions", () => ({ submitPlaylistSuggestion: vi.fn() }));
 
 import { EventModules } from "../components/event-hub/event-modules";
 import { GuestListModule } from "../components/event-hub/guest-list-module";
@@ -18,9 +20,9 @@ describe("Event Hub modules", () => {
       <EventModules features={enabledFeatures} guestList={{ totalGuestCount: 2, guests: [] }} />,
     );
 
-    expect(html.match(/role="tab"/g)).toHaveLength(2);
-    expect(html.match(/role="tabpanel"/g)).toHaveLength(2);
-    for (const id of ["guestList", "weather"]) {
+    expect(html.match(/role="tab"/g)).toHaveLength(3);
+    expect(html.match(/role="tabpanel"/g)).toHaveLength(3);
+    for (const id of ["guestList", "playlist", "weather"]) {
       expect(html).toContain(`aria-controls="hub-panel-${id}"`);
       expect(html).toContain(`id="hub-panel-${id}"`);
       expect(html).toContain(`aria-labelledby="hub-tab-${id}"`);
@@ -34,7 +36,7 @@ describe("Event Hub modules", () => {
   it("hides disabled and unimplemented modules from navigation and content", () => {
     const html = renderToStaticMarkup(
       <EventModules
-        features={{ ...enabledFeatures, weather: false, playlist: true, photos: true, questions: true, updates: true }}
+        features={{ ...enabledFeatures, weather: false, playlist: false, photos: true, questions: true, updates: true }}
         guestList={null}
       />,
     );
@@ -48,7 +50,7 @@ describe("Event Hub modules", () => {
 
   it("renders nothing when all implemented modules are disabled", () => {
     const html = renderToStaticMarkup(
-      <EventModules features={{ ...enabledFeatures, guestList: false, weather: false }} guestList={null} />,
+      <EventModules features={{ ...enabledFeatures, guestList: false, weather: false, playlist: false }} guestList={null} />,
     );
     expect(html).toBe("");
   });
@@ -91,6 +93,7 @@ describe("Event Hub modules", () => {
     const features: EventFeatures = {
       ...enabledFeatures,
       guestList: false,
+      playlist: false,
     };
     const html = renderToStaticMarkup(
       <EventModules

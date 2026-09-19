@@ -10,7 +10,7 @@ export type EventFeatures = {
 
 const features: EventFeatures = {
   guestList: true,
-  playlist: false,
+  playlist: true,
   weather: true,
   photos: false,
   questions: false,

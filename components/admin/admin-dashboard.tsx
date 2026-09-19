@@ -72,6 +72,12 @@ export function AdminDashboard({ filter, rsvps, summary }: AdminDashboardProps) 
           <div className="flex flex-wrap gap-2.5">
             <Link
               className="inline-flex min-h-10 items-center rounded-full border border-[#355f9e]/30 bg-[#e9f2f8]/75 px-4 text-xs font-bold uppercase tracking-[0.1em] text-[#214e91] transition hover:border-[#355f9e]"
+              href="/admin/playlist"
+            >
+              Playlist
+            </Link>
+            <Link
+              className="inline-flex min-h-10 items-center rounded-full border border-[#355f9e]/30 bg-[#e9f2f8]/75 px-4 text-xs font-bold uppercase tracking-[0.1em] text-[#214e91] transition hover:border-[#355f9e]"
               href="/admin/event"
             >
               Event Header

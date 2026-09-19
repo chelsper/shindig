@@ -4,7 +4,9 @@ import { EventHubHeader } from "../../components/event-hub/event-hub-header";
 import { EventModules } from "../../components/event-hub/event-modules";
 import { DEFAULT_EVENT_HUB_HEADER } from "../../lib/event-hub-settings";
 import { OYSTER_ROAST_EVENT } from "../../lib/oyster-roast-event";
+import type { PublicPlaylistSuggestion } from "../../lib/playlist";
 import { getEventHubHeaderSettings } from "../../lib/server/event-hub-settings";
+import { listPublicPlaylistSuggestions } from "../../lib/server/playlist";
 import {
   getPublicGuestList,
   type PublicGuestList,
@@ -21,11 +23,14 @@ export default async function EventPage() {
   let headerSettings = DEFAULT_EVENT_HUB_HEADER;
   let guestList: PublicGuestList | null = null;
   let guestListUnavailable = false;
+  let playlistSuggestions: PublicPlaylistSuggestion[] = [];
+  let playlistUnavailable = false;
 
   if (!process.env.DATABASE_URL?.trim()) {
     if (OYSTER_ROAST_EVENT.features.guestList) {
       guestListUnavailable = true;
     }
+    playlistUnavailable = OYSTER_ROAST_EVENT.features.playlist;
   } else {
     try {
       headerSettings = await getEventHubHeaderSettings();
@@ -55,6 +60,15 @@ export default async function EventPage() {
         guestListUnavailable = true;
       }
     }
+
+    if (OYSTER_ROAST_EVENT.features.playlist) {
+      try {
+        playlistSuggestions = await listPublicPlaylistSuggestions();
+      } catch {
+        console.error("Public playlist retrieval failed.");
+        playlistUnavailable = true;
+      }
+    }
   }
 
   return (
@@ -73,6 +87,8 @@ export default async function EventPage() {
           features={OYSTER_ROAST_EVENT.features}
           guestList={guestList}
           guestListUnavailable={guestListUnavailable}
+          playlistSuggestions={playlistSuggestions}
+          playlistUnavailable={playlistUnavailable}
         />
 
         <footer className="mt-8 flex items-center justify-between border-t border-[#202523]/12 px-1 pt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#202523]/45 sm:mt-10">

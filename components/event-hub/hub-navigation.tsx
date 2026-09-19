@@ -7,7 +7,7 @@ import type { EventFeatures } from "../../lib/oyster-roast-event";
 export type HubModule = {
   id: keyof EventFeatures;
   label: string;
-  icon: "guests" | "weather";
+  icon: "guests" | "weather" | "playlist";
   content: ReactNode;
 };
 
@@ -18,6 +18,12 @@ function ModuleIcon({ icon }: { icon: HubModule["icon"] }) {
         <>
           <circle cx="9" cy="8" r="3" />
           <path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 4v2" />
+        </>
+      ) : icon === "playlist" ? (
+        <>
+          <path d="M9 17V5l12-2v12M9 9l12-2" />
+          <ellipse cx="6" cy="18" rx="3" ry="2.5" />
+          <ellipse cx="18" cy="16" rx="3" ry="2.5" />
         </>
       ) : (
         <>
@@ -75,7 +81,7 @@ export function HubNavigation({ modules }: { modules: HubModule[] }) {
             <button
               aria-controls={`hub-panel-${module.id}`}
               aria-selected={activeId === module.id}
-              className={`flex min-h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border px-4 py-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#355f9e] sm:flex-none sm:px-6 ${
+              className={`flex min-h-12 min-w-0 flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-full border px-4 py-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#355f9e] sm:flex-none sm:px-6 ${
                 activeId === module.id
                   ? "border-[#355f9e] bg-[#355f9e] text-[#fffaf1] shadow-[0_4px_12px_rgb(53_95_158_/_0.12)]"
                   : "border-[#355f9e]/20 bg-[#fffaf1]/70 text-[#355f9e] hover:border-[#355f9e]/50 hover:bg-[#e9f2f8]"

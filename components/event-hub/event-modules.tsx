@@ -1,13 +1,17 @@
 import type { EventFeatures } from "../../lib/oyster-roast-event";
+import type { PublicPlaylistSuggestion } from "../../lib/playlist";
 import type { PublicGuestList } from "../../lib/server/rsvps";
 import { GuestListModule } from "./guest-list-module";
 import { HubNavigation, type HubModule } from "./hub-navigation";
 import { WeatherModule } from "./weather-module";
+import { PlaylistModule } from "./playlist-module";
 
 type EventModulesProps = {
   features: EventFeatures;
   guestList: PublicGuestList | null;
   guestListUnavailable?: boolean;
+  playlistSuggestions?: PublicPlaylistSuggestion[];
+  playlistUnavailable?: boolean;
 };
 
 type ModuleDefinition = Omit<HubModule, "content"> & {
@@ -23,6 +27,14 @@ const moduleRegistry: ModuleDefinition[] = [
     icon: "guests",
     render: ({ guestList, guestListUnavailable }) => (
       <GuestListModule guestList={guestList} unavailable={guestListUnavailable} />
+    ),
+  },
+  {
+    id: "playlist",
+    label: "Playlist",
+    icon: "playlist",
+    render: ({ playlistSuggestions = [], playlistUnavailable }) => (
+      <PlaylistModule suggestions={playlistSuggestions} unavailable={playlistUnavailable} />
     ),
   },
   {
