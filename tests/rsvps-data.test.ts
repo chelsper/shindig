@@ -8,7 +8,11 @@ const mocks = vi.hoisted(() => ({
 vi.mock("server-only", () => ({}));
 vi.mock("@neondatabase/serverless", () => ({ neon: mocks.neon }));
 
-import { saveRsvp } from "../lib/server/rsvps";
+import {
+  getRsvpSummary,
+  listRsvps,
+  saveRsvp,
+} from "../lib/server/rsvps";
 
 const rsvp = {
   id: "4f849d18-931b-42ef-a4d4-7ec07aa73b3d",
@@ -70,6 +74,71 @@ describe("saveRsvp", () => {
     vi.stubEnv("DATABASE_URL", "");
 
     await expect(saveRsvp(rsvp)).resolves.toEqual({ status: "disabled" });
+    expect(mocks.neon).not.toHaveBeenCalled();
+  });
+});
+
+describe("admin RSVP queries", () => {
+  beforeEach(() => {
+    vi.unstubAllEnvs();
+    vi.stubEnv("DATABASE_URL", "postgresql://test:test@example.test/neondb");
+    mocks.neon.mockReset();
+    mocks.sql.mockReset();
+    mocks.neon.mockReturnValue(mocks.sql);
+  });
+
+  it("returns numeric summary totals for the known event", async () => {
+    mocks.sql.mockResolvedValueOnce([
+      {
+        totalAttending: "3",
+        totalResponses: "5",
+        declined: "2",
+        totalPartySize: "8",
+      },
+    ]);
+
+    await expect(getRsvpSummary()).resolves.toEqual({
+      totalAttending: 3,
+      totalResponses: 5,
+      declined: 2,
+      totalPartySize: 8,
+    });
+
+    const [queryParts, ...values] = mocks.sql.mock.calls[0];
+    expect(queryParts.join("?")).toContain("FILTER (WHERE attending)");
+    expect(values).toEqual(["oyster-roast-2026"]);
+  });
+
+  it("lists attending RSVPs newest first", async () => {
+    const createdAt = "2026-09-19T14:00:00.000Z";
+    const updatedAt = "2026-09-19T14:05:00.000Z";
+    mocks.sql.mockResolvedValueOnce([
+      {
+        ...savedRsvp,
+        eventSlug: "oyster-roast-2026",
+        createdAt,
+        updatedAt,
+      },
+    ]);
+
+    await expect(listRsvps("attending")).resolves.toEqual([
+      {
+        ...savedRsvp,
+        eventSlug: "oyster-roast-2026",
+        createdAt,
+        updatedAt,
+      },
+    ]);
+
+    const [queryParts, ...values] = mocks.sql.mock.calls[0];
+    expect(queryParts.join("?")).toContain("ORDER BY created_at DESC");
+    expect(values).toEqual(["oyster-roast-2026", true, true]);
+  });
+
+  it("fails closed when the admin database connection is absent", async () => {
+    vi.stubEnv("DATABASE_URL", "");
+
+    await expect(listRsvps()).rejects.toThrow("Database access is not configured.");
     expect(mocks.neon).not.toHaveBeenCalled();
   });
 });

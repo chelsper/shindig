@@ -12,7 +12,9 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-`DATABASE_URL` is optional during local UI work. When it is empty, the RSVP flow still completes but shows a development-only notice that the response was not persisted. Production submissions fail with a friendly message if the variable is missing.
+`DATABASE_URL` is optional during local invitation UI work. When it is empty, the RSVP flow still completes but shows a development-only notice that the response was not persisted. Production submissions fail with a friendly message if the variable is missing.
+
+Set `ADMIN_PASSWORD` to a strong, unique password to enable the private host dashboard at [http://localhost:3000/admin](http://localhost:3000/admin). The value is read only on the server and must not use a `NEXT_PUBLIC_` prefix.
 
 ## Neon database setup
 
@@ -32,7 +34,14 @@ The connection string is server-only. Do not rename it to `NEXT_PUBLIC_DATABASE_
 1. Open the Shindig project in Vercel.
 2. Go to **Settings → Environment Variables**.
 3. Add `DATABASE_URL` with the Neon pooled connection string for **Production** (and **Preview** if preview deployments should write to a database).
-4. Redeploy the latest commit so the environment variable is available to the deployment.
+4. Add `ADMIN_PASSWORD` with a strong, unique host password for **Production** (and **Preview** only if the dashboard should work there).
+5. Redeploy the latest commit so the environment variables are available to the deployment.
+
+## Host dashboard
+
+Visit `/admin` and enter the configured host password. A successful login creates a signed, HTTP-only, same-site cookie that expires after 12 hours. Changing `ADMIN_PASSWORD` invalidates existing sessions.
+
+The dashboard reads RSVP data only on the server, supports attending/declined filters, shows event totals, and exports the protected guest list as CSV. The export requires the same authenticated admin session.
 
 ## Checks
 
@@ -43,4 +52,4 @@ npm test
 npm run build
 ```
 
-Milestone 2B completes and verifies RSVP persistence, including server-side validation, idempotent duplicate protection, and optional guest notes. It does not include an events table, authentication, an admin dashboard, or guest verification.
+Milestone 3 adds the password-protected host dashboard. It does not add user accounts, RSVP editing or deletion, messaging, multiple events, analytics, or an invitation builder.
