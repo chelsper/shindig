@@ -13,7 +13,7 @@ import {
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: `${OYSTER_ROAST_EVENT.title} · Event Page`,
+  title: `${OYSTER_ROAST_EVENT.title} · Event Hub`,
   description: `${OYSTER_ROAST_EVENT.dateLabel} at ${OYSTER_ROAST_EVENT.timeLabel} in ${OYSTER_ROAST_EVENT.cityLabel}.`,
 };
 

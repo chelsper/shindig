@@ -126,9 +126,9 @@ export function RsvpUpdateForm({ initialRsvp, token }: RsvpUpdateFormProps) {
                   <CalendarActions editToken={token} />
                   <Link
                     className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full border border-[#355f9e]/25 bg-[#e9f2f8]/70 px-5 text-xs font-bold uppercase tracking-[0.12em] text-[#214e91] transition hover:border-[#355f9e]/55 hover:bg-[#e9f2f8]"
-                    href="/event"
+                    href={event.eventHub.path}
                   >
-                    View Event Page
+                    View Event Hub
                   </Link>
                 </>
               ) : null}

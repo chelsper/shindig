@@ -194,6 +194,24 @@ describe("public guest list query", () => {
     expect(visibleQuery).toContain("AND display_on_guest_list = true");
     expect(visibleQuery).not.toMatch(/\b(comment|edit_token_hash|updated_at|id::text)\b/);
   });
+
+  it("only returns the minimum public fields even if the database row contains private data", async () => {
+    mocks.sql
+      .mockResolvedValueOnce([{ totalGuestCount: "6" }])
+      .mockResolvedValueOnce([{
+        guestName: "Visible Household",
+        partySize: "2",
+        id: rsvp.id,
+        comment: "Private comment",
+        editTokenHash,
+        createdAt: "2026-09-19T14:00:00Z",
+      }]);
+
+    await expect(getPublicGuestList()).resolves.toEqual({
+      totalGuestCount: 6,
+      guests: [{ guestName: "Visible Household", partySize: 2 }],
+    });
+  });
 });
 
 describe("admin RSVP queries", () => {

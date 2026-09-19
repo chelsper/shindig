@@ -23,6 +23,7 @@ describe("dynamic ICS route", () => {
     expect(ics).toContain(
       `https://www.haveashindig.com/rsvp/${editToken}`,
     );
+    expect(ics).toContain("URL:https://www.haveashindig.com/event\r\n");
   });
 
   it("ignores malformed tokens and links only to the public event", async () => {
@@ -33,7 +34,7 @@ describe("dynamic ICS route", () => {
     );
     const ics = (await response.text()).replaceAll("\r\n ", "");
 
-    expect(ics).toContain(`URL:${OYSTER_ROAST_EVENT.websiteUrl}`);
+    expect(ics).toContain("URL:https://www.haveashindig.com/event\r\n");
     expect(ics).not.toContain("/rsvp/guessable");
   });
 });

@@ -33,11 +33,10 @@ function getCalendarDescription(
   event: OysterRoastEvent,
   rsvpUrl?: string,
 ) {
-  const linkLabel = rsvpUrl
-    ? "View event or update your RSVP"
-    : "View event";
+  const links = [`View Event Hub: ${getEventHubUrl(event)}`];
+  if (rsvpUrl) links.push(`Update your RSVP (private link): ${rsvpUrl}`);
 
-  return `${event.description}\n\n${linkLabel}: ${rsvpUrl ?? event.websiteUrl}`;
+  return `${event.description}\n\n${links.join("\n\n")}`;
 }
 
 function foldIcsLine(line: string) {
@@ -56,6 +55,10 @@ function foldIcsLine(line: string) {
 
   folded.push(current);
   return folded.join("\r\n");
+}
+
+export function getEventHubUrl(event: OysterRoastEvent = OYSTER_ROAST_EVENT) {
+  return new URL(event.eventHub.path, event.websiteUrl).toString();
 }
 
 export function getRsvpUpdateUrl(
@@ -84,7 +87,7 @@ export function createOysterRoastIcs(
     `SUMMARY:${escapeIcsText(event.title)}`,
     `DESCRIPTION:${escapeIcsText(getCalendarDescription(event, rsvpUrl))}`,
     `LOCATION:${escapeIcsText(event.address)}`,
-    `URL:${rsvpUrl ?? event.websiteUrl}`,
+    `URL:${getEventHubUrl(event)}`,
     "STATUS:CONFIRMED",
     "END:VEVENT",
     "END:VCALENDAR",

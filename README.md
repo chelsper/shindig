@@ -56,11 +56,15 @@ RSVPs submitted before migration `002` do not have update tokens. Those records 
 
 ## Calendar support
 
-Attending confirmations offer Google Calendar, Apple Calendar, and Outlook actions. Calendar details come from the shared [`lib/oyster-roast-event.ts`](lib/oyster-roast-event.ts) configuration. Apple Calendar receives a dynamically generated `.ics` file, and persisted RSVPs include the guest’s private update link in the calendar event.
+Attending confirmations offer Google Calendar, Apple Calendar, and Outlook actions. Calendar details come from the shared [`lib/oyster-roast-event.ts`](lib/oyster-roast-event.ts) configuration. All calendar descriptions link to the Event Hub at `/event`; Apple Calendar receives a dynamically generated `.ics` file whose event URL also points to the Hub. Persisted RSVPs additionally include a separately labeled private RSVP update link. Previously downloaded/imported calendar entries must be re-added to pick up these links.
 
 ## Event Hub
 
-The public Event Hub is available at `/event`. Enabled modules are controlled by feature flags in [`lib/oyster-roast-event.ts`](lib/oyster-roast-event.ts); only the Guest List module is enabled currently.
+The public Event Hub is available at `/event`. Feature availability is controlled only by `features` in [`lib/oyster-roast-event.ts`](lib/oyster-roast-event.ts). Guest List and Weather are enabled; Playlist, Questions, Updates, Photos, and Potluck remain disabled.
+
+The route loads public data on the server and composes the existing header with `EventModules`. Its small module registry contains only implemented modules and filters them using the canonical flags. The same filtered list supplies `HubNavigation` and its content panels, preventing orphaned tabs or placeholders. `HubNavigation` handles touch and keyboard tab switching; each feature owns its own component. To add a future feature, implement its component, register it, and enable its existing event flag. Database access stays on the server.
+
+Weather currently displays only “Forecast coming soon,” using the event's existing location/date. It makes no weather API requests and displays no invented forecast. Navigation wraps to fit narrow screens and shows one module at a time.
 
 The guest list is rendered server-side and its public query returns only the total attending count plus opted-in guest names and party sizes. Declines and private RSVP fields are never selected. Attending guests can opt out of displaying their name while remaining included in the total count. The host dashboard shows each attending RSVP’s visibility choice.
 
@@ -75,4 +79,4 @@ npm test
 npm run build
 ```
 
-The Event Hub milestone establishes optional module architecture and adds only the Guest List. It does not add weather, playlists, photos, questions, updates, potluck coordination, accounts, email, SMS, or multiple events.
+The Event Hub Foundation includes the existing Guest List and a Weather shell. Other module implementations, guest accounts, messaging, and multiple events are outside this milestone. No new environment variables or database migrations are required.

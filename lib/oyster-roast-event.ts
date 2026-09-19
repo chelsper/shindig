@@ -11,7 +11,7 @@ export type EventFeatures = {
 const features: EventFeatures = {
   guestList: true,
   playlist: false,
-  weather: false,
+  weather: true,
   photos: false,
   questions: false,
   updates: false,
@@ -36,6 +36,7 @@ export const OYSTER_ROAST_EVENT = {
   calendarFilename: "annualish-oyster-roast.ics",
   websiteUrl: "https://www.haveashindig.com/",
   eventHub: {
+    path: "/event",
     headerImage: {
       url: "/oyster-roast-invitation.png",
       alt: "Illustrated oyster roast invitation with seafood platters and blue stripes",

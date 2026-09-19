@@ -37,7 +37,7 @@ export function EventHubHeader({
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-[0.68rem] font-bold uppercase tracking-[0.22em] text-[#355f9e]">
-                Event page
+                Event Hub
               </p>
               <h1 className="mt-2 max-w-2xl font-serif text-4xl leading-[0.98] tracking-[-0.04em] sm:text-5xl">
                 {event.title}
