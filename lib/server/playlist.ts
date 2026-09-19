@@ -4,7 +4,8 @@ import { randomUUID } from "node:crypto";
 import { neon } from "@neondatabase/serverless";
 
 import { OYSTER_ROAST_EVENT } from "../oyster-roast-event";
-import type { PublicPlaylistSuggestion } from "../playlist";
+import type { CatalogSuggestion, PublicPlaylistSuggestion } from "../playlist";
+import { musicAttribution } from "./music";
 
 export type AdminPlaylistSuggestion = PublicPlaylistSuggestion & {
   id: string;
@@ -20,31 +21,46 @@ function database() {
 export async function listPublicPlaylistSuggestions(): Promise<PublicPlaylistSuggestion[]> {
   const sql = database();
   const rows = await sql`
-    SELECT song_title AS "songTitle", artist, suggested_by AS "suggestedBy"
+    SELECT provider, provider_track_id AS "providerTrackId", song_title AS "songTitle", artist,
+      album, artwork_url AS "artworkUrl", external_url AS "externalUrl", explicit, suggested_by AS "suggestedBy"
     FROM playlist_suggestions
     WHERE event_slug = ${OYSTER_ROAST_EVENT.slug}
     ORDER BY created_at DESC, id DESC
   `;
 
   // Explicit projection also keeps database-only fields out of RSC/action payloads.
-  return rows.map((row) => ({
+  return rows.map(publicSuggestion);
+}
+
+function publicSuggestion(row: Record<string, unknown>): PublicPlaylistSuggestion {
+  const provider = row.provider == null ? null : String(row.provider);
+  return {
+    provider,
+    providerTrackId: row.providerTrackId == null ? null : String(row.providerTrackId),
     songTitle: String(row.songTitle),
     artist: String(row.artist),
+    album: row.album == null ? null : String(row.album),
+    artworkUrl: row.artworkUrl == null ? null : String(row.artworkUrl),
+    externalUrl: row.externalUrl == null ? null : String(row.externalUrl),
+    explicit: typeof row.explicit === "boolean" ? row.explicit : null,
+    attribution: musicAttribution(provider),
     suggestedBy: row.suggestedBy == null ? null : String(row.suggestedBy),
-  }));
+  };
 }
 
 export async function createPlaylistSuggestion(
-  suggestion: PublicPlaylistSuggestion,
+  suggestion: CatalogSuggestion,
 ): Promise<"added" | "duplicate"> {
   const sql = database();
   const rows = await sql`
-    INSERT INTO playlist_suggestions (id, event_slug, song_title, artist, suggested_by)
+    INSERT INTO playlist_suggestions (id, event_slug, provider, provider_track_id,
+      song_title, artist, album, artwork_url, external_url, explicit, suggested_by)
     VALUES (
-      ${randomUUID()}, ${OYSTER_ROAST_EVENT.slug}, ${suggestion.songTitle},
-      ${suggestion.artist}, ${suggestion.suggestedBy}
+      ${randomUUID()}, ${OYSTER_ROAST_EVENT.slug}, ${suggestion.provider}, ${suggestion.providerTrackId},
+      ${suggestion.songTitle}, ${suggestion.artist}, ${suggestion.album}, ${suggestion.artworkUrl},
+      ${suggestion.externalUrl}, ${suggestion.explicit}, ${suggestion.suggestedBy}
     )
-    ON CONFLICT (event_slug, lower(btrim(song_title)), lower(btrim(artist))) DO NOTHING
+    ON CONFLICT (event_slug, provider, provider_track_id) WHERE provider IS NOT NULL DO NOTHING
     RETURNING 1 AS inserted
   `;
   return rows.length > 0 ? "added" : "duplicate";
@@ -53,17 +69,16 @@ export async function createPlaylistSuggestion(
 export async function listPlaylistSuggestionsForAdmin(): Promise<AdminPlaylistSuggestion[]> {
   const sql = database();
   const rows = await sql`
-    SELECT id::text, song_title AS "songTitle", artist,
+    SELECT id::text, provider, provider_track_id AS "providerTrackId", song_title AS "songTitle", artist,
+      album, artwork_url AS "artworkUrl", external_url AS "externalUrl", explicit,
       suggested_by AS "suggestedBy", created_at AS "createdAt"
     FROM playlist_suggestions
     WHERE event_slug = ${OYSTER_ROAST_EVENT.slug}
     ORDER BY created_at DESC, id DESC
   `;
   return rows.map((row) => ({
+    ...publicSuggestion(row),
     id: String(row.id),
-    songTitle: String(row.songTitle),
-    artist: String(row.artist),
-    suggestedBy: row.suggestedBy == null ? null : String(row.suggestedBy),
     createdAt: new Date(row.createdAt).toISOString(),
   }));
 }

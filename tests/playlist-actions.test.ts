@@ -2,10 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   create: vi.fn(), remove: vi.fn(), listAdmin: vi.fn(), authenticated: vi.fn(), revalidatePath: vi.fn(),
-  redirect: vi.fn(), event: { slug: "oyster-roast-2026", eventHub: { path: "/event" }, features: { playlist: true } },
+  redirect: vi.fn(), getTrack: vi.fn(), throttle: vi.fn(), event: { slug: "oyster-roast-2026", eventHub: { path: "/event" }, features: { playlist: true } },
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
+vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
+vi.mock("../lib/server/music", () => ({ getMusicTrack: mocks.getTrack }));
+vi.mock("../lib/server/music/rate-limit", () => ({ throttleMusicRequest: mocks.throttle }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("../lib/oyster-roast-event", () => ({ OYSTER_ROAST_EVENT: mocks.event }));
 vi.mock("../lib/server/admin-session", () => ({ isAdminAuthenticated: mocks.authenticated }));
@@ -16,15 +19,18 @@ vi.mock("../lib/server/playlist", () => ({
 import { submitPlaylistSuggestion } from "../app/event/playlist-actions";
 import { deleteAdminPlaylistSuggestion } from "../app/admin/playlist/actions";
 import AdminPlaylistPage from "../app/admin/playlist/page";
+import { MusicError } from "../lib/server/music/provider";
+import { track } from "./fixtures/music";
 
 const id = "4f849d18-931b-42ef-a4d4-7ec07aa73b3d";
-const suggestion = { songTitle: "Lovely Day", artist: "Bill Withers", suggestedBy: null };
+const suggestion = { provider: track.provider, providerTrackId: track.providerTrackId, suggestedBy: null };
 function confirmation() { const data = new FormData(); data.set("confirm", "delete"); return data; }
 
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.event.features.playlist = true;
   mocks.authenticated.mockResolvedValue(true);
+  mocks.getTrack.mockResolvedValue(track);
   mocks.redirect.mockImplementation(() => { throw new Error("NEXT_REDIRECT"); });
 });
 
@@ -43,7 +49,29 @@ describe("public playlist action", () => {
   });
 
   it("rejects invalid input before calling the database", async () => {
-    expect((await submitPlaylistSuggestion({ ...suggestion, artist: "" })).ok).toBe(false);
+    expect((await submitPlaylistSuggestion({ ...suggestion, providerTrackId: "" })).ok).toBe(false);
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+
+  it("saves only provider-verified metadata, not the client's title, URL, or event", async () => {
+    mocks.create.mockResolvedValue("added");
+    await submitPlaylistSuggestion({ ...suggestion, songTitle: "Fake", artworkUrl: "http://evil.test", eventSlug: "fake" });
+    expect(mocks.getTrack).toHaveBeenCalledWith(track.provider, track.providerTrackId);
+    expect(mocks.create).toHaveBeenCalledWith({ ...track, suggestedBy: null });
+    expect(mocks.throttle).toHaveBeenCalledWith("add", expect.any(Headers));
+  });
+
+  it.each(["unavailable", "rate_limited", "not_found"] as const)("does not save or show success after provider %s", async (code) => {
+    mocks.getTrack.mockRejectedValue(new MusicError(code, code === "rate_limited" ? 30 : undefined));
+    expect((await submitPlaylistSuggestion(suggestion)).ok).toBe(false);
+    expect(mocks.create).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("throttles rapid writes before contacting the catalog or inserting", async () => {
+    mocks.throttle.mockRejectedValue(new MusicError("rate_limited", 60));
+    expect((await submitPlaylistSuggestion(suggestion)).ok).toBe(false);
+    expect(mocks.getTrack).not.toHaveBeenCalled();
     expect(mocks.create).not.toHaveBeenCalled();
   });
 

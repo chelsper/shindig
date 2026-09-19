@@ -1,9 +1,12 @@
 "use client";
 
-import { useRef, useState, useTransition, type FormEvent } from "react";
+import { useRef, useState, useTransition } from "react";
 
 import { submitPlaylistSuggestion } from "../../app/event/playlist-actions";
 import { PLAYLIST_LIMITS, type PublicPlaylistSuggestion } from "../../lib/playlist";
+import type { MusicTrack } from "../../lib/music";
+import { MusicSearch } from "../music/music-search";
+import { TrackDetails } from "../music/track-details";
 
 type PlaylistModuleProps = {
   suggestions: PublicPlaylistSuggestion[];
@@ -12,8 +15,8 @@ type PlaylistModuleProps = {
 
 export function PlaylistModule({ suggestions, unavailable = false }: PlaylistModuleProps) {
   const [showForm, setShowForm] = useState(false);
-  const [songTitle, setSongTitle] = useState("");
-  const [artist, setArtist] = useState("");
+  const [pendingTrack, setPendingTrack] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
   const [suggestedBy, setSuggestedBy] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
@@ -21,16 +24,16 @@ export function PlaylistModule({ suggestions, unavailable = false }: PlaylistMod
   const submitting = useRef(false);
   const suggestButton = useRef<HTMLButtonElement>(null);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function handleSelect(track: MusicTrack) {
     if (submitting.current || unavailable) return;
     submitting.current = true;
+    setPendingTrack(`${track.provider}:${track.providerTrackId}`);
     setError(null);
     setConfirmation(null);
 
     startTransition(async () => {
       try {
-        const result = await submitPlaylistSuggestion({ songTitle, artist, suggestedBy });
+        const result = await submitPlaylistSuggestion({ provider: track.provider, providerTrackId: track.providerTrackId, suggestedBy });
         if (!result.ok) {
           setError(result.message);
           return;
@@ -39,9 +42,8 @@ export function PlaylistModule({ suggestions, unavailable = false }: PlaylistMod
         // in the same response. No database IDs need to enter client state.
         setConfirmation(result.outcome === "added"
           ? "That’s a shuckin’ good pick! Your song is on the list."
-          : "That song’s already on the list. Great minds shuck alike!");
-        setSongTitle("");
-        setArtist("");
+          : "Already on the Shindig playlist 🎵");
+        setPage(0);
         setSuggestedBy("");
         setShowForm(false);
         suggestButton.current?.focus();
@@ -49,9 +51,14 @@ export function PlaylistModule({ suggestions, unavailable = false }: PlaylistMod
         setError("We couldn’t add your song. Please try again in a moment.");
       } finally {
         submitting.current = false;
+        setPendingTrack(null);
       }
     });
   }
+
+  // Keep each browsable set within the catalog's 20-item display guidance.
+  const currentPage = Math.min(page, Math.max(0, Math.ceil(suggestions.length / 20) - 1));
+  const visibleSuggestions = suggestions.slice(currentPage * 20, (currentPage + 1) * 20);
 
   return (
     <section aria-labelledby="playlist-heading" className="rounded-[1.75rem] border border-[#202523]/10 bg-white/48 p-5 shadow-[0_14px_40px_rgb(32_37_35_/_0.05)] sm:p-7">
@@ -76,26 +83,16 @@ export function PlaylistModule({ suggestions, unavailable = false }: PlaylistMod
 
       <div id="playlist-suggestion-form" hidden={!showForm}>
         {showForm ? (
-          <form className="mt-5 rounded-2xl border border-[#355f9e]/15 bg-[#fffaf1]/85 p-4 sm:p-5" onSubmit={handleSubmit}>
-            <fieldset className="space-y-4" disabled={isPending}>
-              <legend className="sr-only">Suggest a song</legend>
-              <label className="field-label">
-                Song
-                <input autoFocus className="field-input" maxLength={PLAYLIST_LIMITS.songTitle} name="songTitle" onChange={(event) => setSongTitle(event.target.value)} required value={songTitle} />
-              </label>
-              <label className="field-label">
-                Artist
-                <input className="field-input" maxLength={PLAYLIST_LIMITS.artist} name="artist" onChange={(event) => setArtist(event.target.value)} required value={artist} />
-              </label>
-              <label className="field-label">
+          <div className="mt-5 rounded-2xl border border-[#355f9e]/15 bg-[#fffaf1]/85 p-4 sm:p-5">
+            <MusicSearch onSelect={handleSelect} pending={pendingTrack}>
+              <label className="field-label mt-4">
                 Your name (optional)
-                <input aria-describedby="playlist-name-note" autoComplete="name" className="field-input" maxLength={PLAYLIST_LIMITS.suggestedBy} name="suggestedBy" onChange={(event) => setSuggestedBy(event.target.value)} value={suggestedBy} />
+                <input aria-describedby="playlist-name-note" autoComplete="name" className="field-input" disabled={isPending} maxLength={PLAYLIST_LIMITS.suggestedBy} name="suggestedBy" onChange={(event) => setSuggestedBy(event.target.value)} value={suggestedBy} />
               </label>
-              <p className="text-xs leading-5 text-[#202523]/55" id="playlist-name-note">If you add your name, it will appear with your song.</p>
-              {error ? <p className="text-sm leading-6 text-[#843528]" role="alert">{error}</p> : null}
-              <button className="primary-button w-full" disabled={isPending} type="submit">{isPending ? "Adding your song…" : "Add to Playlist"}</button>
-            </fieldset>
-          </form>
+              <p className="mt-2 text-xs leading-5 text-[#202523]/55" id="playlist-name-note">If you add your name, it will appear with your song.</p>
+            </MusicSearch>
+            {error ? <p className="mt-3 text-sm leading-6 text-[#843528]" role="alert">{error}</p> : null}
+          </div>
         ) : null}
       </div>
 
@@ -104,18 +101,21 @@ export function PlaylistModule({ suggestions, unavailable = false }: PlaylistMod
       ) : suggestions.length === 0 ? (
         <p className="px-2 py-10 text-center font-serif text-2xl leading-snug text-[#202523]/70">No requests yet. Be the first to pick something.</p>
       ) : (
-        <ol aria-label="Song suggestions" className="mt-2 divide-y divide-[#202523]/8">
-          {suggestions.map((suggestion, index) => (
-            <li className="flex gap-4 py-5" key={`${suggestion.songTitle}-${suggestion.artist}`}>
-              <span aria-hidden="true" className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full border border-[#355f9e]/15 bg-[#e9f2f8]/65 font-serif text-sm text-[#355f9e]">{String(index + 1).padStart(2, "0")}</span>
-              <div className="min-w-0 break-words">
-                <p className="font-serif text-xl leading-tight sm:text-2xl">{suggestion.songTitle}</p>
-                <p className="mt-1 text-sm text-[#202523]/70">{suggestion.artist}</p>
-                {suggestion.suggestedBy ? <p className="mt-2 text-xs leading-5 text-[#202523]/55">Suggested by {suggestion.suggestedBy}</p> : null}
-              </div>
-            </li>
-          ))}
-        </ol>
+        <>
+          <ol aria-label="Song suggestions" className="mt-2 divide-y divide-[#202523]/8">
+            {visibleSuggestions.map((suggestion) => (
+              <li className="py-5" key={suggestion.providerTrackId ? `${suggestion.provider}:${suggestion.providerTrackId}` : `${suggestion.songTitle}-${suggestion.artist}`}>
+                <TrackDetails attribution={suggestion.attribution} track={suggestion} />
+                {suggestion.suggestedBy ? <p className="mt-2 break-words text-xs leading-5 text-[#202523]/55">Suggested by {suggestion.suggestedBy}</p> : null}
+              </li>
+            ))}
+          </ol>
+          {suggestions.length > 20 ? <nav aria-label="Playlist pages" className="flex items-center justify-between gap-3 border-t border-[#202523]/10 pt-3 text-sm">
+            <button className="min-h-11 px-2 text-[#355f9e] disabled:opacity-40" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)} type="button">Previous</button>
+            <span>{currentPage + 1} / {Math.ceil(suggestions.length / 20)}</span>
+            <button className="min-h-11 px-2 text-[#355f9e] disabled:opacity-40" disabled={(currentPage + 1) * 20 >= suggestions.length} onClick={() => setPage(currentPage + 1)} type="button">Next</button>
+          </nav> : null}
+        </>
       )}
     </section>
   );

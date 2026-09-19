@@ -26,6 +26,7 @@ Set `ADMIN_PASSWORD` to a strong, unique password to enable the private host das
    - [`db/migrations/004_create_event_hub_settings.sql`](db/migrations/004_create_event_hub_settings.sql)
    - [`db/migrations/005_create_playlist_suggestions.sql`](db/migrations/005_create_playlist_suggestions.sql)
    - [`db/migrations/006_create_updates_and_questions.sql`](db/migrations/006_create_updates_and_questions.sql)
+   - [`db/migrations/007_music_catalog.sql`](db/migrations/007_music_catalog.sql)
 3. In the Neon project dashboard, choose **Connect** and copy the pooled Postgres connection string.
 4. Put that connection string in `.env.local`:
 
@@ -81,17 +82,44 @@ npm test
 npm run build
 ```
 
-## Collaborative Playlist V1
+## Playlist and real music catalog search
 
-Apply migration `005_create_playlist_suggestions.sql` to the existing Neon database before deploying this milestone. It adds `playlist_suggestions` with a UUID primary key, the event slug, song title, artist, optional suggested-by name, and creation timestamp. It uses the existing server-only `DATABASE_URL`; no new environment variables or packages are needed.
+Migration `005` created the original playlist. Apply [`007_music_catalog.sql`](db/migrations/007_music_catalog.sql) in the same Neon database when deploying the catalog-search version. It preserves all existing suggestions, adds nullable provider/track ID/album/artwork URL/external URL/explicit metadata, and creates an event/provider/track unique index. Legacy manual rows retain NULL provider metadata and their own song/artist uniqueness constraint. This does not guess catalog matches or delete existing suggestions. The old title/artist-only index is replaced, so deploy the new code together with the migration; the old manual-write action is incompatible with the new indexes.
 
-Guests can suggest a song from the Playlist tab without an account or a music-provider login. Song titles are limited to 160 characters, artists to 120, and optional names to 80, with server validation and database constraints. Names entered in this form are public; no RSVP/private guest data is read or linked. Public queries and action responses never return suggestion IDs or timestamps.
+Guests search and choose a song without a Shindig account or music-provider login. The browser calls `/api/music/search`, never Spotify's API. `lib/server/music/provider.ts` defines the provider interface; `catalog.ts` owns caching; `spotify.ts` implements app-only [Client Credentials authorization](https://developer.spotify.com/documentation/web-api/tutorials/client-credentials-flow); `index.ts` registers providers. Adding a provider does not require changing the search UI. Selecting a song submits only the provider ID, track ID, and optional public name (80-character limit). The server resolves canonical metadata from its verified cache or the provider before inserting. Browser-supplied titles, artwork, URLs, and event slugs are ignored. No RSVP/private guest data is read or linked. Public queries never return database UUIDs or timestamps.
 
-The submit button locks while saving. Whitespace is normalized server-side, and a case-insensitive unique song/artist index prevents repeat or concurrent submissions across server instances. A duplicate receives a friendly confirmation without changing the original suggestion. Successful actions revalidate the Event Hub so the list updates immediately. Database failures show a retry message instead of success.
+Add buttons lock while saving, and the database unique index prevents exact-track duplicates even across concurrent server instances. Duplicates receive “Already on the Shindig playlist 🎵” without changing the first suggestion. Actions revalidate the Event Hub to refresh the list. Database/provider failures never produce false success or a manual-entry fallback. Existing saved songs still load directly from Neon when Spotify is unconfigured or unavailable.
+
+Search waits for three meaningful letters/numbers and 400 ms without typing, aborts stale requests, and returns up to five tracks. Server caches hold at most 300 successful entries for five minutes per warm instance, coalescing concurrent identical searches. Tokens remain in server memory and refresh before expiry. The migration also creates `music_request_limits` for cross-instance quotas: 60 searches/minute and 20 adds/minute per Vercel client IP, plus 90 actual upstream requests/minute application-wide. These are conservative Shindig limits, not Spotify quota guarantees. Provider 429 responses persist a shared Retry-After cooldown and return a friendly 429; missing Retry-After defaults to 60 seconds. There is no immediate retry loop. Only Vercel's trusted IP header is hashed into buckets; raw IPs, search text, names, credentials, and tokens are not stored. Stale buckets are cleaned on subsequent requests after ten minutes. Local development shares one client bucket. Rate limiting requires Neon and fails closed if unavailable.
+
+Original album artwork is loaded directly from Spotify's CDN, with no cropping, overlays, recoloring, or image proxy. Metadata and the official full monochrome logo link back to each track. Missing/failed artwork uses a neutral note placeholder. Attribution follows [Spotify's design guidance](https://developer.spotify.com/documentation/design). Saved suggestions are browsed in sets of 20. No new packages are required.
 
 Hosts can open **Playlist** from `/admin`, or visit `/admin/playlist`, to review and delete suggestions after confirmation. The existing admin session protects both retrieval and deletion. Deletion is scoped to the configured event and refreshes the guest-facing list on its next load. Setting `features.playlist` to false removes the tab, form, and songs from the Hub, skips its public query, and rejects public submissions. Host moderation remains available.
 
-This milestone adds song suggestions only: no playback, music-provider APIs, voting, guest authentication, or other Event Hub modules.
+### Spotify Developer Dashboard setup
+
+1. Sign in to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) using the host's Spotify account. Spotify currently requires the **app owner to have active Premium** for development-mode API access; guests do not need Spotify or Premium.
+2. Choose **Create app**. Use **Shindig** for the name, a description such as **Music catalog search for party song suggestions**, and **https://www.haveashindig.com** for the website. Select **Web API**. Review and accept Spotify's developer terms yourself.
+3. This server-to-server Client Credentials flow needs no user scopes or authorization callback. Leave Redirect URIs empty if the dashboard permits; if its form requires one, add **https://www.haveashindig.com/event**. This flow never uses that value or sends guests through Spotify login.
+4. In the app's **Settings**, copy **Client ID** and reveal/copy **Client Secret** directly into Vercel. Do not paste the secret in source code, screenshots, or chat. Do not configure a Web Playback SDK, OAuth guest login, or guest allowlist for this app-only flow.
+5. Review [Spotify's current access and quota rules](https://developer.spotify.com/documentation/web-api/concepts/quota-modes). Creating credentials does not guarantee unrestricted production access. Development-mode application quotas apply and Spotify may reject requests if the owner's account/app is ineligible or quota is exhausted. The five-user rule concerns authenticated Spotify users; this flow does not authenticate guests. Extended quota approval has separate eligibility requirements and is not automatically granted.
+
+### Vercel setup for music search
+
+1. Apply migration `007` in the Neon production database used by this project's `DATABASE_URL`, coordinated with deploying this version.
+2. In **Vercel → Shindig → Settings → Environment Variables**, add **SPOTIFY_CLIENT_ID** and **SPOTIFY_CLIENT_SECRET**, selecting **Production**. Keep the secret sensitive. Neither variable may use a `NEXT_PUBLIC_` prefix.
+3. Optionally add **SPOTIFY_MARKET=US** (US is already the default). Keep the existing **DATABASE_URL** and **ADMIN_PASSWORD** unchanged. No new database service or callback URL environment variable is needed.
+4. For preview/local testing, also configure credentials in the corresponding environment and apply `007` to its database. Use a separate Neon branch for previews when possible; preview and production sharing Spotify credentials also share upstream quotas.
+5. Deploy this code/redeploy after saving the variables; environment changes do not update an already-running deployment.
+6. Open **/event → Playlist → Suggest a Song**. Search, select a track, and confirm it appears after refresh and in **/admin/playlist**. Select the exact same track again and confirm the friendly duplicate message and a single row. Check a missing-artwork result if available. A live Spotify search/save check is still required after credentials are configured; mocked tests cannot verify the app's actual provider entitlement.
+
+No playback, previews, provider playlist creation, voting, guest authentication, or additional Event Hub modules are included.
+
+### Catalog verification
+
+`npm test` covers the provider adapter, token refresh, search caching/debounce/stale responses, server validation, selection/save actions, duplicate handling, artwork fallbacks/attribution, feature flags, rate limiting, provider failures, legacy display, and existing host moderation. Provider responses and the Neon driver are mocked in the automated unit tests; these are not proof of live Spotify access.
+
+For real SQL checks, run `psql "$TEST_DATABASE_URL" -f tests/music-catalog.integration.sql` against an **isolated disposable Postgres database only**. It seeds one legacy suggestion, applies and reapplies migrations `005`/`007`, and verifies catalog saves, duplicate constraints, legacy preservation, and shared quota SQL. It must not be run against production. The milestone was also checked with eight simultaneous inserts (one row saved), plus 320px/390px browser layout, missing-configuration, and selection-state checks using synthetic fixtures. Production Neon migration and live Spotify verification remain deployment steps.
 
 ## Host Updates and Guest Q&A
 

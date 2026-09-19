@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { PlaylistDeleteButton } from "../../../components/admin/playlist-delete-button";
+import { TrackDetails } from "../../../components/music/track-details";
 import { OYSTER_ROAST_EVENT } from "../../../lib/oyster-roast-event";
 import { isAdminAuthenticated } from "../../../lib/server/admin-session";
 import { listPlaylistSuggestionsForAdmin, type AdminPlaylistSuggestion } from "../../../lib/server/playlist";
@@ -45,8 +46,7 @@ export default async function AdminPlaylistPage() {
                 {suggestions.map((suggestion) => (
                   <li className="py-5 first:border-t first:border-[#202523]/10 sm:flex sm:items-start sm:justify-between sm:gap-6" key={suggestion.id}>
                     <div className="min-w-0 break-words">
-                      <h2 className="font-serif text-2xl">{suggestion.songTitle}</h2>
-                      <p className="mt-1 text-sm text-[#202523]/70">{suggestion.artist}</p>
+                      <TrackDetails attribution={suggestion.attribution} track={suggestion} />
                       <p className="mt-2 text-xs text-[#202523]/55">{suggestion.suggestedBy ? `Suggested by ${suggestion.suggestedBy}` : "No name provided"}</p>
                       <p className="mt-1 text-xs text-[#202523]/50">{new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: OYSTER_ROAST_EVENT.timeZone }).format(new Date(suggestion.createdAt))}</p>
                     </div>

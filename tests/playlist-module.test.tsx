@@ -7,6 +7,8 @@ vi.mock("../app/event/question-actions", () => ({ submitGuestQuestion: vi.fn() }
 import { PlaylistModule } from "../components/event-hub/playlist-module";
 import { EventModules } from "../components/event-hub/event-modules";
 import { OYSTER_ROAST_EVENT } from "../lib/oyster-roast-event";
+import { MusicSearch, MusicSearchResults } from "../components/music/music-search";
+import { attribution, legacy, track } from "./fixtures/music";
 
 describe("public Playlist module", () => {
   it("shows the requested empty state and suggestion action", () => {
@@ -18,8 +20,8 @@ describe("public Playlist module", () => {
 
   it("only renders song, artist, and an optional public name; escaping user text", () => {
     const suggestions = [
-      { songTitle: "<script>alert(1)</script>", artist: "Artist", suggestedBy: "Guest", id: "secret-id", createdAt: "private-time" },
-      { songTitle: "Another Song", artist: "Another Artist", suggestedBy: null },
+      { ...legacy, songTitle: "<script>alert(1)</script>", artist: "Artist", suggestedBy: "Guest", id: "secret-id", createdAt: "private-time" },
+      { ...legacy, songTitle: "Another Song", artist: "Another Artist", suggestedBy: null },
     ];
     const html = renderToStaticMarkup(<PlaylistModule suggestions={suggestions} />);
     expect(html).toContain("Suggested by Guest");
@@ -41,10 +43,41 @@ describe("public Playlist module", () => {
     const html = renderToStaticMarkup(<EventModules
       features={{ ...OYSTER_ROAST_EVENT.features, playlist: false }}
       guestList={null}
-      playlistSuggestions={[{ songTitle: "Hidden Song", artist: "Hidden Artist", suggestedBy: "Hidden Name" }]}
+      playlistSuggestions={[{ ...legacy, songTitle: "Hidden Song", artist: "Hidden Artist", suggestedBy: "Hidden Name" }]}
     />);
     for (const text of ["hub-tab-playlist", "playlist-heading", "Hidden Song", "Hidden Artist", "Hidden Name", "Suggest a Song"]) {
       expect(html).not.toContain(text);
     }
+  });
+
+  it("provides catalog search, not manual title and artist inputs", () => {
+    const html = renderToStaticMarkup(<MusicSearch onSelect={vi.fn()} pending={null} />);
+    expect(html).toContain("Search for a song");
+    expect(html).toContain('type="search"');
+    expect(html).not.toContain('name="songTitle"');
+    expect(html).not.toContain('name="artist"');
+  });
+
+  it("shows linked original artwork, full attribution, metadata, and an explicit label", () => {
+    const html = renderToStaticMarkup(<MusicSearchResults onSelect={vi.fn()} pending={null} result={{ tracks: [{ ...track, explicit: true }], attribution }} />);
+    for (const value of [track.songTitle, track.artist, track.album!, track.artworkUrl!, track.externalUrl, attribution.logoUrl, "Explicit", "Add"]) expect(html).toContain(value);
+    expect(html).toContain("object-contain");
+    expect(html).not.toContain("object-cover");
+    expect(html).not.toContain("/_next/image");
+  });
+
+  it("handles missing artwork and disables all adds while one selection is saving", () => {
+    const html = renderToStaticMarkup(<MusicSearchResults onSelect={vi.fn()} pending={`${track.provider}:${track.providerTrackId}`} result={{ tracks: [{ ...track, artworkUrl: null }], attribution }} />);
+    expect(html).toContain("♪");
+    expect(html).not.toContain("i.scdn.co");
+    expect(html).toContain("Adding…");
+    expect(html).toContain('disabled=""');
+  });
+
+  it("keeps both saved catalog and legacy tracks visible without search credentials", () => {
+    const html = renderToStaticMarkup(<PlaylistModule suggestions={[legacy, { ...track, attribution, suggestedBy: "Chelsea" }]} />);
+    expect(html).toContain(legacy.songTitle);
+    expect(html).toContain(track.songTitle);
+    expect(html).toContain("Suggested by Chelsea");
   });
 });

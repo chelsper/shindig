@@ -1,9 +1,9 @@
 import "server-only";
 
-import { PLAYLIST_LIMITS, type PublicPlaylistSuggestion } from "../playlist";
+import { PLAYLIST_LIMITS, type PlaylistSelection } from "../playlist";
 
 type ValidationResult =
-  | { success: true; data: PublicPlaylistSuggestion }
+  | { success: true; data: PlaylistSelection }
   | { success: false; message: string };
 
 function cleanText(value: string) {
@@ -16,31 +16,22 @@ export function validatePlaylistSuggestion(input: unknown): ValidationResult {
   }
 
   const fields = input as Record<string, unknown>;
-  if (typeof fields.songTitle !== "string" || !fields.songTitle.trim()) {
-    return { success: false, message: "Please enter a song title." };
-  }
-  if (typeof fields.artist !== "string" || !fields.artist.trim()) {
-    return { success: false, message: "Please enter the artist." };
+  if (typeof fields.provider !== "string" || !/^[a-z][a-z0-9_-]{0,31}$/.test(fields.provider)
+    || typeof fields.providerTrackId !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(fields.providerTrackId)) {
+    return { success: false, message: "Please choose a song from the search results." };
   }
   if (fields.suggestedBy != null && typeof fields.suggestedBy !== "string") {
     return { success: false, message: "Please check your name, or leave it blank." };
   }
 
-  const songTitle = cleanText(fields.songTitle);
-  const artist = cleanText(fields.artist);
   const suggestedBy = typeof fields.suggestedBy === "string"
     ? cleanText(fields.suggestedBy) || null
     : null;
 
-  if (songTitle.length > PLAYLIST_LIMITS.songTitle) {
-    return { success: false, message: `Keep the song title to ${PLAYLIST_LIMITS.songTitle} characters or fewer.` };
-  }
-  if (artist.length > PLAYLIST_LIMITS.artist) {
-    return { success: false, message: `Keep the artist to ${PLAYLIST_LIMITS.artist} characters or fewer.` };
-  }
   if (suggestedBy && suggestedBy.length > PLAYLIST_LIMITS.suggestedBy) {
     return { success: false, message: `Keep your name to ${PLAYLIST_LIMITS.suggestedBy} characters or fewer.` };
   }
 
-  return { success: true, data: { songTitle, artist, suggestedBy } };
+  // Never accept browser-supplied titles, artwork URLs, or event identifiers.
+  return { success: true, data: { provider: fields.provider, providerTrackId: fields.providerTrackId, suggestedBy } };
 }

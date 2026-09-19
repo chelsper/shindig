@@ -5,8 +5,9 @@ vi.mock("server-only", () => ({}));
 vi.mock("@neondatabase/serverless", () => ({ neon: mocks.neon }));
 
 import { createPlaylistSuggestion, deletePlaylistSuggestion, listPlaylistSuggestionsForAdmin, listPublicPlaylistSuggestions } from "../lib/server/playlist";
+import { track, attribution, legacy } from "./fixtures/music";
 
-const suggestion = { songTitle: "Lovely Day", artist: "Bill Withers", suggestedBy: null };
+const suggestion = { ...track, suggestedBy: null };
 const id = "4f849d18-931b-42ef-a4d4-7ec07aa73b3d";
 
 beforeEach(() => {
@@ -21,13 +22,13 @@ describe("playlist data access", () => {
     await expect(createPlaylistSuggestion(suggestion)).resolves.toBe("added");
     await expect(createPlaylistSuggestion(suggestion)).resolves.toBe("duplicate");
     const [query, ...values] = mocks.sql.mock.calls[0];
-    expect(query.join("?")).toContain("ON CONFLICT (event_slug, lower(btrim(song_title)), lower(btrim(artist))) DO NOTHING");
-    expect(values).toEqual([expect.stringMatching(/^[0-9a-f-]{36}$/), "oyster-roast-2026", "Lovely Day", "Bill Withers", null]);
+    expect(query.join("?")).toContain("ON CONFLICT (event_slug, provider, provider_track_id) WHERE provider IS NOT NULL DO NOTHING");
+    expect(values).toEqual([expect.stringMatching(/^[0-9a-f-]{36}$/), "oyster-roast-2026", track.provider, track.providerTrackId, track.songTitle, track.artist, track.album, track.artworkUrl, track.externalUrl, track.explicit, null]);
   });
 
   it("selects only public song fields and strips unexpected private fields", async () => {
     mocks.sql.mockResolvedValue([{ ...suggestion, id, createdAt: "2026-09-19T12:00:00Z", privateNote: "secret" }]);
-    await expect(listPublicPlaylistSuggestions()).resolves.toEqual([suggestion]);
+    await expect(listPublicPlaylistSuggestions()).resolves.toEqual([{ ...suggestion, attribution }]);
     const [parts, slug] = mocks.sql.mock.calls[0];
     expect(parts.join("?").split("FROM")[0]).not.toMatch(/\b(id|created_at|createdAt|privateNote)\b/);
     expect(slug).toBe("oyster-roast-2026");
@@ -35,7 +36,14 @@ describe("playlist data access", () => {
 
   it("returns IDs only through the separate admin query", async () => {
     mocks.sql.mockResolvedValue([{ ...suggestion, id, createdAt: "2026-09-19T12:00:00Z" }]);
-    await expect(listPlaylistSuggestionsForAdmin()).resolves.toEqual([{ ...suggestion, id, createdAt: "2026-09-19T12:00:00.000Z" }]);
+    await expect(listPlaylistSuggestionsForAdmin()).resolves.toEqual([{ ...suggestion, attribution, id, createdAt: "2026-09-19T12:00:00.000Z" }]);
+  });
+
+  it("preserves legacy suggestions without calling the catalog or requiring credentials", async () => {
+    vi.stubEnv("SPOTIFY_CLIENT_ID", "");
+    vi.stubEnv("SPOTIFY_CLIENT_SECRET", "");
+    mocks.sql.mockResolvedValue([{ songTitle: legacy.songTitle, artist: legacy.artist, suggestedBy: null }]);
+    await expect(listPublicPlaylistSuggestions()).resolves.toEqual([legacy]);
   });
 
   it("scopes deletions to the known event and requested record", async () => {
