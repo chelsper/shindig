@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { RsvpUpdateForm } from "../../../components/rsvp/rsvp-update-form";
+import { EventHubLink } from "../../../components/event-hub-link";
 import { OYSTER_ROAST_EVENT } from "../../../lib/oyster-roast-event";
 import { isValidRsvpEditToken } from "../../../lib/rsvp-edit-token";
 import { hashRsvpEditToken } from "../../../lib/server/rsvp-edit-token";
@@ -35,8 +36,11 @@ function LinkUnavailable({ loadFailed = false }: { loadFailed?: boolean }) {
             ? "Please refresh and try again in a moment."
             : "Check that you opened the complete private link from your RSVP confirmation."}
         </p>
+        <div className="mt-7">
+          <EventHubLink label="View Event Hub" />
+        </div>
         <Link
-          className="mt-7 inline-flex text-xs font-bold tracking-[0.14em] text-[#214e91] uppercase underline decoration-[#214e91]/30 underline-offset-4"
+          className="mt-3 inline-flex min-h-11 items-center text-xs font-bold tracking-[0.14em] text-[#214e91] uppercase underline decoration-[#214e91]/30 underline-offset-4"
           href="/"
         >
           Return to invitation

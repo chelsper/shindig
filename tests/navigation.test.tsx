@@ -1,5 +1,10 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../app/actions", () => ({ submitRsvp: vi.fn() }));
+vi.mock("../app/rsvp/actions", () => ({ updateRsvp: vi.fn() }));
+vi.mock("../lib/server/rsvps", () => ({ getRsvpForGuest: vi.fn() }));
+vi.mock("../lib/server/rsvp-edit-token", () => ({ hashRsvpEditToken: vi.fn().mockReturnValue("test-hash") }));
 
 vi.mock("../app/admin/actions", () => ({ createAdminGuest: vi.fn(), updateAdminGuest: vi.fn(), deleteAdminGuest: vi.fn(), logoutAdmin: vi.fn() }));
 vi.mock("../app/admin/event/actions", () => ({ saveEventHeaderSettings: vi.fn() }));
@@ -16,6 +21,10 @@ import { AdminDashboard } from "../components/admin/admin-dashboard";
 import { AdminGuestForm } from "../components/admin/admin-guest-form";
 import { EventHeaderEditor } from "../components/admin/event-header-editor";
 import { EventHubHeader } from "../components/event-hub/event-hub-header";
+import { InvitationPage } from "../components/invitation-page";
+import { RsvpUpdateForm } from "../components/rsvp/rsvp-update-form";
+import RsvpUpdatePage from "../app/rsvp/[token]/page";
+import { getRsvpForGuest } from "../lib/server/rsvps";
 import AdminPlaylistPage from "../app/admin/playlist/page";
 import AdminQuestionsPage from "../app/admin/questions/page";
 import AdminUpdatesPage from "../app/admin/updates/page";
@@ -44,6 +53,43 @@ function links(html: string) {
 }
 
 describe("screen navigation", () => {
+  beforeEach(() => { vi.mocked(getRsvpForGuest).mockReset(); });
+
+  it.each([false, true])("provides Hub navigation before any RSVP, including preview=%s", (persistenceDisabled) => {
+    const html = renderToStaticMarkup(<InvitationPage persistenceDisabled={persistenceDisabled} />);
+    const destinations = links(html).filter((link) => link.href === OYSTER_ROAST_EVENT.eventHub.path);
+    expect(destinations).toHaveLength(2);
+    expect(destinations[0].label).toContain("Event Hub");
+    expect(destinations[1].label).toContain("View Event Hub");
+    for (const link of destinations) {
+      expect(link.attributes).toContain("min-h-11");
+      expect(link.attributes).toContain("focus-visible:outline");
+      expect(link.attributes).not.toContain('target="_blank"');
+    }
+    expect(html.indexOf('href="/event"')).toBeLessThan(html.indexOf("Oyster roast invitation artwork"));
+    expect(html).toContain("No new RSVP needed to visit.");
+    expect(html).not.toContain("RSVP received");
+  });
+
+  it.each([true, false])("provides a Hub exit before editing attending=%s without exposing the private token", (attending) => {
+    const html = renderToStaticMarkup(<RsvpUpdateForm token={"a".repeat(43)} initialRsvp={{ ...guest, attending, partySize: attending ? 1 : null }} />);
+    expect(links(html)).toContainEqual(expect.objectContaining({ href: OYSTER_ROAST_EVENT.eventHub.path, label: "Event Hub→" }));
+    expect(links(html).some((link) => link.href?.includes("a".repeat(43)))).toBe(false);
+    expect(html).not.toContain("RSVP updated");
+  });
+
+  it.each(["invalid", "missing", "failure"])("provides a Hub exit for an %s RSVP update link", async (state) => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      if (state === "failure") vi.mocked(getRsvpForGuest).mockRejectedValue(new Error("offline"));
+      else vi.mocked(getRsvpForGuest).mockResolvedValue(null);
+      const html = renderToStaticMarkup(await RsvpUpdatePage({ params: Promise.resolve({ token: state === "invalid" ? "invalid" : "a".repeat(43) }) }));
+      expect(links(html)).toContainEqual(expect.objectContaining({ href: OYSTER_ROAST_EVENT.eventHub.path, label: "View Event Hub→" }));
+      expect(links(html)).toContainEqual(expect.objectContaining({ href: "/", label: "Return to invitation" }));
+      expect(html).toContain(state === "failure" ? "We couldn’t load your RSVP." : "This update link isn’t available.");
+    } finally { log.mockRestore(); }
+  });
+
   it("makes the header-image dashboard pill an accessible link back to /admin", () => {
     const html = renderToStaticMarkup(<EventHeaderEditor initialSettings={DEFAULT_EVENT_HUB_HEADER} uploadConfigured={false} />);
     const dashboard = links(html).find((link) => link.label === "Host Dashboard");

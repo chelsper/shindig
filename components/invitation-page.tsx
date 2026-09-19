@@ -6,6 +6,7 @@ import { FormEvent, useRef, useState, useTransition } from "react";
 
 import { submitRsvp } from "../app/actions";
 import { CalendarActions } from "./calendar-actions";
+import { EventHubLink } from "./event-hub-link";
 import { OYSTER_ROAST_EVENT } from "../lib/oyster-roast-event";
 import { createRsvpEditToken } from "../lib/rsvp-edit-token";
 
@@ -165,11 +166,14 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
       <div aria-hidden="true" className="page-texture" />
 
       <div className="relative mx-auto max-w-[1180px] px-4 py-5 sm:px-6 sm:py-8 lg:px-8 lg:py-12">
-        <header className="mb-5 flex items-center justify-between sm:mb-7">
+        <header className="mb-5 flex flex-wrap items-center justify-between gap-3 sm:mb-7">
           <p className="font-serif text-xl tracking-[-0.02em] sm:text-2xl">Shindig</p>
-          <p className="rounded-full border border-[#202523]/15 bg-white/40 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#202523]/65 sm:text-xs">
-            {oysterRoastEvent.cityLabel}
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="rounded-full border border-[#202523]/15 bg-white/40 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#202523]/65 sm:text-xs">
+              {oysterRoastEvent.cityLabel}
+            </p>
+            <EventHubLink />
+          </div>
         </header>
 
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.16fr)_minmax(370px,0.84fr)] lg:gap-10">
@@ -430,6 +434,10 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
                   )}
                 </form>
               )}
+            </div>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-[#202523]/60">
+              <p>No new RSVP needed to visit.</p>
+              <EventHubLink label="View Event Hub" />
             </div>
           </section>
         </div>

@@ -6,6 +6,7 @@ import { FormEvent, useRef, useState, useTransition } from "react";
 import { updateRsvp } from "../../app/rsvp/actions";
 import { OYSTER_ROAST_EVENT } from "../../lib/oyster-roast-event";
 import { CalendarActions } from "../calendar-actions";
+import { EventHubLink } from "../event-hub-link";
 
 type GuestRsvp = {
   guestName: string;
@@ -81,13 +82,16 @@ export function RsvpUpdateForm({ initialRsvp, token }: RsvpUpdateFormProps) {
     <main className="relative min-h-screen overflow-hidden bg-[#f7f0e3] px-4 py-5 text-[#202523] sm:px-6 sm:py-8">
       <div className="page-texture" />
       <div className="relative mx-auto max-w-2xl">
-        <header className="flex items-center justify-between border-b border-[#202523]/12 pb-5">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#202523]/12 pb-5">
           <Link className="font-serif text-xl tracking-[-0.02em] sm:text-2xl" href="/">
             Shindig
           </Link>
-          <p className="rounded-full border border-[#202523]/15 bg-white/40 px-3 py-1.5 text-[10px] font-semibold tracking-[0.18em] text-[#202523]/65 uppercase">
-            Private RSVP
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="rounded-full border border-[#202523]/15 bg-white/40 px-3 py-1.5 text-[10px] font-semibold tracking-[0.18em] text-[#202523]/65 uppercase">
+              Private RSVP
+            </p>
+            <EventHubLink />
+          </div>
         </header>
 
         <section className="py-8 text-center sm:py-11">
