@@ -221,7 +221,7 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
               </div>
 
               <p className="mt-5 max-w-lg text-[15px] leading-7 text-[#202523]/72 sm:text-base">
-                Oysters on the fire, cold drinks in hand, and plenty of good food to go around. Come casual, come hungry, and stay awhile.
+                Oysters on the fire, cold drinks in hand, and good food to go around. Come casual and stay awhile.
               </p>
             </div>
 

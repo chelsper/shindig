@@ -55,6 +55,12 @@ function links(html: string) {
 describe("screen navigation", () => {
   beforeEach(() => { vi.mocked(getRsvpForGuest).mockReset(); });
 
+  it("displays the current invitation description", () => {
+    const html = renderToStaticMarkup(<InvitationPage persistenceDisabled={false} />);
+    expect(html).toContain("Oysters on the fire, cold drinks in hand, and good food to go around. Come casual and stay awhile.");
+    expect(html).not.toContain("come hungry");
+  });
+
   it.each([false, true])("provides Hub navigation before any RSVP, including preview=%s", (persistenceDisabled) => {
     const html = renderToStaticMarkup(<InvitationPage persistenceDisabled={persistenceDisabled} />);
     const destinations = links(html).filter((link) => link.href === OYSTER_ROAST_EVENT.eventHub.path);
