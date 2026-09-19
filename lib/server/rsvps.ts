@@ -48,6 +48,11 @@ export type PublicGuestList = {
   guests: PublicGuestListGuest[];
 };
 
+type DatabaseAdminRsvp = Omit<AdminRsvp, "createdAt" | "updatedAt"> & {
+  createdAt: string | Date;
+  updatedAt: string | Date;
+};
+
 const OYSTER_ROAST_SLUG = OYSTER_ROAST_EVENT.slug;
 
 function getDatabaseUrl() {
@@ -70,6 +75,14 @@ function withoutEditTokenHash(
     partySize: rsvp.partySize,
     displayOnGuestList: rsvp.displayOnGuestList,
     comment: rsvp.comment,
+  };
+}
+
+function normalizeAdminRsvp(rsvp: DatabaseAdminRsvp): AdminRsvp {
+  return {
+    ...rsvp,
+    createdAt: new Date(rsvp.createdAt).toISOString(),
+    updatedAt: new Date(rsvp.updatedAt).toISOString(),
   };
 }
 
@@ -235,18 +248,94 @@ export async function listRsvps(filter: RsvpFilter = "all"): Promise<AdminRsvp[]
     ORDER BY created_at DESC
   `;
 
-  return rows.map((row) => {
-    const rsvp = row as Omit<AdminRsvp, "createdAt" | "updatedAt"> & {
-      createdAt: string | Date;
-      updatedAt: string | Date;
-    };
+  return rows.map((row) => normalizeAdminRsvp(row as DatabaseAdminRsvp));
+}
 
-    return {
-      ...rsvp,
-      createdAt: new Date(rsvp.createdAt).toISOString(),
-      updatedAt: new Date(rsvp.updatedAt).toISOString(),
-    };
-  });
+export async function getRsvpForAdmin(id: string): Promise<AdminRsvp | null> {
+  const sql = neon(getDatabaseUrl());
+  const rows = await sql`
+    SELECT
+      id::text AS id,
+      event_slug AS "eventSlug",
+      guest_name AS "guestName",
+      attending,
+      party_size AS "partySize",
+      display_on_guest_list AS "displayOnGuestList",
+      comment,
+      created_at AS "createdAt",
+      updated_at AS "updatedAt"
+    FROM rsvps
+    WHERE event_slug = ${OYSTER_ROAST_SLUG}
+      AND id = ${id}::uuid
+    LIMIT 1
+  `;
+  const rsvp = rows[0] as DatabaseAdminRsvp | undefined;
+
+  return rsvp ? normalizeAdminRsvp(rsvp) : null;
+}
+
+export async function createRsvpForAdmin(
+  id: string,
+  rsvp: ValidatedRsvpUpdate,
+): Promise<void> {
+  const sql = neon(getDatabaseUrl());
+  const rows = await sql`
+    INSERT INTO rsvps (
+      id,
+      event_slug,
+      guest_name,
+      attending,
+      party_size,
+      display_on_guest_list,
+      comment
+    )
+    VALUES (
+      ${id}::uuid,
+      ${OYSTER_ROAST_SLUG},
+      ${rsvp.guestName},
+      ${rsvp.attending},
+      ${rsvp.partySize},
+      ${rsvp.displayOnGuestList},
+      ${rsvp.comment}
+    )
+    RETURNING id
+  `;
+
+  if (!rows[0]) throw new Error("The RSVP could not be created.");
+}
+
+export async function updateRsvpForAdmin(
+  id: string,
+  rsvp: ValidatedRsvpUpdate,
+): Promise<boolean> {
+  const sql = neon(getDatabaseUrl());
+  const rows = await sql`
+    UPDATE rsvps
+    SET
+      guest_name = ${rsvp.guestName},
+      attending = ${rsvp.attending},
+      party_size = ${rsvp.partySize},
+      display_on_guest_list = ${rsvp.displayOnGuestList},
+      comment = ${rsvp.comment},
+      updated_at = now()
+    WHERE event_slug = ${OYSTER_ROAST_SLUG}
+      AND id = ${id}::uuid
+    RETURNING id
+  `;
+
+  return Boolean(rows[0]);
+}
+
+export async function deleteRsvpForAdmin(id: string): Promise<boolean> {
+  const sql = neon(getDatabaseUrl());
+  const rows = await sql`
+    DELETE FROM rsvps
+    WHERE event_slug = ${OYSTER_ROAST_SLUG}
+      AND id = ${id}::uuid
+    RETURNING id
+  `;
+
+  return Boolean(rows[0]);
 }
 
 export async function getPublicGuestList(): Promise<PublicGuestList> {

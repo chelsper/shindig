@@ -9,12 +9,16 @@ vi.mock("server-only", () => ({}));
 vi.mock("@neondatabase/serverless", () => ({ neon: mocks.neon }));
 
 import {
+  createRsvpForAdmin,
+  deleteRsvpForAdmin,
+  getRsvpForAdmin,
+  getPublicGuestList,
   getRsvpForGuest,
   getRsvpSummary,
   listRsvps,
   saveRsvp,
+  updateRsvpForAdmin,
   updateRsvpForGuest,
-  getPublicGuestList,
 } from "../lib/server/rsvps";
 
 const rsvp = {
@@ -247,6 +251,59 @@ describe("admin RSVP queries", () => {
     const [queryParts, ...values] = mocks.sql.mock.calls[0];
     expect(queryParts.join("?")).toContain("ORDER BY created_at DESC");
     expect(values).toEqual(["oyster-roast-2026", true, true]);
+  });
+
+  it("loads one RSVP for an authenticated admin edit page", async () => {
+    const createdAt = "2026-09-19T14:00:00.000Z";
+    const updatedAt = "2026-09-19T14:05:00.000Z";
+    mocks.sql.mockResolvedValueOnce([
+      { ...savedRsvp, eventSlug: "oyster-roast-2026", createdAt, updatedAt },
+    ]);
+
+    await expect(getRsvpForAdmin(rsvp.id)).resolves.toEqual({
+      ...savedRsvp,
+      eventSlug: "oyster-roast-2026",
+      createdAt,
+      updatedAt,
+    });
+
+    const [queryParts, ...values] = mocks.sql.mock.calls[0];
+    expect(queryParts.join("?")).toContain("AND id = ?::uuid");
+    expect(values).toEqual(["oyster-roast-2026", rsvp.id]);
+  });
+
+  it("creates, updates, and deletes RSVPs within the known event", async () => {
+    const adminInput = {
+      guestName: "Host Added Guest",
+      attending: true,
+      partySize: 2,
+      displayOnGuestList: false,
+      comment: null,
+    };
+    mocks.sql
+      .mockResolvedValueOnce([{ id: rsvp.id }])
+      .mockResolvedValueOnce([{ id: rsvp.id }])
+      .mockResolvedValueOnce([{ id: rsvp.id }]);
+
+    await expect(createRsvpForAdmin(rsvp.id, adminInput)).resolves.toBeUndefined();
+    await expect(updateRsvpForAdmin(rsvp.id, adminInput)).resolves.toBe(true);
+    await expect(deleteRsvpForAdmin(rsvp.id)).resolves.toBe(true);
+
+    expect(mocks.sql.mock.calls[0].slice(1)).toEqual([
+      rsvp.id,
+      "oyster-roast-2026",
+      adminInput.guestName,
+      true,
+      2,
+      false,
+      null,
+    ]);
+    expect(mocks.sql.mock.calls[1][0].join("?")).toContain("updated_at = now()");
+    expect(mocks.sql.mock.calls[2][0].join("?")).toContain("DELETE FROM rsvps");
+    expect(mocks.sql.mock.calls[2].slice(1)).toEqual([
+      "oyster-roast-2026",
+      rsvp.id,
+    ]);
   });
 
   it("fails closed when the admin database connection is absent", async () => {

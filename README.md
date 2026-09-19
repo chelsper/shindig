@@ -44,7 +44,7 @@ The connection string is server-only. Do not rename it to `NEXT_PUBLIC_DATABASE_
 
 Visit `/admin` and enter the configured host password. A successful login creates a signed, HTTP-only, same-site cookie that expires after 12 hours. Changing `ADMIN_PASSWORD` invalidates existing sessions.
 
-The dashboard reads RSVP data only on the server, supports attending/declined filters, shows event totals, and exports the protected guest list as CSV. The export requires the same authenticated admin session.
+The dashboard reads RSVP data only on the server, supports attending/declined filters, shows event totals, and exports the protected guest list as CSV. Authenticated hosts can also add RSVPs, edit guest responses and guest-list visibility, or permanently delete a response after confirmation. Every mutation is protected by the same server-verified admin session and immediately refreshes the dashboard and public Event Hub.
 
 ## Guest RSVP updates
 

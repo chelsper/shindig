@@ -26,20 +26,19 @@ export function EventHubHeader() {
 
   return (
     <header className="overflow-hidden rounded-[1.75rem] border border-[#202523]/10 bg-[#fffaf1]/90 shadow-[0_18px_50px_rgba(41,56,53,0.10)] sm:rounded-[2rem]">
-      <div className="grid sm:grid-cols-[13rem_minmax(0,1fr)]">
-        <div className="relative min-h-48 overflow-hidden bg-[#dceaf7] sm:min-h-full">
-          <Image
-            alt={`Artwork for ${event.title}`}
-            className="object-cover object-[center_28%]"
-            fill
-            priority
-            sizes="(min-width: 640px) 208px, 100vw"
-            src="/oyster-roast-invitation.png"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#202523]/18 to-transparent" />
-        </div>
+      <div className="relative aspect-[16/9] overflow-hidden bg-[#dceaf7] sm:aspect-[16/6]">
+        <Image
+          alt={`Artwork for ${event.title}`}
+          className="object-cover object-[center_26%]"
+          fill
+          priority
+          sizes="(min-width: 896px) 896px, 100vw"
+          src="/oyster-roast-invitation.png"
+        />
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#202523]/22 to-transparent" />
+      </div>
 
-        <div className="p-5 sm:p-7 lg:p-9">
+      <div className="p-5 sm:p-7 lg:p-9">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-[0.68rem] font-bold uppercase tracking-[0.22em] text-[#355f9e]">
@@ -96,7 +95,6 @@ export function EventHubHeader() {
           >
             Return to invitation
           </Link>
-        </div>
       </div>
     </header>
   );
