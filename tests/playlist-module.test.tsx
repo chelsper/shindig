@@ -8,6 +8,7 @@ import { PlaylistModule } from "../components/event-hub/playlist-module";
 import { EventModules } from "../components/event-hub/event-modules";
 import { OYSTER_ROAST_EVENT } from "../lib/oyster-roast-event";
 import { MusicSearch, MusicSearchResults } from "../components/music/music-search";
+import { SongConfirmation } from "../components/music/song-confirmation";
 import { attribution, legacy, track } from "./fixtures/music";
 
 describe("public Playlist module", () => {
@@ -51,7 +52,7 @@ describe("public Playlist module", () => {
   });
 
   it("provides catalog search, not manual title and artist inputs", () => {
-    const html = renderToStaticMarkup(<MusicSearch onSelect={vi.fn()} pending={null} />);
+    const html = renderToStaticMarkup(<MusicSearch onSelect={vi.fn()} />);
     expect(html).toContain("Search for a song");
     expect(html).toContain('type="search"');
     expect(html).not.toContain('name="songTitle"');
@@ -59,19 +60,20 @@ describe("public Playlist module", () => {
   });
 
   it("shows linked original artwork, full attribution, metadata, and an explicit label", () => {
-    const html = renderToStaticMarkup(<MusicSearchResults onSelect={vi.fn()} pending={null} result={{ tracks: [{ ...track, explicit: true }], attribution }} />);
-    for (const value of [track.songTitle, track.artist, track.album!, track.artworkUrl!, track.externalUrl, attribution.logoUrl, "Explicit", "Add"]) expect(html).toContain(value);
+    const html = renderToStaticMarkup(<MusicSearchResults onSelect={vi.fn()} result={{ tracks: [{ ...track, explicit: true }], attribution }} />);
+    for (const value of [track.songTitle, track.artist, track.album!, track.artworkUrl!, track.externalUrl, attribution.logoUrl, "Explicit", "Choose"]) expect(html).toContain(value);
     expect(html).toContain("object-contain");
     expect(html).not.toContain("object-cover");
     expect(html).not.toContain("/_next/image");
   });
 
-  it("handles missing artwork and disables all adds while one selection is saving", () => {
-    const html = renderToStaticMarkup(<MusicSearchResults onSelect={vi.fn()} pending={`${track.provider}:${track.providerTrackId}`} result={{ tracks: [{ ...track, artworkUrl: null }], attribution }} />);
+  it("handles missing artwork and offers selection rather than immediate submission", () => {
+    const html = renderToStaticMarkup(<MusicSearchResults onSelect={vi.fn()} result={{ tracks: [{ ...track, artworkUrl: null }], attribution }} />);
     expect(html).toContain("♪");
     expect(html).not.toContain("i.scdn.co");
-    expect(html).toContain("Adding…");
-    expect(html).toContain('disabled=""');
+    expect(html).toContain(`Choose ${track.songTitle} by ${track.artist}`);
+    expect(html).toContain('type="button"');
+    expect(html).not.toContain('type="submit"');
   });
 
   it("keeps both saved catalog and legacy tracks visible without search credentials", () => {
@@ -79,5 +81,45 @@ describe("public Playlist module", () => {
     expect(html).toContain(legacy.songTitle);
     expect(html).toContain(track.songTitle);
     expect(html).toContain("Suggested by Chelsea");
+  });
+});
+
+describe("song confirmation step", () => {
+  const props = { track, attribution, suggestedBy: "", pending: false, error: null, onSubmit: vi.fn(), onNameChange: vi.fn(), onChangeSong: vi.fn() };
+
+  it("shows the selected song and an optional name before the actual Add to Playlist button", () => {
+    const html = renderToStaticMarkup(<SongConfirmation {...props} />);
+    expect(html).toContain(track.songTitle);
+    expect(html).toContain(attribution.logoUrl);
+    expect(html).toContain('name="suggestedBy"');
+    expect(html).toContain('maxLength="80"');
+    expect(html).toContain("Your name (optional)");
+    expect(html).toContain("leave it blank to stay anonymous");
+    expect(html).toContain('type="submit"');
+    expect(html).toContain("Add to Playlist");
+    expect(html.indexOf('name="suggestedBy"')).toBeLessThan(html.indexOf("Add to Playlist"));
+    expect(html).not.toContain('required=""');
+  });
+
+  it("keeps the typed name and chosen track visible when a save fails", () => {
+    const html = renderToStaticMarkup(<SongConfirmation {...props} suggestedBy="Chelsea" error="Please try again." />);
+    expect(html).toContain('value="Chelsea"');
+    expect(html).toContain(track.songTitle);
+    expect(html).toContain('role="alert"');
+    expect(html).toContain("Please try again.");
+    expect(html).not.toContain('disabled=""');
+  });
+
+  it("offers a non-submitting way to choose another song", () => {
+    const html = renderToStaticMarkup(<SongConfirmation {...props} />);
+    expect(html).toMatch(/type="button">Choose a different song/);
+  });
+
+  it("disables name entry and both confirmation actions during submission", () => {
+    const html = renderToStaticMarkup(<SongConfirmation {...props} pending />);
+    expect(html).toContain('aria-busy="true"');
+    expect(html).toMatch(/<fieldset[^>]*disabled=""/);
+    expect(html.match(/disabled=""/g)).toHaveLength(3);
+    expect(html).toContain("Adding your song…");
   });
 });

@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition, type FormEvent } from "react";
 
 import { submitPlaylistSuggestion } from "../../app/event/playlist-actions";
-import { PLAYLIST_LIMITS, type PublicPlaylistSuggestion } from "../../lib/playlist";
-import type { MusicTrack } from "../../lib/music";
+import type { PublicPlaylistSuggestion } from "../../lib/playlist";
+import type { MusicAttribution, MusicTrack } from "../../lib/music";
 import { MusicSearch } from "../music/music-search";
+import { SongConfirmation } from "../music/song-confirmation";
 import { TrackDetails } from "../music/track-details";
 
 type PlaylistModuleProps = {
@@ -15,7 +16,7 @@ type PlaylistModuleProps = {
 
 export function PlaylistModule({ suggestions, unavailable = false }: PlaylistModuleProps) {
   const [showForm, setShowForm] = useState(false);
-  const [pendingTrack, setPendingTrack] = useState<string | null>(null);
+  const [selection, setSelection] = useState<{ track: MusicTrack; attribution: MusicAttribution } | null>(null);
   const [page, setPage] = useState(0);
   const [suggestedBy, setSuggestedBy] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -24,10 +25,19 @@ export function PlaylistModule({ suggestions, unavailable = false }: PlaylistMod
   const submitting = useRef(false);
   const suggestButton = useRef<HTMLButtonElement>(null);
 
-  function handleSelect(track: MusicTrack) {
+  function handleSelect(track: MusicTrack, attribution: MusicAttribution) {
     if (submitting.current || unavailable) return;
+    // Selecting only opens the review/name step. Nothing is saved yet.
+    setSelection({ track, attribution });
+    setError(null);
+    setConfirmation(null);
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selection || submitting.current || unavailable) return;
+    const { track } = selection;
     submitting.current = true;
-    setPendingTrack(`${track.provider}:${track.providerTrackId}`);
     setError(null);
     setConfirmation(null);
 
@@ -45,13 +55,13 @@ export function PlaylistModule({ suggestions, unavailable = false }: PlaylistMod
           : "Already on the Shindig playlist 🎵");
         setPage(0);
         setSuggestedBy("");
+        setSelection(null);
         setShowForm(false);
         suggestButton.current?.focus();
       } catch {
         setError("We couldn’t add your song. Please try again in a moment.");
       } finally {
         submitting.current = false;
-        setPendingTrack(null);
       }
     });
   }
@@ -71,7 +81,7 @@ export function PlaylistModule({ suggestions, unavailable = false }: PlaylistMod
           aria-expanded={showForm}
           className="mt-5 inline-flex min-h-12 items-center justify-center rounded-full border border-[#355f9e]/25 bg-[#e9f2f8]/80 px-5 text-sm font-semibold text-[#214e91] transition hover:border-[#355f9e] disabled:cursor-not-allowed disabled:opacity-50"
           disabled={unavailable || isPending}
-          onClick={() => { setShowForm(!showForm); setError(null); setConfirmation(null); }}
+          onClick={() => { setShowForm(!showForm); setSelection(null); setError(null); setConfirmation(null); }}
           ref={suggestButton}
           type="button"
         >
@@ -84,14 +94,18 @@ export function PlaylistModule({ suggestions, unavailable = false }: PlaylistMod
       <div id="playlist-suggestion-form" hidden={!showForm}>
         {showForm ? (
           <div className="mt-5 rounded-2xl border border-[#355f9e]/15 bg-[#fffaf1]/85 p-4 sm:p-5">
-            <MusicSearch onSelect={handleSelect} pending={pendingTrack}>
-              <label className="field-label mt-4">
-                Your name (optional)
-                <input aria-describedby="playlist-name-note" autoComplete="name" className="field-input" disabled={isPending} maxLength={PLAYLIST_LIMITS.suggestedBy} name="suggestedBy" onChange={(event) => setSuggestedBy(event.target.value)} value={suggestedBy} />
-              </label>
-              <p className="mt-2 text-xs leading-5 text-[#202523]/55" id="playlist-name-note">If you add your name, it will appear with your song.</p>
-            </MusicSearch>
-            {error ? <p className="mt-3 text-sm leading-6 text-[#843528]" role="alert">{error}</p> : null}
+            {selection ? (
+              <SongConfirmation
+                attribution={selection.attribution}
+                error={error}
+                onChangeSong={() => { if (!submitting.current) { setSelection(null); setError(null); } }}
+                onNameChange={setSuggestedBy}
+                onSubmit={handleSubmit}
+                pending={isPending}
+                suggestedBy={suggestedBy}
+                track={selection.track}
+              />
+            ) : <MusicSearch onSelect={handleSelect} />}
           </div>
         ) : null}
       </div>
