@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { logoutAdmin } from "../../app/admin/actions";
+import { OYSTER_ROAST_EVENT } from "../../lib/oyster-roast-event";
 import type {
   AdminRsvp,
   RsvpFilter,
@@ -44,6 +45,7 @@ function StatusBadge({ attending }: { attending: boolean }) {
 }
 
 export function AdminDashboard({ filter, rsvps, summary }: AdminDashboardProps) {
+  const event = OYSTER_ROAST_EVENT;
   const summaryCards = [
     { label: "Total Attending", value: summary.totalAttending },
     { label: "RSVP Responses", value: summary.totalResponses },
@@ -61,10 +63,10 @@ export function AdminDashboard({ filter, rsvps, summary }: AdminDashboardProps) 
               Shindig · Host Dashboard
             </p>
             <h1 className="font-serif mt-2 text-4xl leading-none tracking-[-0.025em] sm:text-5xl">
-              Oyster Roast 2026
+              {event.hostTitle}
             </h1>
             <p className="mt-3 text-sm text-[#202523]/58">
-              Saturday, November 7 · St. Johns, Florida
+              {event.shortDateLabel} · {event.cityLabel}
             </p>
           </div>
           <form action={logoutAdmin}>

@@ -1,4 +1,6 @@
-export const OYSTER_ROAST_EVENT_SLUG = "oyster-roast-2026";
+import { OYSTER_ROAST_EVENT } from "../oyster-roast-event";
+
+export const OYSTER_ROAST_EVENT_SLUG = OYSTER_ROAST_EVENT.slug;
 
 const UUID_V4_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

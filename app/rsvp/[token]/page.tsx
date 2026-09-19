@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { RsvpUpdateForm } from "../../../components/rsvp/rsvp-update-form";
+import { OYSTER_ROAST_EVENT } from "../../../lib/oyster-roast-event";
 import { isValidRsvpEditToken } from "../../../lib/rsvp-edit-token";
 import { hashRsvpEditToken } from "../../../lib/server/rsvp-edit-token";
 import { getRsvpForGuest } from "../../../lib/server/rsvps";
@@ -24,7 +25,7 @@ function LinkUnavailable({ loadFailed = false }: { loadFailed?: boolean }) {
       <div className="page-texture" />
       <section className="relative w-full max-w-md rounded-[1.75rem] border border-[#202523]/12 bg-[#fffaf1]/85 p-7 text-center shadow-[0_24px_70px_rgb(32_37_35_/_0.1)] sm:p-9">
         <p className="text-[0.68rem] font-bold tracking-[0.2em] text-[#355f9e] uppercase">
-          Shindig · Oyster Roast 2026
+          Shindig · {OYSTER_ROAST_EVENT.hostTitle}
         </p>
         <h1 className="font-serif mt-3 text-4xl tracking-[-0.025em]">
           {loadFailed ? "We couldn’t load your RSVP." : "This update link isn’t available."}

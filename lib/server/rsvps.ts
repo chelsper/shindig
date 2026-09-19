@@ -2,6 +2,7 @@ import "server-only";
 
 import { neon } from "@neondatabase/serverless";
 
+import { OYSTER_ROAST_EVENT } from "../oyster-roast-event";
 import type {
   ValidatedRsvp,
   ValidatedRsvpUpdate,
@@ -36,7 +37,7 @@ export type RsvpSummary = {
   totalPartySize: number;
 };
 
-const OYSTER_ROAST_SLUG = "oyster-roast-2026";
+const OYSTER_ROAST_SLUG = OYSTER_ROAST_EVENT.slug;
 
 function getDatabaseUrl() {
   const databaseUrl = process.env.DATABASE_URL?.trim();

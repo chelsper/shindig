@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { AdminDashboard } from "../../components/admin/admin-dashboard";
 import { AdminLoginForm } from "../../components/admin/admin-login-form";
+import { OYSTER_ROAST_EVENT } from "../../lib/oyster-roast-event";
 import {
   isAdminAuthenticated,
   isAdminConfigured,
@@ -38,7 +39,9 @@ function LoginScreen({ configured }: { configured: boolean }) {
         <p className="mt-5 text-center text-[0.68rem] font-bold tracking-[0.2em] text-[#355f9e] uppercase">
           Shindig · Host Access
         </p>
-        <h1 className="font-serif mt-2 text-center text-4xl tracking-[-0.025em]">Oyster Roast 2026</h1>
+        <h1 className="font-serif mt-2 text-center text-4xl tracking-[-0.025em]">
+          {OYSTER_ROAST_EVENT.hostTitle}
+        </h1>
         <p className="mx-auto mt-3 max-w-sm text-center text-sm leading-relaxed text-[#202523]/58">
           Enter the host password to view guest responses.
         </p>

@@ -51,6 +51,10 @@ New RSVP submissions receive a private update link. The browser creates a crypto
 
 RSVPs submitted before migration `002` do not have update tokens. Those records remain valid, but only new submissions can receive a private update link.
 
+## Calendar support
+
+Attending confirmations offer Google Calendar, Apple Calendar, and Outlook actions. Calendar details come from the shared [`lib/oyster-roast-event.ts`](lib/oyster-roast-event.ts) configuration. Apple Calendar receives a dynamically generated `.ics` file, and persisted RSVPs include the guest’s private update link in the calendar event.
+
 ## Checks
 
 ```bash
@@ -60,4 +64,4 @@ npm test
 npm run build
 ```
 
-Milestone 4 adds private token-based guest RSVP updates. It does not add accounts, email, SMS, multiple events, RSVP deletion, analytics, or an invitation builder.
+Milestone 5 adds attending-only calendar support. It does not add accounts, email, SMS, multiple events, RSVP deletion, analytics, or an invitation builder.

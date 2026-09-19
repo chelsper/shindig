@@ -5,35 +5,13 @@ import Link from "next/link";
 import { FormEvent, useRef, useState, useTransition } from "react";
 
 import { submitRsvp } from "../app/actions";
+import { CalendarActions } from "./calendar-actions";
+import { OYSTER_ROAST_EVENT } from "../lib/oyster-roast-event";
 import { createRsvpEditToken } from "../lib/rsvp-edit-token";
 
 type RsvpChoice = "attending" | "declined" | null;
 
-const EVENT_SLUG = "oyster-roast-2026";
-
-const event = {
-  title: "Another Annualish Oyster Roast",
-  date: "Saturday, November 7, 2026",
-  time: "5:00 PM",
-  address: "172 Belmont Dr, St. Johns, FL 32259",
-};
-
-const calendarFile = [
-  "BEGIN:VCALENDAR",
-  "VERSION:2.0",
-  "PRODID:-//Shindig//Oyster Roast//EN",
-  "CALSCALE:GREGORIAN",
-  "BEGIN:VEVENT",
-  "UID:oyster-roast-2026@shindig",
-  "DTSTAMP:20260919T120000Z",
-  "DTSTART;TZID=America/New_York:20261107T170000",
-  "DTEND;TZID=America/New_York:20261107T210000",
-  `SUMMARY:${event.title}`,
-  "DESCRIPTION:Oysters, good food, and a shucking good time.",
-  "LOCATION:172 Belmont Dr\, St. Johns\, FL 32259",
-  "END:VEVENT",
-  "END:VCALENDAR",
-].join("\r\n");
+const oysterRoastEvent = OYSTER_ROAST_EVENT;
 
 function CalendarIcon() {
   return (
@@ -136,7 +114,7 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
         const result = await submitRsvp({
           submissionId,
           editToken: nextEditToken,
-          eventSlug: EVENT_SLUG,
+          eventSlug: oysterRoastEvent.slug,
           guestName: name,
           attending: choice === "attending",
           partySize: choice === "attending" ? Number(partySize) : null,
@@ -170,18 +148,6 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
     setEditToken(null);
   }
 
-  function addToCalendar() {
-    const blob = new Blob([calendarFile], { type: "text/calendar;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "annualish-oyster-roast.ics";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  }
-
   return (
     <main className="min-h-screen overflow-hidden bg-[#f7f0e3] text-[#202523]">
       <div aria-hidden="true" className="page-texture" />
@@ -190,7 +156,7 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
         <header className="mb-5 flex items-center justify-between sm:mb-7">
           <p className="font-serif text-xl tracking-[-0.02em] sm:text-2xl">Shindig</p>
           <p className="rounded-full border border-[#202523]/15 bg-white/40 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#202523]/65 sm:text-xs">
-            St. Johns, Florida
+            {oysterRoastEvent.cityLabel}
           </p>
         </header>
 
@@ -199,7 +165,7 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
             <div className="hero-frame relative mx-auto max-w-[680px] overflow-hidden rounded-[1.75rem] bg-white shadow-[0_24px_70px_rgba(41,56,53,0.16)] sm:rounded-[2.25rem] lg:max-w-none">
               <Image
                 src="/oyster-roast-invitation.png"
-                alt="Illustrated invitation for the Another Annualish Oyster Roast, featuring oysters, seafood platters, and blue stripes"
+                alt={`Illustrated invitation for ${oysterRoastEvent.title}, featuring oysters, seafood platters, and blue stripes`}
                 width={1429}
                 height={2000}
                 className="h-auto w-full"
@@ -218,22 +184,22 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
                 You’re invited
               </p>
               <h1 className="max-w-xl font-serif text-[2.65rem] leading-[0.98] tracking-[-0.045em] text-balance sm:text-6xl lg:text-[3.4rem]">
-                Another Annualish Oyster Roast
+                {oysterRoastEvent.title}
               </h1>
 
               <div className="mt-6 grid gap-3 border-y border-[#202523]/15 py-5 text-sm sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                 <div className="flex items-start gap-3">
                   <CalendarIcon />
                   <div>
-                    <p className="font-semibold">{event.date}</p>
-                    <p className="mt-0.5 text-[#202523]/62">{event.time} until the shells run out</p>
+                    <p className="font-semibold">{oysterRoastEvent.dateLabel}</p>
+                    <p className="mt-0.5 text-[#202523]/62">{oysterRoastEvent.timeLabel} until the shells run out</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <PinIcon />
                   <div>
-                    <p className="font-semibold">The backyard</p>
-                    <p className="mt-0.5 text-[#202523]/62">{event.address}</p>
+                    <p className="font-semibold">{oysterRoastEvent.venue}</p>
+                    <p className="mt-0.5 text-[#202523]/62">{oysterRoastEvent.address}</p>
                   </div>
                 </div>
               </div>
@@ -270,10 +236,7 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
                   )}
 
                   {choice === "attending" && (
-                    <button type="button" onClick={addToCalendar} className="primary-button mt-6 w-full">
-                      <CalendarIcon />
-                      Add to Calendar
-                    </button>
+                    <CalendarActions editToken={editToken} />
                   )}
 
                   {editToken ? (

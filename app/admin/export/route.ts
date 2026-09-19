@@ -1,4 +1,5 @@
 import { isAdminAuthenticated } from "../../../lib/server/admin-session";
+import { OYSTER_ROAST_EVENT } from "../../../lib/oyster-roast-event";
 import { rsvpsToCsv } from "../../../lib/server/rsvp-csv";
 import { listRsvps } from "../../../lib/server/rsvps";
 
@@ -19,7 +20,7 @@ export async function GET() {
     return new Response(csv, {
       headers: {
         "Cache-Control": "private, no-store, max-age=0",
-        "Content-Disposition": 'attachment; filename="oyster-roast-2026-rsvps.csv"',
+        "Content-Disposition": `attachment; filename="${OYSTER_ROAST_EVENT.slug}-rsvps.csv"`,
         "Content-Type": "text/csv; charset=utf-8",
       },
     });

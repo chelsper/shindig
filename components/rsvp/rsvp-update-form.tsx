@@ -4,6 +4,8 @@ import Link from "next/link";
 import { FormEvent, useRef, useState, useTransition } from "react";
 
 import { updateRsvp } from "../../app/rsvp/actions";
+import { OYSTER_ROAST_EVENT } from "../../lib/oyster-roast-event";
+import { CalendarActions } from "../calendar-actions";
 
 type GuestRsvp = {
   guestName: string;
@@ -20,6 +22,7 @@ type RsvpUpdateFormProps = {
 type RsvpChoice = "attending" | "declined";
 
 export function RsvpUpdateForm({ initialRsvp, token }: RsvpUpdateFormProps) {
+  const event = OYSTER_ROAST_EVENT;
   const [choice, setChoice] = useState<RsvpChoice>(
     initialRsvp.attending ? "attending" : "declined",
   );
@@ -82,13 +85,13 @@ export function RsvpUpdateForm({ initialRsvp, token }: RsvpUpdateFormProps) {
 
         <section className="py-8 text-center sm:py-11">
           <p className="text-xs font-semibold tracking-[0.22em] text-[#355f9e] uppercase">
-            Another Annualish Oyster Roast
+            {event.title}
           </p>
           <h1 className="font-serif mt-3 text-4xl tracking-[-0.04em] sm:text-5xl">
             Update your RSVP
           </h1>
           <p className="mt-3 text-sm text-[#202523]/58">
-            Saturday, November 7, 2026 · 5:00 PM
+            {event.dateLabel} · {event.timeLabel}
           </p>
         </section>
 
@@ -111,6 +114,9 @@ export function RsvpUpdateForm({ initialRsvp, token }: RsvpUpdateFormProps) {
                   ? `${partySize === "1" ? "Your spot is" : `All ${partySize} spots are`} saved for the roast.`
                   : "Your response has been updated. We’ll raise an oyster to you."}
               </p>
+              {choice === "attending" ? (
+                <CalendarActions editToken={token} />
+              ) : null}
               <button
                 className="primary-button mt-6 w-full"
                 onClick={() => setUpdated(false)}
