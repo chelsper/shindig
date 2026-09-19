@@ -26,6 +26,8 @@ export const OYSTER_ROAST_EVENT = {
   venue: "The backyard",
   address: "172 Belmont Dr, St. Johns, FL 32259",
   cityLabel: "St. Johns, Florida",
+  // One-time US Census address match; never geocode visitors or their devices.
+  coordinates: { latitude: 30.0287, longitude: -81.6003 },
   dateLabel: "Saturday, November 7, 2026",
   shortDateLabel: "Saturday, November 7",
   timeLabel: "5:00 PM",

@@ -31,7 +31,7 @@ describe("Event Hub modules", () => {
     }
     expect(html.match(/aria-selected="true"/g)).toHaveLength(1);
     expect(html).toContain('hidden="" id="hub-panel-weather"');
-    expect(html).toContain("Forecast coming soon");
+    expect(html).toContain("Checking the skies in St. Johns");
   });
 
   it("hides disabled and unimplemented modules from navigation and content", () => {
@@ -44,7 +44,7 @@ describe("Event Hub modules", () => {
 
     expect(html.match(/role="tab"/g)).toHaveLength(1);
     expect(html).toContain("Who’s Coming");
-    for (const text of ["Weather", "Forecast coming soon", "Playlist", "Photos", "Questions", "Ask the Host", "Updates"]) {
+    for (const text of ["Weather", "Checking the skies", "Playlist", "Photos", "Questions", "Ask the Host", "Updates"]) {
       expect(html).not.toContain(text);
     }
   });
@@ -56,12 +56,12 @@ describe("Event Hub modules", () => {
     expect(html).toBe("");
   });
 
-  it("keeps the weather shell available when guest-list retrieval fails", () => {
+  it("loads weather independently when guest-list retrieval fails", () => {
     const html = renderToStaticMarkup(
       <EventModules features={enabledFeatures} guestList={null} guestListUnavailable />,
     );
     expect(html).toContain("The guest list is taking a quick break.");
-    expect(html).toContain("Forecast coming soon");
+    expect(html).toContain("Checking the skies in St. Johns");
     expect(html).not.toContain("0 guests");
   });
 
@@ -111,7 +111,7 @@ describe("Event Hub modules", () => {
     expect(html).not.toContain("Who’s Coming");
     expect(html).not.toContain("Should Not Render");
     expect(html).not.toContain('id="hub-tab-guestList"');
-    expect(html).toContain("Forecast coming soon");
+    expect(html).toContain("Checking the skies in St. Johns");
     expect(html).not.toContain('hidden=""');
   });
 });
