@@ -23,6 +23,7 @@ Set `ADMIN_PASSWORD` to a strong, unique password to enable the private host das
    - [`db/migrations/001_create_rsvps.sql`](db/migrations/001_create_rsvps.sql)
    - [`db/migrations/002_add_rsvp_edit_tokens.sql`](db/migrations/002_add_rsvp_edit_tokens.sql)
    - [`db/migrations/003_add_guest_list_visibility.sql`](db/migrations/003_add_guest_list_visibility.sql)
+   - [`db/migrations/004_create_event_hub_settings.sql`](db/migrations/004_create_event_hub_settings.sql)
 3. In the Neon project dashboard, choose **Connect** and copy the pooled Postgres connection string.
 4. Put that connection string in `.env.local`:
 
@@ -38,7 +39,8 @@ The connection string is server-only. Do not rename it to `NEXT_PUBLIC_DATABASE_
 2. Go to **Settings → Environment Variables**.
 3. Add `DATABASE_URL` with the Neon pooled connection string for **Production** (and **Preview** if preview deployments should write to a database).
 4. Add `ADMIN_PASSWORD` with a strong, unique host password for **Production** (and **Preview** only if the dashboard should work there).
-5. Redeploy the latest commit so the environment variables are available to the deployment.
+5. To enable Event Hub image uploads, open **Storage**, create a public Vercel Blob store, connect it to the Shindig project, and include the generated `BLOB_READ_WRITE_TOKEN` in Production.
+6. Redeploy the latest commit so the environment variables are available to the deployment.
 
 ## Host dashboard
 
@@ -61,6 +63,8 @@ Attending confirmations offer Google Calendar, Apple Calendar, and Outlook actio
 The public Event Hub is available at `/event`. Enabled modules are controlled by feature flags in [`lib/oyster-roast-event.ts`](lib/oyster-roast-event.ts); only the Guest List module is enabled currently.
 
 The guest list is rendered server-side and its public query returns only the total attending count plus opted-in guest names and party sizes. Declines and private RSVP fields are never selected. Attending guests can opt out of displaying their name while remaining included in the total count. The host dashboard shows each attending RSVP’s visibility choice.
+
+Authenticated hosts can open `/admin/event` to preview and adjust the Event Hub header’s focal point, zoom, and accessible description. A connected public Vercel Blob store also enables JPG, PNG, WebP, and AVIF uploads up to 10 MB. Upload authorization is issued only after the existing server-side admin session is verified; `BLOB_READ_WRITE_TOKEN` remains server-only.
 
 ## Checks
 

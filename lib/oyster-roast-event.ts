@@ -35,6 +35,15 @@ export const OYSTER_ROAST_EVENT = {
   calendarUid: "oyster-roast-2026@haveashindig.com",
   calendarFilename: "annualish-oyster-roast.ics",
   websiteUrl: "https://www.haveashindig.com/",
+  eventHub: {
+    headerImage: {
+      url: "/oyster-roast-invitation.png",
+      alt: "Illustrated oyster roast invitation with seafood platters and blue stripes",
+      focalX: 50,
+      focalY: 26,
+      zoomPercent: 100,
+    },
+  },
   features,
 } as const;
 

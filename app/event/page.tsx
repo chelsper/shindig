@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 
 import { EventHubHeader } from "../../components/event-hub/event-hub-header";
 import { EventModules } from "../../components/event-hub/event-modules";
+import { DEFAULT_EVENT_HUB_HEADER } from "../../lib/event-hub-settings";
 import { OYSTER_ROAST_EVENT } from "../../lib/oyster-roast-event";
+import { getEventHubHeaderSettings } from "../../lib/server/event-hub-settings";
 import {
   getPublicGuestList,
   type PublicGuestList,
@@ -16,13 +18,29 @@ export const metadata: Metadata = {
 };
 
 export default async function EventPage() {
+  let headerSettings = DEFAULT_EVENT_HUB_HEADER;
   let guestList: PublicGuestList | null = null;
   let guestListUnavailable = false;
 
-  if (OYSTER_ROAST_EVENT.features.guestList) {
-    if (!process.env.DATABASE_URL?.trim()) {
+  if (!process.env.DATABASE_URL?.trim()) {
+    if (OYSTER_ROAST_EVENT.features.guestList) {
       guestListUnavailable = true;
-    } else {
+    }
+  } else {
+    try {
+      headerSettings = await getEventHubHeaderSettings();
+    } catch (error) {
+      const databaseError =
+        error && typeof error === "object"
+          ? (error as { code?: string; name?: string })
+          : {};
+      console.error("Event Hub header retrieval failed.", {
+        code: databaseError.code ?? "unknown",
+        name: databaseError.name ?? "unknown",
+      });
+    }
+
+    if (OYSTER_ROAST_EVENT.features.guestList) {
       try {
         guestList = await getPublicGuestList();
       } catch (error) {
@@ -50,7 +68,7 @@ export default async function EventPage() {
           </p>
         </div>
 
-        <EventHubHeader />
+        <EventHubHeader headerSettings={headerSettings} />
         <EventModules
           features={OYSTER_ROAST_EVENT.features}
           guestList={guestList}

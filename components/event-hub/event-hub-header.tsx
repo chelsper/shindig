@@ -1,7 +1,8 @@
-import Image from "next/image";
 import Link from "next/link";
 
+import type { EventHubHeaderSettings } from "../../lib/event-hub-settings";
 import { OYSTER_ROAST_EVENT } from "../../lib/oyster-roast-event";
+import { EventHeaderImage } from "./event-header-image";
 
 function CalendarIcon() {
   return (
@@ -20,23 +21,17 @@ function DirectionsIcon() {
   );
 }
 
-export function EventHubHeader() {
+export function EventHubHeader({
+  headerSettings,
+}: {
+  headerSettings: EventHubHeaderSettings;
+}) {
   const event = OYSTER_ROAST_EVENT;
   const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address)}`;
 
   return (
     <header className="overflow-hidden rounded-[1.75rem] border border-[#202523]/10 bg-[#fffaf1]/90 shadow-[0_18px_50px_rgba(41,56,53,0.10)] sm:rounded-[2rem]">
-      <div className="relative aspect-[16/9] overflow-hidden bg-[#dceaf7] sm:aspect-[16/6]">
-        <Image
-          alt={`Artwork for ${event.title}`}
-          className="object-cover object-[center_26%]"
-          fill
-          priority
-          sizes="(min-width: 896px) 896px, 100vw"
-          src="/oyster-roast-invitation.png"
-        />
-        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#202523]/22 to-transparent" />
-      </div>
+      <EventHeaderImage settings={headerSettings} />
 
       <div className="p-5 sm:p-7 lg:p-9">
           <div className="flex items-start justify-between gap-4">

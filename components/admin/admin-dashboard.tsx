@@ -69,14 +69,22 @@ export function AdminDashboard({ filter, rsvps, summary }: AdminDashboardProps) 
               {event.shortDateLabel} · {event.cityLabel}
             </p>
           </div>
-          <form action={logoutAdmin}>
-            <button
-              className="rounded-full border border-[#202523]/20 bg-white/35 px-4 py-2 text-xs font-bold tracking-[0.1em] uppercase transition hover:border-[#355f9e]/50 hover:text-[#355f9e]"
-              type="submit"
+          <div className="flex flex-wrap gap-2.5">
+            <Link
+              className="inline-flex min-h-10 items-center rounded-full border border-[#355f9e]/30 bg-[#e9f2f8]/75 px-4 text-xs font-bold uppercase tracking-[0.1em] text-[#214e91] transition hover:border-[#355f9e]"
+              href="/admin/event"
             >
-              Sign out
-            </button>
-          </form>
+              Event Header
+            </Link>
+            <form action={logoutAdmin}>
+              <button
+                className="min-h-10 rounded-full border border-[#202523]/20 bg-white/35 px-4 text-xs font-bold tracking-[0.1em] uppercase transition hover:border-[#355f9e]/50 hover:text-[#355f9e]"
+                type="submit"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
         </header>
 
         <section
