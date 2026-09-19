@@ -7,7 +7,7 @@ import type { EventFeatures } from "../../lib/oyster-roast-event";
 export type HubModule = {
   id: keyof EventFeatures;
   label: string;
-  icon: "guests" | "weather" | "playlist";
+  icon: "guests" | "weather" | "playlist" | "questions" | "updates";
   content: ReactNode;
 };
 
@@ -24,6 +24,15 @@ function ModuleIcon({ icon }: { icon: HubModule["icon"] }) {
           <path d="M9 17V5l12-2v12M9 9l12-2" />
           <ellipse cx="6" cy="18" rx="3" ry="2.5" />
           <ellipse cx="18" cy="16" rx="3" ry="2.5" />
+        </>
+      ) : icon === "questions" ? (
+        <>
+          <path d="M21 11a8 8 0 0 1-8 8H8l-5 3V11a9 9 0 0 1 18 0Z" />
+          <path d="M9 8a3 3 0 0 1 6 0c0 2-3 2-3 4m0 3h.01" />
+        </>
+      ) : icon === "updates" ? (
+        <>
+          <path d="m3 10 17-6v16L3 14v-4Zm5 6 1 5h4l-2-4M20 9h2m-2 6h2" />
         </>
       ) : (
         <>

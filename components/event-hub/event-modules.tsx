@@ -1,10 +1,14 @@
 import type { EventFeatures } from "../../lib/oyster-roast-event";
 import type { PublicPlaylistSuggestion } from "../../lib/playlist";
+import type { PublicQuestion } from "../../lib/questions";
+import type { PublicHostUpdate } from "../../lib/updates";
 import type { PublicGuestList } from "../../lib/server/rsvps";
 import { GuestListModule } from "./guest-list-module";
 import { HubNavigation, type HubModule } from "./hub-navigation";
 import { WeatherModule } from "./weather-module";
 import { PlaylistModule } from "./playlist-module";
+import { QuestionsModule } from "./questions-module";
+import { UpdatesModule } from "./updates-module";
 
 type EventModulesProps = {
   features: EventFeatures;
@@ -12,6 +16,10 @@ type EventModulesProps = {
   guestListUnavailable?: boolean;
   playlistSuggestions?: PublicPlaylistSuggestion[];
   playlistUnavailable?: boolean;
+  questions?: PublicQuestion[];
+  questionsUnavailable?: boolean;
+  updates?: PublicHostUpdate[];
+  updatesUnavailable?: boolean;
 };
 
 type ModuleDefinition = Omit<HubModule, "content"> & {
@@ -35,6 +43,22 @@ const moduleRegistry: ModuleDefinition[] = [
     icon: "playlist",
     render: ({ playlistSuggestions = [], playlistUnavailable }) => (
       <PlaylistModule suggestions={playlistSuggestions} unavailable={playlistUnavailable} />
+    ),
+  },
+  {
+    id: "questions",
+    label: "Ask the Host",
+    icon: "questions",
+    render: ({ questions = [], questionsUnavailable }) => (
+      <QuestionsModule questions={questions} unavailable={questionsUnavailable} />
+    ),
+  },
+  {
+    id: "updates",
+    label: "Updates",
+    icon: "updates",
+    render: ({ updates = [], updatesUnavailable }) => (
+      <UpdatesModule updates={updates} unavailable={updatesUnavailable} />
     ),
   },
   {

@@ -25,6 +25,7 @@ Set `ADMIN_PASSWORD` to a strong, unique password to enable the private host das
    - [`db/migrations/003_add_guest_list_visibility.sql`](db/migrations/003_add_guest_list_visibility.sql)
    - [`db/migrations/004_create_event_hub_settings.sql`](db/migrations/004_create_event_hub_settings.sql)
    - [`db/migrations/005_create_playlist_suggestions.sql`](db/migrations/005_create_playlist_suggestions.sql)
+   - [`db/migrations/006_create_updates_and_questions.sql`](db/migrations/006_create_updates_and_questions.sql)
 3. In the Neon project dashboard, choose **Connect** and copy the pooled Postgres connection string.
 4. Put that connection string in `.env.local`:
 
@@ -61,7 +62,7 @@ Attending confirmations offer Google Calendar, Apple Calendar, and Outlook actio
 
 ## Event Hub
 
-The public Event Hub is available at `/event`. Feature availability is controlled only by `features` in [`lib/oyster-roast-event.ts`](lib/oyster-roast-event.ts). Guest List, Playlist, and Weather are enabled; Questions, Updates, Photos, and Potluck remain disabled.
+The public Event Hub is available at `/event`. Feature availability is controlled only by `features` in [`lib/oyster-roast-event.ts`](lib/oyster-roast-event.ts). Guest List, Playlist, Weather, Questions, and Updates are enabled; Photos and Potluck remain disabled.
 
 The route loads public data on the server and composes the existing header with `EventModules`. Its small module registry contains only implemented modules and filters them using the canonical flags. The same filtered list supplies `HubNavigation` and its content panels, preventing orphaned tabs or placeholders. `HubNavigation` handles touch and keyboard tab switching; each feature owns its own component. To add a future feature, implement its component, register it, and enable its existing event flag. Database access stays on the server.
 
@@ -91,3 +92,15 @@ The submit button locks while saving. Whitespace is normalized server-side, and 
 Hosts can open **Playlist** from `/admin`, or visit `/admin/playlist`, to review and delete suggestions after confirmation. The existing admin session protects both retrieval and deletion. Deletion is scoped to the configured event and refreshes the guest-facing list on its next load. Setting `features.playlist` to false removes the tab, form, and songs from the Hub, skips its public query, and rejects public submissions. Host moderation remains available.
 
 This milestone adds song suggestions only: no playback, music-provider APIs, voting, guest authentication, or other Event Hub modules.
+
+## Host Updates and Guest Q&A
+
+Apply `db/migrations/006_create_updates_and_questions.sql` in the same Neon database before deploying. It adds `event_updates` and `event_questions`, validation constraints, and event-scoped ordering indexes. No additional packages or environment variables are required: the existing server-only `DATABASE_URL` and `ADMIN_PASSWORD` are used.
+
+- `/admin/updates`: create, edit, and delete host updates. An optional heading (120 characters) and required message (3,000 characters) are validated on the server. Creating publishes immediately; editing preserves the original publication timestamp. Guests see updates newest first.
+- `/admin/questions`: review private guest questions and optional submitter names, save an answer privately, explicitly publish an answered question, unpublish it, or delete it. Question, name, and answer limits are 1,000, 80, and 2,000 characters. Both pages and every mutation verify the existing host session. Deletions require confirmation.
+- Guest questions always start private with no answer. Publication fields from guests are ignored. The public SQL query selects **only question and answer**, and filters to answered, explicitly published rows before data leaves the database. Submitter names, IDs, private answers, pending questions, and timestamps are never passed to public components. Host-authored updates use a separate public projection containing only heading, message, and publication time.
+- Client submit locks and a database-unique hashed request token prevent duplicate question records on rapid clicks or retries. A failed save shows a retry error; it never returns a false success or database details. Host update creation is similarly idempotent by UUID. All writes use parameterized SQL and the canonical event slug.
+- `features.questions` and `features.updates` independently control the tabs, content, and public queries. Disabling questions also blocks new guest submissions; authenticated moderation remains available. Host changes revalidate the Event Hub for subsequent page loads; there is no polling or notification system.
+
+Questions may contain personal details in their text, so the form cautions guests and the host dashboard reminds the host to review before publishing. The separate optional name field is never publicly displayed. This milestone does not add notifications, email, SMS, accounts, guest authentication, or reactions/comments.

@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../app/event/playlist-actions", () => ({ submitPlaylistSuggestion: vi.fn() }));
+vi.mock("../app/event/question-actions", () => ({ submitGuestQuestion: vi.fn() }));
 
 import { PlaylistModule } from "../components/event-hub/playlist-module";
 import { EventModules } from "../components/event-hub/event-modules";

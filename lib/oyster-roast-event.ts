@@ -13,8 +13,8 @@ const features: EventFeatures = {
   playlist: true,
   weather: true,
   photos: false,
-  questions: false,
-  updates: false,
+  questions: true,
+  updates: true,
   potluck: false,
 };
 

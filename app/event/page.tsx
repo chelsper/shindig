@@ -7,6 +7,10 @@ import { OYSTER_ROAST_EVENT } from "../../lib/oyster-roast-event";
 import type { PublicPlaylistSuggestion } from "../../lib/playlist";
 import { getEventHubHeaderSettings } from "../../lib/server/event-hub-settings";
 import { listPublicPlaylistSuggestions } from "../../lib/server/playlist";
+import type { PublicQuestion } from "../../lib/questions";
+import type { PublicHostUpdate } from "../../lib/updates";
+import { listPublicQuestions } from "../../lib/server/questions";
+import { listPublicHostUpdates } from "../../lib/server/updates";
 import {
   getPublicGuestList,
   type PublicGuestList,
@@ -25,12 +29,18 @@ export default async function EventPage() {
   let guestListUnavailable = false;
   let playlistSuggestions: PublicPlaylistSuggestion[] = [];
   let playlistUnavailable = false;
+  let questions: PublicQuestion[] = [];
+  let updates: PublicHostUpdate[] = [];
+  let questionsUnavailable = false;
+  let updatesUnavailable = false;
 
   if (!process.env.DATABASE_URL?.trim()) {
     if (OYSTER_ROAST_EVENT.features.guestList) {
       guestListUnavailable = true;
     }
     playlistUnavailable = OYSTER_ROAST_EVENT.features.playlist;
+    questionsUnavailable = OYSTER_ROAST_EVENT.features.questions;
+    updatesUnavailable = OYSTER_ROAST_EVENT.features.updates;
   } else {
     try {
       headerSettings = await getEventHubHeaderSettings();
@@ -69,6 +79,14 @@ export default async function EventPage() {
         playlistUnavailable = true;
       }
     }
+    const [questionsResult, updatesResult] = await Promise.allSettled([
+      OYSTER_ROAST_EVENT.features.questions ? listPublicQuestions() : Promise.resolve([]),
+      OYSTER_ROAST_EVENT.features.updates ? listPublicHostUpdates() : Promise.resolve([]),
+    ]);
+    if (questionsResult.status === "fulfilled") questions = questionsResult.value;
+    else { questionsUnavailable = true; console.error("Public questions retrieval failed."); }
+    if (updatesResult.status === "fulfilled") updates = updatesResult.value;
+    else { updatesUnavailable = true; console.error("Public updates retrieval failed."); }
   }
 
   return (
@@ -89,6 +107,10 @@ export default async function EventPage() {
           guestListUnavailable={guestListUnavailable}
           playlistSuggestions={playlistSuggestions}
           playlistUnavailable={playlistUnavailable}
+          questions={questions}
+          questionsUnavailable={questionsUnavailable}
+          updates={updates}
+          updatesUnavailable={updatesUnavailable}
         />
 
         <footer className="mt-8 flex items-center justify-between border-t border-[#202523]/12 px-1 pt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#202523]/45 sm:mt-10">
