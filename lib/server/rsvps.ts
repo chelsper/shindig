@@ -2,7 +2,10 @@ import "server-only";
 
 import { neon } from "@neondatabase/serverless";
 
-import type { ValidatedRsvp } from "./rsvp-validation";
+import type {
+  ValidatedRsvp,
+  ValidatedRsvpUpdate,
+} from "./rsvp-validation";
 
 export type SavedRsvp = {
   id: string;
@@ -11,6 +14,8 @@ export type SavedRsvp = {
   partySize: number | null;
   comment: string | null;
 };
+
+export type GuestRsvp = Omit<SavedRsvp, "id">;
 
 export type SaveRsvpResult =
   | { status: "created" | "duplicate"; rsvp: SavedRsvp }
@@ -43,7 +48,22 @@ function getDatabaseUrl() {
   return databaseUrl;
 }
 
-export async function saveRsvp(rsvp: ValidatedRsvp): Promise<SaveRsvpResult> {
+function withoutEditTokenHash(
+  rsvp: SavedRsvp & { editTokenHash: string | null },
+): SavedRsvp {
+  return {
+    id: rsvp.id,
+    guestName: rsvp.guestName,
+    attending: rsvp.attending,
+    partySize: rsvp.partySize,
+    comment: rsvp.comment,
+  };
+}
+
+export async function saveRsvp(
+  rsvp: ValidatedRsvp,
+  editTokenHash: string,
+): Promise<SaveRsvpResult> {
   const databaseUrl = process.env.DATABASE_URL?.trim();
 
   if (!databaseUrl) {
@@ -58,7 +78,8 @@ export async function saveRsvp(rsvp: ValidatedRsvp): Promise<SaveRsvpResult> {
       guest_name,
       attending,
       party_size,
-      comment
+      comment,
+      edit_token_hash
     )
     VALUES (
       ${rsvp.id}::uuid,
@@ -66,7 +87,8 @@ export async function saveRsvp(rsvp: ValidatedRsvp): Promise<SaveRsvpResult> {
       ${rsvp.guestName},
       ${rsvp.attending},
       ${rsvp.partySize},
-      ${rsvp.comment}
+      ${rsvp.comment},
+      ${editTokenHash}
     )
     ON CONFLICT (id) DO NOTHING
     RETURNING
@@ -74,13 +96,14 @@ export async function saveRsvp(rsvp: ValidatedRsvp): Promise<SaveRsvpResult> {
       guest_name AS "guestName",
       attending,
       party_size AS "partySize",
-      comment
+      comment,
+      edit_token_hash AS "editTokenHash"
   `;
 
-  const createdRsvp = rows[0] as SavedRsvp | undefined;
+  const createdRsvp = rows[0] as (SavedRsvp & { editTokenHash: string }) | undefined;
 
   if (createdRsvp) {
-    return { status: "created", rsvp: createdRsvp };
+    return { status: "created", rsvp: withoutEditTokenHash(createdRsvp) };
   }
 
   const existingRows = await sql`
@@ -89,18 +112,65 @@ export async function saveRsvp(rsvp: ValidatedRsvp): Promise<SaveRsvpResult> {
       guest_name AS "guestName",
       attending,
       party_size AS "partySize",
-      comment
+      comment,
+      edit_token_hash AS "editTokenHash"
     FROM rsvps
     WHERE id = ${rsvp.id}::uuid
     LIMIT 1
   `;
-  const existingRsvp = existingRows[0] as SavedRsvp | undefined;
+  const existingRsvp = existingRows[0] as
+    | (SavedRsvp & { editTokenHash: string | null })
+    | undefined;
 
-  if (!existingRsvp) {
+  if (!existingRsvp || existingRsvp.editTokenHash !== editTokenHash) {
     throw new Error("The saved RSVP could not be confirmed.");
   }
 
-  return { status: "duplicate", rsvp: existingRsvp };
+  return { status: "duplicate", rsvp: withoutEditTokenHash(existingRsvp) };
+}
+
+export async function getRsvpForGuest(
+  editTokenHash: string,
+): Promise<GuestRsvp | null> {
+  const sql = neon(getDatabaseUrl());
+  const rows = await sql`
+    SELECT
+      guest_name AS "guestName",
+      attending,
+      party_size AS "partySize",
+      comment
+    FROM rsvps
+    WHERE event_slug = ${OYSTER_ROAST_SLUG}
+      AND edit_token_hash = ${editTokenHash}
+    LIMIT 1
+  `;
+
+  return (rows[0] as GuestRsvp | undefined) ?? null;
+}
+
+export async function updateRsvpForGuest(
+  editTokenHash: string,
+  rsvp: ValidatedRsvpUpdate,
+): Promise<GuestRsvp | null> {
+  const sql = neon(getDatabaseUrl());
+  const rows = await sql`
+    UPDATE rsvps
+    SET
+      guest_name = ${rsvp.guestName},
+      attending = ${rsvp.attending},
+      party_size = ${rsvp.partySize},
+      comment = ${rsvp.comment},
+      updated_at = now()
+    WHERE event_slug = ${OYSTER_ROAST_SLUG}
+      AND edit_token_hash = ${editTokenHash}
+    RETURNING
+      guest_name AS "guestName",
+      attending,
+      party_size AS "partySize",
+      comment
+  `;
+
+  return (rows[0] as GuestRsvp | undefined) ?? null;
 }
 
 export async function getRsvpSummary(): Promise<RsvpSummary> {

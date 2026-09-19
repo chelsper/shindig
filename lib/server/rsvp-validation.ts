@@ -16,28 +16,24 @@ export type ValidatedRsvp = {
   comment: string | null;
 };
 
-type ValidationResult =
+export type ValidatedRsvpUpdate = {
+  guestName: string;
+  attending: boolean;
+  partySize: number | null;
+  comment: string | null;
+};
+
+type SubmissionValidationResult =
   | { success: true; data: ValidatedRsvp }
   | { success: false; message: string };
 
-export function validateRsvpSubmission(input: unknown): ValidationResult {
-  if (!input || typeof input !== "object" || Array.isArray(input)) {
-    return { success: false, message: "Please check your response and try again." };
-  }
+type UpdateValidationResult =
+  | { success: true; data: ValidatedRsvpUpdate }
+  | { success: false; message: string };
 
-  const submission = input as Record<string, unknown>;
-
-  if (
-    typeof submission.submissionId !== "string" ||
-    !UUID_V4_PATTERN.test(submission.submissionId)
-  ) {
-    return { success: false, message: "Please refresh the page and try again." };
-  }
-
-  if (submission.eventSlug !== OYSTER_ROAST_EVENT_SLUG) {
-    return { success: false, message: "This invitation is no longer available." };
-  }
-
+function validateRsvpFields(
+  submission: Record<string, unknown>,
+): UpdateValidationResult {
   if (typeof submission.guestName !== "string") {
     return { success: false, message: "Please enter your name." };
   }
@@ -90,12 +86,52 @@ export function validateRsvpSubmission(input: unknown): ValidationResult {
   return {
     success: true,
     data: {
-      id: submission.submissionId,
-      eventSlug: OYSTER_ROAST_EVENT_SLUG,
       guestName,
       attending: submission.attending,
       partySize,
       comment,
+    },
+  };
+}
+
+export function validateRsvpUpdate(input: unknown): UpdateValidationResult {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return { success: false, message: "Please check your response and try again." };
+  }
+
+  return validateRsvpFields(input as Record<string, unknown>);
+}
+
+export function validateRsvpSubmission(
+  input: unknown,
+): SubmissionValidationResult {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return { success: false, message: "Please check your response and try again." };
+  }
+
+  const submission = input as Record<string, unknown>;
+
+  if (
+    typeof submission.submissionId !== "string" ||
+    !UUID_V4_PATTERN.test(submission.submissionId)
+  ) {
+    return { success: false, message: "Please refresh the page and try again." };
+  }
+
+  if (submission.eventSlug !== OYSTER_ROAST_EVENT_SLUG) {
+    return { success: false, message: "This invitation is no longer available." };
+  }
+
+  const fields = validateRsvpFields(submission);
+
+  if (!fields.success) return fields;
+
+  return {
+    success: true,
+    data: {
+      id: submission.submissionId,
+      eventSlug: OYSTER_ROAST_EVENT_SLUG,
+      ...fields.data,
     },
   };
 }

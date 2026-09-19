@@ -1,9 +1,11 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { FormEvent, useRef, useState, useTransition } from "react";
 
 import { submitRsvp } from "../app/actions";
+import { createRsvpEditToken } from "../lib/rsvp-edit-token";
 
 type RsvpChoice = "attending" | "declined" | null;
 
@@ -83,31 +85,38 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
   const [comment, setComment] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [submissionPersisted, setSubmissionPersisted] = useState(true);
+  const [editToken, setEditToken] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const submissionIdRef = useRef<string | null>(null);
+  const editTokenRef = useRef<string | null>(null);
   const submittingRef = useRef(false);
+
+  function resetSubmissionIdentity() {
+    submissionIdRef.current = null;
+    editTokenRef.current = null;
+  }
 
   function handleChoice(nextChoice: Exclude<RsvpChoice, null>) {
     setChoice(nextChoice);
     setSubmitted(false);
     setErrorMessage(null);
-    submissionIdRef.current = null;
+    resetSubmissionIdentity();
   }
 
   function handleNameChange(nextName: string) {
     setName(nextName);
-    if (!isPending) submissionIdRef.current = null;
+    if (!isPending) resetSubmissionIdentity();
   }
 
   function handlePartySizeChange(nextPartySize: string) {
     setPartySize(nextPartySize);
-    if (!isPending) submissionIdRef.current = null;
+    if (!isPending) resetSubmissionIdentity();
   }
 
   function handleCommentChange(nextComment: string) {
     setComment(nextComment);
-    if (!isPending) submissionIdRef.current = null;
+    if (!isPending) resetSubmissionIdentity();
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -116,7 +125,9 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
     if (!choice || !name.trim() || submittingRef.current) return;
 
     const submissionId = submissionIdRef.current ?? crypto.randomUUID();
+    const nextEditToken = editTokenRef.current ?? createRsvpEditToken();
     submissionIdRef.current = submissionId;
+    editTokenRef.current = nextEditToken;
     submittingRef.current = true;
     setErrorMessage(null);
 
@@ -124,6 +135,7 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
       try {
         const result = await submitRsvp({
           submissionId,
+          editToken: nextEditToken,
           eventSlug: EVENT_SLUG,
           guestName: name,
           attending: choice === "attending",
@@ -137,6 +149,7 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
         }
 
         setSubmissionPersisted(result.persisted);
+        setEditToken(result.editToken);
         setName(result.rsvp.guestName);
         setChoice(result.rsvp.attending ? "attending" : "declined");
         setPartySize(String(result.rsvp.partySize ?? 1));
@@ -153,7 +166,8 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
   function changeResponse() {
     setSubmitted(false);
     setErrorMessage(null);
-    submissionIdRef.current = null;
+    resetSubmissionIdentity();
+    setEditToken(null);
   }
 
   function addToCalendar() {
@@ -262,13 +276,27 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
                     </button>
                   )}
 
-                  <button
-                    type="button"
-                    onClick={changeResponse}
-                    className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-[#202523]/55 underline decoration-[#202523]/25 underline-offset-4 transition hover:text-[#202523]"
-                  >
-                    Change response
-                  </button>
+                  {editToken ? (
+                    <div className="mt-5 rounded-xl border border-[#355f9e]/15 bg-[#e9f2f8]/65 px-4 py-3">
+                      <p className="text-xs leading-5 text-[#214e91]/75">
+                        Save this private link if you need to change your response later.
+                      </p>
+                      <Link
+                        className="mt-2 inline-flex text-xs font-bold uppercase tracking-[0.14em] text-[#214e91] underline decoration-[#214e91]/30 underline-offset-4 transition hover:decoration-[#214e91]"
+                        href={`/rsvp/${editToken}`}
+                      >
+                        Update RSVP
+                      </Link>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={changeResponse}
+                      className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-[#202523]/55 underline decoration-[#202523]/25 underline-offset-4 transition hover:text-[#202523]"
+                    >
+                      Change response
+                    </button>
+                  )}
                 </div>
               ) : (
                 <form onSubmit={handleSubmit}>

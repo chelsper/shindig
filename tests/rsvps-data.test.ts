@@ -9,9 +9,11 @@ vi.mock("server-only", () => ({}));
 vi.mock("@neondatabase/serverless", () => ({ neon: mocks.neon }));
 
 import {
+  getRsvpForGuest,
   getRsvpSummary,
   listRsvps,
   saveRsvp,
+  updateRsvpForGuest,
 } from "../lib/server/rsvps";
 
 const rsvp = {
@@ -30,6 +32,7 @@ const savedRsvp = {
   partySize: 4,
   comment: rsvp.comment,
 };
+const editTokenHash = "f".repeat(64);
 
 describe("saveRsvp", () => {
   beforeEach(() => {
@@ -41,9 +44,9 @@ describe("saveRsvp", () => {
   });
 
   it("inserts and returns the database-confirmed RSVP", async () => {
-    mocks.sql.mockResolvedValueOnce([savedRsvp]);
+    mocks.sql.mockResolvedValueOnce([{ ...savedRsvp, editTokenHash }]);
 
-    await expect(saveRsvp(rsvp)).resolves.toEqual({
+    await expect(saveRsvp(rsvp, editTokenHash)).resolves.toEqual({
       status: "created",
       rsvp: savedRsvp,
     });
@@ -57,13 +60,16 @@ describe("saveRsvp", () => {
       rsvp.attending,
       rsvp.partySize,
       rsvp.comment,
+      editTokenHash,
     ]);
   });
 
   it("reads back the existing row after a duplicate submission", async () => {
-    mocks.sql.mockResolvedValueOnce([]).mockResolvedValueOnce([savedRsvp]);
+    mocks.sql
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ ...savedRsvp, editTokenHash }]);
 
-    await expect(saveRsvp(rsvp)).resolves.toEqual({
+    await expect(saveRsvp(rsvp, editTokenHash)).resolves.toEqual({
       status: "duplicate",
       rsvp: savedRsvp,
     });
@@ -73,8 +79,78 @@ describe("saveRsvp", () => {
   it("reports disabled persistence when DATABASE_URL is absent", async () => {
     vi.stubEnv("DATABASE_URL", "");
 
-    await expect(saveRsvp(rsvp)).resolves.toEqual({ status: "disabled" });
+    await expect(saveRsvp(rsvp, editTokenHash)).resolves.toEqual({ status: "disabled" });
     expect(mocks.neon).not.toHaveBeenCalled();
+  });
+
+  it("does not authorize a duplicate submission with a different edit token", async () => {
+    mocks.sql
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ ...savedRsvp, editTokenHash }]);
+
+    await expect(saveRsvp(rsvp, "a".repeat(64))).rejects.toThrow(
+      "The saved RSVP could not be confirmed.",
+    );
+  });
+});
+
+describe("guest RSVP access", () => {
+  const guestRsvp = {
+    guestName: "Test Guest",
+    attending: true,
+    partySize: 4,
+    comment: "Save me a seat",
+  };
+
+  beforeEach(() => {
+    vi.unstubAllEnvs();
+    vi.stubEnv("DATABASE_URL", "postgresql://test:test@example.test/neondb");
+    mocks.neon.mockReset();
+    mocks.sql.mockReset();
+    mocks.neon.mockReturnValue(mocks.sql);
+  });
+
+  it("loads only the RSVP matching the event and token hash", async () => {
+    mocks.sql.mockResolvedValueOnce([guestRsvp]);
+
+    await expect(getRsvpForGuest(editTokenHash)).resolves.toEqual(guestRsvp);
+
+    const [queryParts, ...values] = mocks.sql.mock.calls[0];
+    expect(queryParts.join("?")).toContain("edit_token_hash =");
+    expect(queryParts.join("?")).toContain("LIMIT 1");
+    expect(values).toEqual(["oyster-roast-2026", editTokenHash]);
+  });
+
+  it("updates the matching RSVP and refreshes updated_at", async () => {
+    const declinedRsvp = {
+      guestName: "Test Guest",
+      attending: false,
+      partySize: null,
+      comment: null,
+    };
+    mocks.sql.mockResolvedValueOnce([declinedRsvp]);
+
+    await expect(
+      updateRsvpForGuest(editTokenHash, declinedRsvp),
+    ).resolves.toEqual(declinedRsvp);
+
+    const [queryParts, ...values] = mocks.sql.mock.calls[0];
+    expect(queryParts.join("?")).toContain("updated_at = now()");
+    expect(queryParts.join("?")).toContain("edit_token_hash =");
+    expect(values).toEqual([
+      declinedRsvp.guestName,
+      false,
+      null,
+      null,
+      "oyster-roast-2026",
+      editTokenHash,
+    ]);
+  });
+
+  it("returns null for an unknown guest token", async () => {
+    mocks.sql.mockResolvedValueOnce([]);
+
+    await expect(getRsvpForGuest(editTokenHash)).resolves.toBeNull();
   });
 });
 

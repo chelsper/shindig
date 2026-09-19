@@ -19,7 +19,9 @@ Set `ADMIN_PASSWORD` to a strong, unique password to enable the private host das
 ## Neon database setup
 
 1. Create a Neon project and use its default database/branch.
-2. Open Neon’s SQL Editor and run [`db/migrations/001_create_rsvps.sql`](db/migrations/001_create_rsvps.sql).
+2. Open Neon’s SQL Editor and run the migrations in order:
+   - [`db/migrations/001_create_rsvps.sql`](db/migrations/001_create_rsvps.sql)
+   - [`db/migrations/002_add_rsvp_edit_tokens.sql`](db/migrations/002_add_rsvp_edit_tokens.sql)
 3. In the Neon project dashboard, choose **Connect** and copy the pooled Postgres connection string.
 4. Put that connection string in `.env.local`:
 
@@ -43,6 +45,12 @@ Visit `/admin` and enter the configured host password. A successful login create
 
 The dashboard reads RSVP data only on the server, supports attending/declined filters, shows event totals, and exports the protected guest list as CSV. The export requires the same authenticated admin session.
 
+## Guest RSVP updates
+
+New RSVP submissions receive a private update link. The browser creates a cryptographically secure 256-bit token, while Neon stores only its SHA-256 hash. Opening the link loads only the matching RSVP, and all changes are validated and saved server-side.
+
+RSVPs submitted before migration `002` do not have update tokens. Those records remain valid, but only new submissions can receive a private update link.
+
 ## Checks
 
 ```bash
@@ -52,4 +60,4 @@ npm test
 npm run build
 ```
 
-Milestone 3 adds the password-protected host dashboard. It does not add user accounts, RSVP editing or deletion, messaging, multiple events, analytics, or an invitation builder.
+Milestone 4 adds private token-based guest RSVP updates. It does not add accounts, email, SMS, multiple events, RSVP deletion, analytics, or an invitation builder.

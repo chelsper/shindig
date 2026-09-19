@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   OYSTER_ROAST_EVENT_SLUG,
   validateRsvpSubmission,
+  validateRsvpUpdate,
 } from "../lib/server/rsvp-validation";
 
 const validSubmission = {
@@ -76,6 +77,53 @@ describe("validateRsvpSubmission", () => {
     expect(result).toEqual({
       success: false,
       message: "This invitation is no longer available.",
+    });
+  });
+});
+
+describe("validateRsvpUpdate", () => {
+  it("applies the same normalization rules as a new RSVP", () => {
+    expect(
+      validateRsvpUpdate({
+        guestName: "  Updated Guest ",
+        attending: true,
+        partySize: 2,
+        comment: "  Updated note ",
+      }),
+    ).toEqual({
+      success: true,
+      data: {
+        guestName: "Updated Guest",
+        attending: true,
+        partySize: 2,
+        comment: "Updated note",
+      },
+    });
+  });
+
+  it("sets party size to null when an RSVP changes to declined", () => {
+    const result = validateRsvpUpdate({
+      guestName: "Updated Guest",
+      attending: false,
+      partySize: 12,
+      comment: null,
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.partySize).toBeNull();
+  });
+
+  it("requires party size when an RSVP changes to attending", () => {
+    expect(
+      validateRsvpUpdate({
+        guestName: "Updated Guest",
+        attending: true,
+        partySize: null,
+        comment: null,
+      }),
+    ).toEqual({
+      success: false,
+      message: "Party size must be between 1 and 20.",
     });
   });
 });

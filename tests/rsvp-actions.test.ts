@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   saveRsvp: vi.fn(),
 }));
 
+vi.mock("server-only", () => ({}));
 vi.mock("../lib/server/rsvps", () => ({
   saveRsvp: mocks.saveRsvp,
 }));
@@ -12,6 +13,7 @@ import { submitRsvp } from "../app/actions";
 
 const validSubmission = {
   submissionId: "4f849d18-931b-42ef-a4d4-7ec07aa73b3d",
+  editToken: "A".repeat(43),
   eventSlug: "oyster-roast-2026",
   guestName: "Test Guest",
   attending: true,
@@ -39,7 +41,13 @@ describe("submitRsvp", () => {
       ok: true,
       persisted: true,
       rsvp: savedRsvp,
+      editToken: validSubmission.editToken,
     });
+    expect(mocks.saveRsvp).toHaveBeenCalledWith(
+      expect.objectContaining({ id: validSubmission.submissionId }),
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+    );
+    expect(mocks.saveRsvp.mock.calls[0][1]).not.toBe(validSubmission.editToken);
   });
 
   it("treats a confirmed idempotent retry as success", async () => {
@@ -49,6 +57,7 @@ describe("submitRsvp", () => {
       ok: true,
       persisted: true,
       rsvp: savedRsvp,
+      editToken: validSubmission.editToken,
     });
   });
 
@@ -56,6 +65,16 @@ describe("submitRsvp", () => {
     const result = await submitRsvp({ ...validSubmission, guestName: "" });
 
     expect(result).toEqual({ ok: false, message: "Please enter your name." });
+    expect(mocks.saveRsvp).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid edit token before calling the database", async () => {
+    const result = await submitRsvp({ ...validSubmission, editToken: "guessable" });
+
+    expect(result).toEqual({
+      ok: false,
+      message: "Please refresh the page and try again.",
+    });
     expect(mocks.saveRsvp).not.toHaveBeenCalled();
   });
 
