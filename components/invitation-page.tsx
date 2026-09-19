@@ -80,6 +80,7 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
   const [choice, setChoice] = useState<RsvpChoice>(null);
   const [name, setName] = useState("");
   const [partySize, setPartySize] = useState("1");
+  const [comment, setComment] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [submissionPersisted, setSubmissionPersisted] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -104,6 +105,11 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
     if (!isPending) submissionIdRef.current = null;
   }
 
+  function handleCommentChange(nextComment: string) {
+    setComment(nextComment);
+    if (!isPending) submissionIdRef.current = null;
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -122,7 +128,7 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
           guestName: name,
           attending: choice === "attending",
           partySize: choice === "attending" ? Number(partySize) : null,
-          comment: null,
+          comment,
         });
 
         if (!result.ok) {
@@ -131,6 +137,10 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
         }
 
         setSubmissionPersisted(result.persisted);
+        setName(result.rsvp.guestName);
+        setChoice(result.rsvp.attending ? "attending" : "declined");
+        setPartySize(String(result.rsvp.partySize ?? 1));
+        setComment(result.rsvp.comment ?? "");
         setSubmitted(true);
       } catch {
         setErrorMessage("We couldn’t save your RSVP. Please try again in a moment.");
@@ -229,7 +239,9 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
                   </div>
                   <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#355f9e]">RSVP received</p>
                   <h2 className="mt-3 font-serif text-3xl tracking-[-0.03em]">
-                    {choice === "attending" ? `See you there${name ? `, ${name.split(" ")[0]}` : ""}!` : "We’ll miss you!"}
+                    {choice === "attending"
+                      ? "You’re on the shuck-it list!"
+                      : "Awww… shucks! We’ll miss you!"}
                   </h2>
                   <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[#202523]/65">
                     {choice === "attending"
@@ -293,46 +305,64 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
                   </fieldset>
 
                   {choice && (
-                    <div
-                      className={`mt-5 grid gap-4 ${
-                        choice === "attending"
-                          ? "sm:grid-cols-[minmax(0,1fr)_126px] lg:grid-cols-1 xl:grid-cols-[minmax(0,1fr)_126px]"
-                          : "grid-cols-1"
-                      }`}
-                    >
-                      <label className="field-label">
-                        Guest name
-                        <input
-                          autoComplete="name"
-                          className="field-input"
+                    <div className="mt-5">
+                      <div
+                        className={`grid gap-4 ${
+                          choice === "attending"
+                            ? "sm:grid-cols-[minmax(0,1fr)_126px] lg:grid-cols-1 xl:grid-cols-[minmax(0,1fr)_126px]"
+                            : "grid-cols-1"
+                        }`}
+                      >
+                        <label className="field-label">
+                          Guest name
+                          <input
+                            autoComplete="name"
+                            className="field-input"
+                            disabled={isPending}
+                            maxLength={120}
+                            name="name"
+                            onChange={(event) => handleNameChange(event.target.value)}
+                            placeholder="Your full name"
+                            required
+                            type="text"
+                            value={name}
+                          />
+                        </label>
+                        {choice === "attending" && (
+                          <label className="field-label">
+                            Number attending
+                            <select
+                              className="field-input appearance-none"
+                              disabled={isPending}
+                              name="partySize"
+                              onChange={(event) => handlePartySizeChange(event.target.value)}
+                              value={partySize}
+                            >
+                              {Array.from({ length: 20 }, (_, index) => index + 1).map((number) => (
+                                <option key={number} value={number}>
+                                  {number}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        )}
+                      </div>
+
+                      <label className="field-label mt-4">
+                        <span>
+                          Note <span className="normal-case tracking-normal">(optional)</span>
+                        </span>
+                        <textarea
+                          className="field-input min-h-20 resize-none py-3 leading-5"
                           disabled={isPending}
-                          maxLength={120}
-                          name="name"
-                          onChange={(event) => handleNameChange(event.target.value)}
-                          placeholder="Your full name"
-                          required
-                          type="text"
-                          value={name}
+                          maxLength={1000}
+                          name="comment"
+                          onChange={(event) => handleCommentChange(event.target.value)}
+                          placeholder="Anything we should know?"
+                          rows={2}
+                          value={comment}
                         />
                       </label>
-                      {choice === "attending" && (
-                        <label className="field-label">
-                          Number attending
-                          <select
-                            className="field-input appearance-none"
-                            disabled={isPending}
-                            name="partySize"
-                            onChange={(event) => handlePartySizeChange(event.target.value)}
-                            value={partySize}
-                          >
-                            {Array.from({ length: 20 }, (_, index) => index + 1).map((number) => (
-                              <option key={number} value={number}>
-                                {number}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      )}
                     </div>
                   )}
 

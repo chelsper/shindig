@@ -1,10 +1,10 @@
 "use server";
 
-import { saveRsvp } from "../lib/server/rsvps";
+import { saveRsvp, type SavedRsvp } from "../lib/server/rsvps";
 import { validateRsvpSubmission } from "../lib/server/rsvp-validation";
 
 export type SubmitRsvpResult =
-  | { ok: true; persisted: boolean }
+  | { ok: true; persisted: boolean; rsvp: SavedRsvp }
   | { ok: false; message: string };
 
 export async function submitRsvp(input: unknown): Promise<SubmitRsvpResult> {
@@ -17,10 +17,20 @@ export async function submitRsvp(input: unknown): Promise<SubmitRsvpResult> {
   try {
     const result = await saveRsvp(validation.data);
 
-    if (result === "disabled") {
+    if (result.status === "disabled") {
       if (process.env.NODE_ENV === "development") {
         console.warn("RSVP persistence is disabled because DATABASE_URL is not set.");
-        return { ok: true, persisted: false };
+        return {
+          ok: true,
+          persisted: false,
+          rsvp: {
+            id: validation.data.id,
+            guestName: validation.data.guestName,
+            attending: validation.data.attending,
+            partySize: validation.data.partySize,
+            comment: validation.data.comment,
+          },
+        };
       }
 
       return {
@@ -29,7 +39,7 @@ export async function submitRsvp(input: unknown): Promise<SubmitRsvpResult> {
       };
     }
 
-    return { ok: true, persisted: true };
+    return { ok: true, persisted: true, rsvp: result.rsvp };
   } catch (error) {
     const databaseError =
       error && typeof error === "object"

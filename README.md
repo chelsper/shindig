@@ -39,7 +39,8 @@ The connection string is server-only. Do not rename it to `NEXT_PUBLIC_DATABASE_
 ```bash
 npm run lint
 npm run typecheck
+npm test
 npm run build
 ```
 
-Milestone 2A adds RSVP persistence only. It does not include an events table, authentication, an admin dashboard, or guest verification.
+Milestone 2B completes and verifies RSVP persistence, including server-side validation, idempotent duplicate protection, and optional guest notes. It does not include an events table, authentication, an admin dashboard, or guest verification.
