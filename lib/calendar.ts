@@ -71,8 +71,8 @@ export function getRsvpUpdateUrl(
 export function createOysterRoastIcs(
   generatedAt = new Date(),
   rsvpUrl?: string,
+  event: OysterRoastEvent = OYSTER_ROAST_EVENT,
 ) {
-  const event = OYSTER_ROAST_EVENT;
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",

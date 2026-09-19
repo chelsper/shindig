@@ -7,12 +7,10 @@ import { FormEvent, useRef, useState, useTransition } from "react";
 import { submitRsvp } from "../app/actions";
 import { CalendarActions } from "./calendar-actions";
 import { EventHubLink } from "./event-hub-link";
-import { OYSTER_ROAST_EVENT } from "../lib/oyster-roast-event";
+import { OYSTER_ROAST_EVENT, eventMonthLabel, type OysterRoastEvent } from "../lib/oyster-roast-event";
 import { createRsvpEditToken } from "../lib/rsvp-edit-token";
 
 type RsvpChoice = "attending" | "declined" | null;
-
-const oysterRoastEvent = OYSTER_ROAST_EVENT;
 
 function CalendarIcon() {
   return (
@@ -55,9 +53,10 @@ function PinIcon() {
 
 type InvitationPageProps = {
   persistenceDisabled: boolean;
+  event?: OysterRoastEvent;
 };
 
-export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
+export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = OYSTER_ROAST_EVENT }: InvitationPageProps) {
   const [choice, setChoice] = useState<RsvpChoice>(null);
   const [name, setName] = useState("");
   const [partySize, setPartySize] = useState("1");
@@ -180,10 +179,10 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
           <section aria-label="Oyster roast invitation artwork" className="relative">
             <div className="hero-frame relative mx-auto max-w-[680px] overflow-hidden rounded-[1.75rem] bg-white shadow-[0_24px_70px_rgba(41,56,53,0.16)] sm:rounded-[2.25rem] lg:max-w-none">
               <Image
-                src="/oyster-roast-invitation.png"
-                alt={`Illustrated invitation for ${oysterRoastEvent.title}, featuring oysters, seafood platters, and blue stripes`}
-                width={1429}
-                height={2000}
+                src={oysterRoastEvent.invitation.imageUrl}
+                alt={oysterRoastEvent.invitation.imageAlt}
+                width={oysterRoastEvent.invitation.imageWidth}
+                height={oysterRoastEvent.invitation.imageHeight}
                 className="h-auto w-full"
                 priority
                 sizes="(min-width: 1024px) 57vw, 100vw"
@@ -197,7 +196,7 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
           <section className="lg:sticky lg:top-8">
             <div className="mb-6 px-1 sm:mb-7">
               <p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-[#355f9e]">
-                You’re invited
+                {oysterRoastEvent.invitation.eyebrow}
               </p>
               <h1 className="max-w-xl font-serif text-[2.65rem] leading-[0.98] tracking-[-0.045em] text-balance sm:text-6xl lg:text-[3.4rem]">
                 {oysterRoastEvent.title}
@@ -208,7 +207,7 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
                   <CalendarIcon />
                   <div>
                     <p className="font-semibold">{oysterRoastEvent.dateLabel}</p>
-                    <p className="mt-0.5 text-[#202523]/62">{oysterRoastEvent.timeLabel} until the shells run out</p>
+                    <p className="mt-0.5 text-[#202523]/62">{oysterRoastEvent.timeLabel} {oysterRoastEvent.invitation.timeNote}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
@@ -220,8 +219,8 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
                 </div>
               </div>
 
-              <p className="mt-5 max-w-lg text-[15px] leading-7 text-[#202523]/72 sm:text-base">
-                Oysters on the fire, cold drinks in hand, and good food to go around. Come casual and stay awhile.
+              <p className="mt-5 max-w-lg whitespace-pre-line text-[15px] leading-7 text-[#202523]/72 sm:text-base">
+                {oysterRoastEvent.description}
               </p>
             </div>
 
@@ -253,7 +252,7 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
 
                   {choice === "attending" && (
                     <>
-                      <CalendarActions editToken={editToken} />
+                      <CalendarActions editToken={editToken} event={oysterRoastEvent} />
                       <Link
                         className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full border border-[#355f9e]/25 bg-[#e9f2f8]/70 px-5 text-xs font-bold uppercase tracking-[0.12em] text-[#214e91] transition hover:border-[#355f9e]/55 hover:bg-[#e9f2f8]"
                         href={oysterRoastEvent.eventHub.path}
@@ -290,7 +289,7 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
                   <div className="mb-5 flex items-end justify-between gap-3">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#355f9e]">Kindly reply</p>
-                      <h2 className="mt-1.5 font-serif text-3xl tracking-[-0.03em]">Will you join us?</h2>
+                      <h2 className="mt-1.5 font-serif text-3xl tracking-[-0.03em]">{oysterRoastEvent.invitation.rsvpHeading}</h2>
                     </div>
                     <span aria-hidden="true" className="text-2xl">◌</span>
                   </div>
@@ -444,7 +443,7 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
 
         <footer className="mt-8 flex items-center justify-between border-t border-[#202523]/12 px-1 pt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#202523]/45 sm:mt-12">
           <span>Shuck · Sip · Stay awhile</span>
-          <span>November ’26</span>
+          <span>{eventMonthLabel(oysterRoastEvent)}</span>
         </footer>
       </div>
     </main>

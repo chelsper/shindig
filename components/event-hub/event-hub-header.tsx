@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import type { EventHubHeaderSettings } from "../../lib/event-hub-settings";
-import { OYSTER_ROAST_EVENT } from "../../lib/oyster-roast-event";
+import { OYSTER_ROAST_EVENT, type OysterRoastEvent } from "../../lib/oyster-roast-event";
 import { EventHeaderImage } from "./event-header-image";
 
 function CalendarIcon() {
@@ -23,10 +23,11 @@ function DirectionsIcon() {
 
 export function EventHubHeader({
   headerSettings,
+  event = OYSTER_ROAST_EVENT,
 }: {
   headerSettings: EventHubHeaderSettings;
+  event?: OysterRoastEvent;
 }) {
-  const event = OYSTER_ROAST_EVENT;
   const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address)}`;
 
   return (

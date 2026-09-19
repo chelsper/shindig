@@ -2,21 +2,24 @@ import {
   createOysterRoastIcs,
   getRsvpUpdateUrl,
 } from "../../../lib/calendar";
-import { OYSTER_ROAST_EVENT } from "../../../lib/oyster-roast-event";
+import { getEventConfiguration } from "../../../lib/server/invitation-settings";
 import { isValidRsvpEditToken } from "../../../lib/rsvp-edit-token";
 
 export const dynamic = "force-dynamic";
 
-export function GET(request: Request) {
+export async function GET(request: Request) {
+  let event;
+  try { event = await getEventConfiguration(); }
+  catch { return new Response("Calendar details are unavailable. Please try again shortly.", { status: 503, headers: { "Cache-Control": "no-store" } }); }
   const editToken = new URL(request.url).searchParams.get("token");
   const rsvpUrl = isValidRsvpEditToken(editToken)
-    ? getRsvpUpdateUrl(editToken)
+    ? getRsvpUpdateUrl(editToken, event)
     : undefined;
 
-  return new Response(createOysterRoastIcs(new Date(), rsvpUrl), {
+  return new Response(createOysterRoastIcs(new Date(), rsvpUrl, event), {
     headers: {
-      "Cache-Control": "public, max-age=0, must-revalidate",
-      "Content-Disposition": `attachment; filename="${OYSTER_ROAST_EVENT.calendarFilename}"`,
+      "Cache-Control": "private, no-store",
+      "Content-Disposition": `attachment; filename="${event.calendarFilename}"`,
       "Content-Type": "text/calendar; charset=utf-8",
     },
   });

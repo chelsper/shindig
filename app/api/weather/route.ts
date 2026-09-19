@@ -1,5 +1,6 @@
 import { OYSTER_ROAST_EVENT } from "../../../lib/oyster-roast-event";
 import { eventWeatherService } from "../../../lib/server/weather";
+import { getEventConfiguration } from "../../../lib/server/invitation-settings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,10 +12,11 @@ export async function GET(request: Request) {
   // The caller cannot choose a location, event, provider, date range, or API URL.
   // History loads separately so a cold archive request never delays live weather.
   try {
+    const event = await getEventConfiguration();
     if (new URL(request.url).searchParams.get("context") === "typical") {
-      return Response.json({ typical: await eventWeatherService.typical(OYSTER_ROAST_EVENT) }, { headers });
+      return Response.json({ typical: await eventWeatherService.typical(event) }, { headers });
     }
-    return Response.json({ weather: await eventWeatherService.live(OYSTER_ROAST_EVENT) }, { headers });
+    return Response.json({ weather: await eventWeatherService.live(event) }, { headers });
   } catch {
     return Response.json({ message: "The weather is taking a quick break. Please check back shortly." }, { status: 503, headers });
   }

@@ -1,5 +1,47 @@
 # Shindig
 
+## Editing the invitation
+
+The host can edit the main invitation at **`/admin/invitation`**, linked as
+**Invitation** in the existing host dashboard. The existing `ADMIN_PASSWORD`
+session protects the editor, save action and upload authorization server-side.
+
+- Run `db/migrations/009_invitation_settings.sql` in the same Neon production
+  branch/database used by `DATABASE_URL` **before deploying this version**.
+  It adds only `invitation_settings`; it does not seed content or change RSVPs.
+  The current invitation remains the default until the host first publishes.
+- Edit title, description, invitation label, RSVP heading, time note, dates,
+  venue/address, city label and invitation artwork. Use **Show draft preview**,
+  then **Save & publish invitation**. Another host save requires reloading rather
+  than silently overwriting it.
+- Dates use `America/New_York`, including daylight saving time. Skipped or
+  ambiguous DST times are rejected. The end time is used for calendar entries.
+  When changing the address, confirm/update the weather coordinates too.
+- Shared details feed the invitation, Hub, directions, RSVP confirmation calendar
+  links, dynamic `.ics` downloads and weather service. Event identity, existing
+  guest update links and feature flags remain unchanged. Already-downloaded
+  calendar entries do not update automatically.
+- Invitation artwork is independent of the Hub header. Uploaded artwork is shown
+  in full and accepts JPG/PNG/WebP/AVIF up to 10 MB and 12,000 pixels per side.
+  Text embedded inside artwork is not rewritten when event fields change.
+- Artwork replacement requires a **public Vercel Blob store** connected to the
+  `shindig` project in Production, providing server-only `BLOB_READ_WRITE_TOKEN`.
+  In Vercel: project → Storage → Create/Connect Database → Blob → connect to
+  Production, then redeploy. Do not paste or commit the token. Until connected,
+  the editor explains that uploads are unavailable; all text/detail editing works.
+  Unpublished uploads are not automatically deleted, so no published image can
+  accidentally be removed by replacing a draft.
+
+No new packages or environment variable names are required. Settings are fetched
+server-side per request (deduplicated within a render), with validated, public-only
+event data sent to the UI. Database failure shows a retry state instead of quietly
+using outdated event details. The database keeps a revision for atomic conflict
+checks; guest-submitted data cannot authorize invitation edits.
+
+For a disposable local PostgreSQL test database with migrations 001–009 applied,
+run `psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/invitation-settings.integration.sql`.
+The integration test requires a database name containing `test` and rolls back.
+
 A mobile-first invitation page for the Annualish Oyster Roast, built with Next.js, TypeScript, Tailwind CSS, and Neon Postgres.
 
 ## Local development

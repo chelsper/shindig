@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FormEvent, useRef, useState, useTransition } from "react";
 
 import { updateRsvp } from "../../app/rsvp/actions";
-import { OYSTER_ROAST_EVENT } from "../../lib/oyster-roast-event";
+import { OYSTER_ROAST_EVENT, type OysterRoastEvent } from "../../lib/oyster-roast-event";
 import { CalendarActions } from "../calendar-actions";
 import { EventHubLink } from "../event-hub-link";
 
@@ -19,12 +19,12 @@ type GuestRsvp = {
 type RsvpUpdateFormProps = {
   initialRsvp: GuestRsvp;
   token: string;
+  event?: OysterRoastEvent;
 };
 
 type RsvpChoice = "attending" | "declined";
 
-export function RsvpUpdateForm({ initialRsvp, token }: RsvpUpdateFormProps) {
-  const event = OYSTER_ROAST_EVENT;
+export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT }: RsvpUpdateFormProps) {
   const [choice, setChoice] = useState<RsvpChoice>(
     initialRsvp.attending ? "attending" : "declined",
   );
@@ -127,7 +127,7 @@ export function RsvpUpdateForm({ initialRsvp, token }: RsvpUpdateFormProps) {
               </p>
               {choice === "attending" ? (
                 <>
-                  <CalendarActions editToken={token} />
+                  <CalendarActions editToken={token} event={event} />
                   <Link
                     className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full border border-[#355f9e]/25 bg-[#e9f2f8]/70 px-5 text-xs font-bold uppercase tracking-[0.12em] text-[#214e91] transition hover:border-[#355f9e]/55 hover:bg-[#e9f2f8]"
                     href={event.eventHub.path}

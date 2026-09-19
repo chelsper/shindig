@@ -7,6 +7,7 @@ import { OYSTER_ROAST_EVENT } from "../../../lib/oyster-roast-event";
 import { isValidRsvpEditToken } from "../../../lib/rsvp-edit-token";
 import { hashRsvpEditToken } from "../../../lib/server/rsvp-edit-token";
 import { getRsvpForGuest } from "../../../lib/server/rsvps";
+import { getEventConfiguration } from "../../../lib/server/invitation-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -72,5 +73,9 @@ export default async function RsvpUpdatePage({ params }: RsvpUpdatePageProps) {
     return <LinkUnavailable />;
   }
 
-  return <RsvpUpdateForm initialRsvp={rsvp} token={token} />;
+  let event;
+  try {
+    event = await getEventConfiguration();
+  } catch { return <LinkUnavailable loadFailed />; }
+  return <RsvpUpdateForm initialRsvp={rsvp} token={token} event={event} />;
 }

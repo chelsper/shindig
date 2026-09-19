@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { AdminDashboard } from "../../components/admin/admin-dashboard";
 import { AdminLoginForm } from "../../components/admin/admin-login-form";
 import { OYSTER_ROAST_EVENT } from "../../lib/oyster-roast-event";
+import { getEventConfiguration } from "../../lib/server/invitation-settings";
 import {
   isAdminAuthenticated,
   isAdminConfigured,
@@ -98,6 +99,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   return (
     <AdminDashboard
       filter={filter}
+      event={await getEventConfiguration()}
       rsvps={dashboardData.rsvps}
       summary={dashboardData.summary}
     />

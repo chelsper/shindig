@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
+import { getEventConfiguration } from "../../lib/server/invitation-settings";
+import { EventDetailsUnavailable } from "../../components/event-details-unavailable";
 
 import { EventHubHeader } from "../../components/event-hub/event-hub-header";
 import { EventModules } from "../../components/event-hub/event-modules";
 import { DEFAULT_EVENT_HUB_HEADER } from "../../lib/event-hub-settings";
-import { OYSTER_ROAST_EVENT } from "../../lib/oyster-roast-event";
+import { OYSTER_ROAST_EVENT, eventMonthLabel } from "../../lib/oyster-roast-event";
 import type { PublicPlaylistSuggestion } from "../../lib/playlist";
 import { getEventHubHeaderSettings } from "../../lib/server/event-hub-settings";
 import { listPublicPlaylistSuggestions } from "../../lib/server/playlist";
@@ -20,12 +21,17 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: `${OYSTER_ROAST_EVENT.title} · Event Hub`,
-  description: `${OYSTER_ROAST_EVENT.dateLabel} at ${OYSTER_ROAST_EVENT.timeLabel} in ${OYSTER_ROAST_EVENT.cityLabel}.`,
-};
+export async function generateMetadata() {
+  try {
+    const event = await getEventConfiguration();
+    return { title: `${event.title} · Event Hub`, description: `${event.dateLabel} at ${event.timeLabel} in ${event.cityLabel}.` };
+  } catch { return { title: "Event Hub | Shindig" }; }
+}
 
 export default async function EventPage() {
+  let event;
+  try { event = await getEventConfiguration(); }
+  catch { return <EventDetailsUnavailable />; }
   let headerSettings = DEFAULT_EVENT_HUB_HEADER;
   let guestList: PublicGuestList | null = null;
   let guestListUnavailable = false;
@@ -102,12 +108,13 @@ export default async function EventPage() {
         <div className="mb-5 flex items-center justify-between px-1 sm:mb-7">
           <p className="font-serif text-xl tracking-[-0.02em] sm:text-2xl">Shindig</p>
           <p className="rounded-full border border-[#202523]/15 bg-white/40 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#202523]/65 sm:text-xs">
-            {OYSTER_ROAST_EVENT.cityLabel}
+            {event.cityLabel}
           </p>
         </div>
 
-        <EventHubHeader headerSettings={headerSettings} />
+        <EventHubHeader headerSettings={headerSettings} event={event} />
         <EventModules
+          event={event}
           features={OYSTER_ROAST_EVENT.features}
           guestList={guestList}
           guestListUnavailable={guestListUnavailable}
@@ -122,7 +129,7 @@ export default async function EventPage() {
 
         <footer className="mt-8 flex items-center justify-between border-t border-[#202523]/12 px-1 pt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#202523]/45 sm:mt-10">
           <span>Shuck · Sip · Stay awhile</span>
-          <span>November ’26</span>
+          <span>{eventMonthLabel(event)}</span>
         </footer>
       </div>
     </main>

@@ -3,10 +3,11 @@ import {
   getOutlookCalendarUrl,
   getRsvpUpdateUrl,
 } from "../lib/calendar";
-import { OYSTER_ROAST_EVENT } from "../lib/oyster-roast-event";
+import { OYSTER_ROAST_EVENT, type OysterRoastEvent } from "../lib/oyster-roast-event";
 
 type CalendarActionsProps = {
   editToken?: string | null;
+  event?: OysterRoastEvent;
 };
 
 function CalendarIcon() {
@@ -28,10 +29,10 @@ function CalendarIcon() {
   );
 }
 
-export function CalendarActions({ editToken }: CalendarActionsProps) {
-  const rsvpUrl = editToken ? getRsvpUpdateUrl(editToken) : undefined;
-  const googleCalendarUrl = getGoogleCalendarUrl(rsvpUrl);
-  const outlookCalendarUrl = getOutlookCalendarUrl(rsvpUrl);
+export function CalendarActions({ editToken, event = OYSTER_ROAST_EVENT }: CalendarActionsProps) {
+  const rsvpUrl = editToken ? getRsvpUpdateUrl(editToken, event) : undefined;
+  const googleCalendarUrl = getGoogleCalendarUrl(rsvpUrl, event);
+  const outlookCalendarUrl = getOutlookCalendarUrl(rsvpUrl, event);
   const icsUrl = editToken
     ? `/calendar/oyster-roast.ics?token=${encodeURIComponent(editToken)}`
     : "/calendar/oyster-roast.ics";
@@ -55,7 +56,7 @@ export function CalendarActions({ editToken }: CalendarActionsProps) {
         </a>
         <a
           className={linkClassName}
-          download={OYSTER_ROAST_EVENT.calendarFilename}
+          download={event.calendarFilename}
           href={icsUrl}
         >
           Apple

@@ -1,4 +1,4 @@
-import type { EventFeatures } from "../../lib/oyster-roast-event";
+import type { EventFeatures, OysterRoastEvent } from "../../lib/oyster-roast-event";
 import type { PublicPlaylistSuggestion } from "../../lib/playlist";
 import type { PublicQuestion } from "../../lib/questions";
 import type { PublicHostUpdate } from "../../lib/updates";
@@ -14,6 +14,7 @@ import type { PublicPoll } from "../../lib/polls";
 import { GuestInteractionsProvider } from "../guest-interactions-provider";
 
 type EventModulesProps = {
+  event?: OysterRoastEvent;
   features: EventFeatures;
   guestList: PublicGuestList | null;
   guestListUnavailable?: boolean;
@@ -73,7 +74,7 @@ const moduleRegistry: ModuleDefinition[] = [
     id: "weather",
     label: "Weather",
     icon: "weather",
-    render: () => <WeatherModule />,
+    render: ({ event }) => <WeatherModule event={event} key={JSON.stringify([event?.startsAtUtc, event?.coordinates])} />,
   },
 ];
 

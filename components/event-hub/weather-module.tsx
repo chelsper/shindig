@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { LIVE_WEATHER_TTL, freshWeather, type EventWeather, type TypicalWeather } from "../../lib/weather";
 import { WeatherContent } from "./weather-content";
+import type { OysterRoastEvent } from "../../lib/oyster-roast-event";
 
-export function WeatherModule() {
+export function WeatherModule({ event }: { event?: OysterRoastEvent }) {
   const [weather, setWeather] = useState<EventWeather | null>(null);
   const [typical, setTypical] = useState<TypicalWeather | null | undefined>(undefined);
   const [loading, setLoading] = useState(true);
@@ -76,7 +77,7 @@ export function WeatherModule() {
         <p className="text-[0.66rem] font-bold uppercase tracking-[0.2em] text-[#355f9e]">Weather</p>
         <h2 id="weather-heading" className="mt-1.5 font-serif text-3xl tracking-[-0.03em] sm:text-4xl">A little sky watching</h2>
       </div>
-      <WeatherContent weather={fresh} typical={typical} loading={loading} />
+      <WeatherContent event={event} weather={fresh} typical={typical} loading={loading} />
       {!loading && (!fresh?.current || (fresh.forecastInRange && !fresh.forecast) || (!fresh.forecast && typical === null)) ? (
         <button type="button" className="mt-2 min-h-11 text-sm text-[#355f9e] underline decoration-[#355f9e]/30 underline-offset-4" onClick={() => { setLoading(true); setAttempt((value) => value + 1); }}>Check weather again</button>
       ) : null}
