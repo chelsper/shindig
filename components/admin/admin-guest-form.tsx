@@ -10,6 +10,7 @@ import {
   type AdminGuestActionState,
 } from "../../app/admin/actions";
 import type { AdminRsvp } from "../../lib/server/rsvps";
+import { DashboardLink } from "./dashboard-link";
 
 type AdminGuestFormProps =
   | { mode: "create"; rsvp?: never }
@@ -78,13 +79,11 @@ export function AdminGuestForm({ mode, rsvp }: AdminGuestFormProps) {
     <main className="relative min-h-screen overflow-hidden bg-[#f7f0e3] px-4 py-6 text-[#202523] sm:px-6 sm:py-9">
       <div aria-hidden="true" className="page-texture" />
       <div className="relative mx-auto max-w-2xl">
-        <header className="flex items-center justify-between border-b border-[#202523]/12 pb-5">
+        <header className="flex items-center justify-between gap-4 border-b border-[#202523]/12 pb-5">
           <Link className="font-serif text-xl tracking-[-0.02em] sm:text-2xl" href="/admin">
             Shindig
           </Link>
-          <p className="rounded-full border border-[#202523]/15 bg-white/40 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#202523]/65">
-            Host Dashboard
-          </p>
+          <DashboardLink />
         </header>
 
         <section className="py-8 sm:py-10">

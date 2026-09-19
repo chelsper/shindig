@@ -14,6 +14,7 @@ import {
 } from "../../lib/event-hub-settings";
 import { OYSTER_ROAST_EVENT } from "../../lib/oyster-roast-event";
 import { EventHeaderImage } from "../event-hub/event-header-image";
+import { DashboardLink } from "./dashboard-link";
 
 type EventHeaderEditorProps = {
   initialSettings: EventHubHeaderSettings;
@@ -128,13 +129,11 @@ export function EventHeaderEditor({
     <main className="relative min-h-screen overflow-hidden bg-[#f7f0e3] px-4 py-6 text-[#202523] sm:px-6 sm:py-9">
       <div aria-hidden="true" className="page-texture" />
       <div className="relative mx-auto max-w-4xl">
-        <header className="flex items-center justify-between border-b border-[#202523]/12 pb-5">
+        <header className="flex items-center justify-between gap-4 border-b border-[#202523]/12 pb-5">
           <Link className="font-serif text-xl tracking-[-0.02em] sm:text-2xl" href="/admin">
             Shindig
           </Link>
-          <p className="rounded-full border border-[#202523]/15 bg-white/40 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#202523]/65">
-            Host Dashboard
-          </p>
+          <DashboardLink />
         </header>
 
         <section className="py-8 sm:py-10">
@@ -250,7 +249,7 @@ export function EventHeaderEditor({
                   {isSaving ? "Saving…" : "Save Header"}
                   {!isSaving ? <span aria-hidden="true">→</span> : null}
                 </button>
-                <Link className="flex min-h-12 items-center justify-center text-xs font-bold uppercase tracking-[0.11em] text-[#202523]/55 underline decoration-[#202523]/20 underline-offset-4" href="/event" target="_blank">
+                <Link className="flex min-h-12 items-center justify-center text-xs font-bold uppercase tracking-[0.11em] text-[#202523]/55 underline decoration-[#202523]/20 underline-offset-4" href={OYSTER_ROAST_EVENT.eventHub.path} rel="noopener noreferrer" target="_blank">
                   View Event Hub
                 </Link>
               </div>
