@@ -1,3 +1,23 @@
+export type EventFeatures = {
+  guestList: boolean;
+  playlist: boolean;
+  weather: boolean;
+  photos: boolean;
+  questions: boolean;
+  updates: boolean;
+  potluck: boolean;
+};
+
+const features: EventFeatures = {
+  guestList: true,
+  playlist: false,
+  weather: false,
+  photos: false,
+  questions: false,
+  updates: false,
+  potluck: false,
+};
+
 export const OYSTER_ROAST_EVENT = {
   slug: "oyster-roast-2026",
   title: "Another Annualish Oyster Roast",
@@ -15,6 +35,7 @@ export const OYSTER_ROAST_EVENT = {
   calendarUid: "oyster-roast-2026@haveashindig.com",
   calendarFilename: "annualish-oyster-roast.ics",
   websiteUrl: "https://www.haveashindig.com/",
+  features,
 } as const;
 
 export type OysterRoastEvent = typeof OYSTER_ROAST_EVENT;

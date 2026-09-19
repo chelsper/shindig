@@ -13,6 +13,7 @@ export type SavedRsvp = {
   guestName: string;
   attending: boolean;
   partySize: number | null;
+  displayOnGuestList: boolean;
   comment: string | null;
 };
 
@@ -37,6 +38,16 @@ export type RsvpSummary = {
   totalPartySize: number;
 };
 
+export type PublicGuestListGuest = {
+  guestName: string;
+  partySize: number;
+};
+
+export type PublicGuestList = {
+  totalGuestCount: number;
+  guests: PublicGuestListGuest[];
+};
+
 const OYSTER_ROAST_SLUG = OYSTER_ROAST_EVENT.slug;
 
 function getDatabaseUrl() {
@@ -57,6 +68,7 @@ function withoutEditTokenHash(
     guestName: rsvp.guestName,
     attending: rsvp.attending,
     partySize: rsvp.partySize,
+    displayOnGuestList: rsvp.displayOnGuestList,
     comment: rsvp.comment,
   };
 }
@@ -79,6 +91,7 @@ export async function saveRsvp(
       guest_name,
       attending,
       party_size,
+      display_on_guest_list,
       comment,
       edit_token_hash
     )
@@ -88,6 +101,7 @@ export async function saveRsvp(
       ${rsvp.guestName},
       ${rsvp.attending},
       ${rsvp.partySize},
+      ${rsvp.displayOnGuestList},
       ${rsvp.comment},
       ${editTokenHash}
     )
@@ -97,6 +111,7 @@ export async function saveRsvp(
       guest_name AS "guestName",
       attending,
       party_size AS "partySize",
+      display_on_guest_list AS "displayOnGuestList",
       comment,
       edit_token_hash AS "editTokenHash"
   `;
@@ -113,6 +128,7 @@ export async function saveRsvp(
       guest_name AS "guestName",
       attending,
       party_size AS "partySize",
+      display_on_guest_list AS "displayOnGuestList",
       comment,
       edit_token_hash AS "editTokenHash"
     FROM rsvps
@@ -139,6 +155,7 @@ export async function getRsvpForGuest(
       guest_name AS "guestName",
       attending,
       party_size AS "partySize",
+      display_on_guest_list AS "displayOnGuestList",
       comment
     FROM rsvps
     WHERE event_slug = ${OYSTER_ROAST_SLUG}
@@ -160,6 +177,7 @@ export async function updateRsvpForGuest(
       guest_name = ${rsvp.guestName},
       attending = ${rsvp.attending},
       party_size = ${rsvp.partySize},
+      display_on_guest_list = ${rsvp.displayOnGuestList},
       comment = ${rsvp.comment},
       updated_at = now()
     WHERE event_slug = ${OYSTER_ROAST_SLUG}
@@ -168,6 +186,7 @@ export async function updateRsvpForGuest(
       guest_name AS "guestName",
       attending,
       party_size AS "partySize",
+      display_on_guest_list AS "displayOnGuestList",
       comment
   `;
 
@@ -206,6 +225,7 @@ export async function listRsvps(filter: RsvpFilter = "all"): Promise<AdminRsvp[]
       guest_name AS "guestName",
       attending,
       party_size AS "partySize",
+      display_on_guest_list AS "displayOnGuestList",
       comment,
       created_at AS "createdAt",
       updated_at AS "updatedAt"
@@ -227,4 +247,41 @@ export async function listRsvps(filter: RsvpFilter = "all"): Promise<AdminRsvp[]
       updatedAt: new Date(rsvp.updatedAt).toISOString(),
     };
   });
+}
+
+export async function getPublicGuestList(): Promise<PublicGuestList> {
+  const sql = neon(getDatabaseUrl());
+  const [totalRows, guestRows] = await Promise.all([
+    sql`
+      SELECT
+        COALESCE(SUM(party_size), 0)::int AS "totalGuestCount"
+      FROM rsvps
+      WHERE event_slug = ${OYSTER_ROAST_SLUG}
+        AND attending = true
+    `,
+    sql`
+      SELECT
+        guest_name AS "guestName",
+        party_size::int AS "partySize"
+      FROM rsvps
+      WHERE event_slug = ${OYSTER_ROAST_SLUG}
+        AND attending = true
+        AND display_on_guest_list = true
+      ORDER BY LOWER(guest_name), created_at
+    `,
+  ]);
+
+  const total = totalRows[0] as { totalGuestCount?: number | string } | undefined;
+
+  return {
+    totalGuestCount: Number(total?.totalGuestCount ?? 0),
+    guests: guestRows.map((row) => {
+      const guest = row as { guestName: string; partySize: number | string };
+
+      return {
+        guestName: guest.guestName,
+        partySize: Number(guest.partySize),
+      };
+    }),
+  };
 }

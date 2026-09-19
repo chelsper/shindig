@@ -11,6 +11,7 @@ type GuestRsvp = {
   guestName: string;
   attending: boolean;
   partySize: number | null;
+  displayOnGuestList: boolean;
   comment: string | null;
 };
 
@@ -28,6 +29,9 @@ export function RsvpUpdateForm({ initialRsvp, token }: RsvpUpdateFormProps) {
   );
   const [name, setName] = useState(initialRsvp.guestName);
   const [partySize, setPartySize] = useState(String(initialRsvp.partySize ?? 1));
+  const [displayOnGuestList, setDisplayOnGuestList] = useState(
+    initialRsvp.displayOnGuestList,
+  );
   const [comment, setComment] = useState(initialRsvp.comment ?? "");
   const [updated, setUpdated] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -49,6 +53,8 @@ export function RsvpUpdateForm({ initialRsvp, token }: RsvpUpdateFormProps) {
           guestName: name,
           attending: choice === "attending",
           partySize: choice === "attending" ? Number(partySize) : null,
+          displayOnGuestList:
+            choice === "attending" ? displayOnGuestList : false,
           comment,
         });
 
@@ -60,6 +66,7 @@ export function RsvpUpdateForm({ initialRsvp, token }: RsvpUpdateFormProps) {
         setName(result.rsvp.guestName);
         setChoice(result.rsvp.attending ? "attending" : "declined");
         setPartySize(String(result.rsvp.partySize ?? 1));
+        setDisplayOnGuestList(result.rsvp.displayOnGuestList);
         setComment(result.rsvp.comment ?? "");
         setUpdated(true);
       } catch {
@@ -115,7 +122,15 @@ export function RsvpUpdateForm({ initialRsvp, token }: RsvpUpdateFormProps) {
                   : "Your response has been updated. We’ll raise an oyster to you."}
               </p>
               {choice === "attending" ? (
-                <CalendarActions editToken={token} />
+                <>
+                  <CalendarActions editToken={token} />
+                  <Link
+                    className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full border border-[#355f9e]/25 bg-[#e9f2f8]/70 px-5 text-xs font-bold uppercase tracking-[0.12em] text-[#214e91] transition hover:border-[#355f9e]/55 hover:bg-[#e9f2f8]"
+                    href="/event"
+                  >
+                    View Event Page
+                  </Link>
+                </>
               ) : null}
               <button
                 className="primary-button mt-6 w-full"
@@ -144,7 +159,10 @@ export function RsvpUpdateForm({ initialRsvp, token }: RsvpUpdateFormProps) {
                   <button
                     aria-pressed={choice === "attending"}
                     className={`choice-button ${choice === "attending" ? "choice-button-active" : ""}`}
-                    onClick={() => setChoice("attending")}
+                    onClick={() => {
+                      if (choice === "declined") setDisplayOnGuestList(true);
+                      setChoice("attending");
+                    }}
                     type="button"
                   >
                     <span className="choice-dot" />
@@ -204,6 +222,26 @@ export function RsvpUpdateForm({ initialRsvp, token }: RsvpUpdateFormProps) {
                   value={comment}
                 />
               </label>
+
+              {choice === "attending" && event.features.guestList ? (
+                <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-[#355f9e]/12 bg-[#e9f2f8]/45 px-3.5 py-3 text-sm text-[#202523]/70">
+                  <input
+                    checked={displayOnGuestList}
+                    className="mt-0.5 size-4 shrink-0 accent-[#355f9e]"
+                    disabled={isPending}
+                    onChange={(event) => setDisplayOnGuestList(event.target.checked)}
+                    type="checkbox"
+                  />
+                  <span>
+                    <span className="font-semibold text-[#202523]">
+                      Show my name on the guest list
+                    </span>
+                    <span className="mt-0.5 block text-xs leading-5 text-[#202523]/55">
+                      Your party still counts toward the total if you leave this unchecked.
+                    </span>
+                  </span>
+                </label>
+              ) : null}
 
               {errorMessage ? (
                 <p aria-live="polite" className="mt-4 rounded-xl border border-[#a94132]/20 bg-[#fff0e9] px-3 py-2.5 text-center text-xs leading-5 text-[#843528]">

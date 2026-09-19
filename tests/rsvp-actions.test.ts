@@ -18,6 +18,7 @@ const validSubmission = {
   guestName: "Test Guest",
   attending: true,
   partySize: 4,
+  displayOnGuestList: true,
   comment: "Save me a seat",
 };
 
@@ -26,6 +27,7 @@ const savedRsvp = {
   guestName: validSubmission.guestName,
   attending: true,
   partySize: 4,
+  displayOnGuestList: true,
   comment: validSubmission.comment,
 };
 

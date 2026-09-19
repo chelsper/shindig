@@ -60,6 +60,7 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
   const [choice, setChoice] = useState<RsvpChoice>(null);
   const [name, setName] = useState("");
   const [partySize, setPartySize] = useState("1");
+  const [displayOnGuestList, setDisplayOnGuestList] = useState(true);
   const [comment, setComment] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [submissionPersisted, setSubmissionPersisted] = useState(true);
@@ -76,6 +77,9 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
   }
 
   function handleChoice(nextChoice: Exclude<RsvpChoice, null>) {
+    if (nextChoice === "attending" && choice === "declined") {
+      setDisplayOnGuestList(true);
+    }
     setChoice(nextChoice);
     setSubmitted(false);
     setErrorMessage(null);
@@ -94,6 +98,11 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
 
   function handleCommentChange(nextComment: string) {
     setComment(nextComment);
+    if (!isPending) resetSubmissionIdentity();
+  }
+
+  function handleGuestListPreference(nextPreference: boolean) {
+    setDisplayOnGuestList(nextPreference);
     if (!isPending) resetSubmissionIdentity();
   }
 
@@ -118,6 +127,8 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
           guestName: name,
           attending: choice === "attending",
           partySize: choice === "attending" ? Number(partySize) : null,
+          displayOnGuestList:
+            choice === "attending" ? displayOnGuestList : false,
           comment,
         });
 
@@ -131,6 +142,7 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
         setName(result.rsvp.guestName);
         setChoice(result.rsvp.attending ? "attending" : "declined");
         setPartySize(String(result.rsvp.partySize ?? 1));
+        setDisplayOnGuestList(result.rsvp.displayOnGuestList);
         setComment(result.rsvp.comment ?? "");
         setSubmitted(true);
       } catch {
@@ -236,7 +248,15 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
                   )}
 
                   {choice === "attending" && (
-                    <CalendarActions editToken={editToken} />
+                    <>
+                      <CalendarActions editToken={editToken} />
+                      <Link
+                        className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full border border-[#355f9e]/25 bg-[#e9f2f8]/70 px-5 text-xs font-bold uppercase tracking-[0.12em] text-[#214e91] transition hover:border-[#355f9e]/55 hover:bg-[#e9f2f8]"
+                        href="/event"
+                      >
+                        View Event Page
+                      </Link>
+                    </>
                   )}
 
                   {editToken ? (
@@ -354,6 +374,30 @@ export function InvitationPage({ persistenceDisabled }: InvitationPageProps) {
                           value={comment}
                         />
                       </label>
+
+                      {choice === "attending" &&
+                      oysterRoastEvent.features.guestList ? (
+                        <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-[#355f9e]/12 bg-[#e9f2f8]/45 px-3.5 py-3 text-sm text-[#202523]/70">
+                          <input
+                            checked={displayOnGuestList}
+                            className="mt-0.5 size-4 shrink-0 accent-[#355f9e]"
+                            disabled={isPending}
+                            name="displayOnGuestList"
+                            onChange={(event) =>
+                              handleGuestListPreference(event.target.checked)
+                            }
+                            type="checkbox"
+                          />
+                          <span>
+                            <span className="font-semibold text-[#202523]">
+                              Show my name on the guest list
+                            </span>
+                            <span className="mt-0.5 block text-xs leading-5 text-[#202523]/55">
+                              Your party still counts toward the total if you leave this unchecked.
+                            </span>
+                          </span>
+                        </label>
+                      ) : null}
                     </div>
                   )}
 

@@ -12,6 +12,7 @@ const validSubmission = {
   guestName: "  Test Guest  ",
   attending: true,
   partySize: 4,
+  displayOnGuestList: true,
   comment: "  Save me a seat  ",
 };
 
@@ -27,6 +28,7 @@ describe("validateRsvpSubmission", () => {
         guestName: "Test Guest",
         attending: true,
         partySize: 4,
+        displayOnGuestList: true,
         comment: "Save me a seat",
       },
     });
@@ -43,6 +45,7 @@ describe("validateRsvpSubmission", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.partySize).toBeNull();
+      expect(result.data.displayOnGuestList).toBe(false);
       expect(result.data.comment).toBeNull();
     }
   });
@@ -88,6 +91,7 @@ describe("validateRsvpUpdate", () => {
         guestName: "  Updated Guest ",
         attending: true,
         partySize: 2,
+        displayOnGuestList: false,
         comment: "  Updated note ",
       }),
     ).toEqual({
@@ -96,6 +100,7 @@ describe("validateRsvpUpdate", () => {
         guestName: "Updated Guest",
         attending: true,
         partySize: 2,
+        displayOnGuestList: false,
         comment: "Updated note",
       },
     });
@@ -106,11 +111,15 @@ describe("validateRsvpUpdate", () => {
       guestName: "Updated Guest",
       attending: false,
       partySize: 12,
+      displayOnGuestList: true,
       comment: null,
     });
 
     expect(result.success).toBe(true);
-    if (result.success) expect(result.data.partySize).toBeNull();
+    if (result.success) {
+      expect(result.data.partySize).toBeNull();
+      expect(result.data.displayOnGuestList).toBe(false);
+    }
   });
 
   it("requires party size when an RSVP changes to attending", () => {
@@ -119,11 +128,26 @@ describe("validateRsvpUpdate", () => {
         guestName: "Updated Guest",
         attending: true,
         partySize: null,
+        displayOnGuestList: true,
         comment: null,
       }),
     ).toEqual({
       success: false,
       message: "Party size must be between 1 and 20.",
+    });
+  });
+
+  it("requires an explicit guest-list preference when attending", () => {
+    expect(
+      validateRsvpUpdate({
+        guestName: "Updated Guest",
+        attending: true,
+        partySize: 2,
+        comment: null,
+      }),
+    ).toEqual({
+      success: false,
+      message: "Please check your guest list preference and try again.",
     });
   });
 });

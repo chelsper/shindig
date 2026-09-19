@@ -22,6 +22,7 @@ Set `ADMIN_PASSWORD` to a strong, unique password to enable the private host das
 2. Open Neon’s SQL Editor and run the migrations in order:
    - [`db/migrations/001_create_rsvps.sql`](db/migrations/001_create_rsvps.sql)
    - [`db/migrations/002_add_rsvp_edit_tokens.sql`](db/migrations/002_add_rsvp_edit_tokens.sql)
+   - [`db/migrations/003_add_guest_list_visibility.sql`](db/migrations/003_add_guest_list_visibility.sql)
 3. In the Neon project dashboard, choose **Connect** and copy the pooled Postgres connection string.
 4. Put that connection string in `.env.local`:
 
@@ -55,6 +56,12 @@ RSVPs submitted before migration `002` do not have update tokens. Those records 
 
 Attending confirmations offer Google Calendar, Apple Calendar, and Outlook actions. Calendar details come from the shared [`lib/oyster-roast-event.ts`](lib/oyster-roast-event.ts) configuration. Apple Calendar receives a dynamically generated `.ics` file, and persisted RSVPs include the guest’s private update link in the calendar event.
 
+## Event Hub
+
+The public Event Hub is available at `/event`. Enabled modules are controlled by feature flags in [`lib/oyster-roast-event.ts`](lib/oyster-roast-event.ts); only the Guest List module is enabled currently.
+
+The guest list is rendered server-side and its public query returns only the total attending count plus opted-in guest names and party sizes. Declines and private RSVP fields are never selected. Attending guests can opt out of displaying their name while remaining included in the total count. The host dashboard shows each attending RSVP’s visibility choice.
+
 ## Checks
 
 ```bash
@@ -64,4 +71,4 @@ npm test
 npm run build
 ```
 
-Milestone 5 adds attending-only calendar support. It does not add accounts, email, SMS, multiple events, RSVP deletion, analytics, or an invitation builder.
+The Event Hub milestone establishes optional module architecture and adds only the Guest List. It does not add weather, playlists, photos, questions, updates, potluck coordination, accounts, email, SMS, or multiple events.

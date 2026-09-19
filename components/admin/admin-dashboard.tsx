@@ -163,6 +163,16 @@ export function AdminDashboard({ filter, rsvps, summary }: AdminDashboardProps) 
                         <dt className="text-[0.64rem] font-bold tracking-[0.12em] text-[#202523]/45 uppercase">Submitted</dt>
                         <dd className="mt-1 text-xs leading-relaxed">{formatDate(rsvp.createdAt)}</dd>
                       </div>
+                      <div>
+                        <dt className="text-[0.64rem] font-bold tracking-[0.12em] text-[#202523]/45 uppercase">Guest list</dt>
+                        <dd className="mt-1 font-semibold">
+                          {rsvp.attending
+                            ? rsvp.displayOnGuestList
+                              ? "Shown"
+                              : "Hidden"
+                            : "—"}
+                        </dd>
+                      </div>
                       <div className="col-span-2">
                         <dt className="text-[0.64rem] font-bold tracking-[0.12em] text-[#202523]/45 uppercase">Comment</dt>
                         <dd className="mt-1 break-words text-[#202523]/70">{rsvp.comment || "—"}</dd>
@@ -178,12 +188,13 @@ export function AdminDashboard({ filter, rsvps, summary }: AdminDashboardProps) 
 
               <div className="mt-5 hidden overflow-hidden rounded-2xl border border-[#202523]/10 bg-white/48 shadow-[0_14px_40px_rgb(32_37_35_/_0.05)] md:block">
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[960px] border-collapse text-left text-sm">
+                  <table className="w-full min-w-[1060px] border-collapse text-left text-sm">
                     <thead className="border-b border-[#202523]/10 bg-[#202523]/[0.035] text-[0.64rem] font-bold tracking-[0.11em] text-[#202523]/48 uppercase">
                       <tr>
                         <th className="px-5 py-4">Guest Name</th>
                         <th className="px-4 py-4">RSVP Status</th>
                         <th className="px-4 py-4">Party Size</th>
+                        <th className="px-4 py-4">Guest List</th>
                         <th className="px-4 py-4">Comment</th>
                         <th className="px-4 py-4">Submitted</th>
                         <th className="px-5 py-4">Last Updated</th>
@@ -195,6 +206,13 @@ export function AdminDashboard({ filter, rsvps, summary }: AdminDashboardProps) 
                           <td className="font-serif px-5 py-4 text-base font-semibold">{rsvp.guestName}</td>
                           <td className="px-4 py-4"><StatusBadge attending={rsvp.attending} /></td>
                           <td className="px-4 py-4 font-semibold">{rsvp.partySize ?? "—"}</td>
+                          <td className="px-4 py-4 font-semibold">
+                            {rsvp.attending
+                              ? rsvp.displayOnGuestList
+                                ? "Shown"
+                                : "Hidden"
+                              : "—"}
+                          </td>
                           <td className="max-w-64 px-4 py-4 break-words text-[#202523]/68">{rsvp.comment || "—"}</td>
                           <td className="px-4 py-4 text-xs leading-relaxed text-[#202523]/65">{formatDate(rsvp.createdAt)}</td>
                           <td className="px-5 py-4 text-xs leading-relaxed text-[#202523]/65">{formatDate(rsvp.updatedAt)}</td>

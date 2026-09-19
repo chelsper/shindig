@@ -14,6 +14,7 @@ import {
   listRsvps,
   saveRsvp,
   updateRsvpForGuest,
+  getPublicGuestList,
 } from "../lib/server/rsvps";
 
 const rsvp = {
@@ -22,6 +23,7 @@ const rsvp = {
   guestName: "Test Guest",
   attending: true,
   partySize: 4,
+  displayOnGuestList: true,
   comment: "Save me a seat",
 };
 
@@ -30,6 +32,7 @@ const savedRsvp = {
   guestName: rsvp.guestName,
   attending: true,
   partySize: 4,
+  displayOnGuestList: true,
   comment: rsvp.comment,
 };
 const editTokenHash = "f".repeat(64);
@@ -59,6 +62,7 @@ describe("saveRsvp", () => {
       rsvp.guestName,
       rsvp.attending,
       rsvp.partySize,
+      rsvp.displayOnGuestList,
       rsvp.comment,
       editTokenHash,
     ]);
@@ -99,6 +103,7 @@ describe("guest RSVP access", () => {
     guestName: "Test Guest",
     attending: true,
     partySize: 4,
+    displayOnGuestList: true,
     comment: "Save me a seat",
   };
 
@@ -126,6 +131,7 @@ describe("guest RSVP access", () => {
       guestName: "Test Guest",
       attending: false,
       partySize: null,
+      displayOnGuestList: false,
       comment: null,
     };
     mocks.sql.mockResolvedValueOnce([declinedRsvp]);
@@ -141,6 +147,7 @@ describe("guest RSVP access", () => {
       declinedRsvp.guestName,
       false,
       null,
+      false,
       null,
       "oyster-roast-2026",
       editTokenHash,
@@ -151,6 +158,37 @@ describe("guest RSVP access", () => {
     mocks.sql.mockResolvedValueOnce([]);
 
     await expect(getRsvpForGuest(editTokenHash)).resolves.toBeNull();
+  });
+});
+
+describe("public guest list query", () => {
+  beforeEach(() => {
+    vi.unstubAllEnvs();
+    vi.stubEnv("DATABASE_URL", "postgresql://test:test@example.test/neondb");
+    mocks.neon.mockReset();
+    mocks.sql.mockReset();
+    mocks.neon.mockReturnValue(mocks.sql);
+  });
+
+  it("counts every attendee but returns names only for visible attending RSVPs", async () => {
+    mocks.sql
+      .mockResolvedValueOnce([{ totalGuestCount: "6" }])
+      .mockResolvedValueOnce([{ guestName: "Visible Household", partySize: "2" }]);
+
+    await expect(getPublicGuestList()).resolves.toEqual({
+      totalGuestCount: 6,
+      guests: [{ guestName: "Visible Household", partySize: 2 }],
+    });
+
+    expect(mocks.sql).toHaveBeenCalledTimes(2);
+    const totalQuery = mocks.sql.mock.calls[0][0].join("?");
+    const visibleQuery = mocks.sql.mock.calls[1][0].join("?");
+
+    expect(totalQuery).toContain("AND attending = true");
+    expect(totalQuery).not.toContain("display_on_guest_list = true");
+    expect(visibleQuery).toContain("AND attending = true");
+    expect(visibleQuery).toContain("AND display_on_guest_list = true");
+    expect(visibleQuery).not.toMatch(/\b(comment|edit_token_hash|updated_at|id::text)\b/);
   });
 });
 

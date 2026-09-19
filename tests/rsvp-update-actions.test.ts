@@ -17,6 +17,7 @@ const validUpdate = {
   guestName: "Test Guest",
   attending: true,
   partySize: 3,
+  displayOnGuestList: true,
   comment: "Updated note",
 };
 
@@ -30,6 +31,7 @@ describe("updateRsvp", () => {
       guestName: "Test Guest",
       attending: true,
       partySize: 3,
+      displayOnGuestList: true,
       comment: "Updated note",
     };
     mocks.updateRsvpForGuest.mockResolvedValue(rsvp);
@@ -41,6 +43,7 @@ describe("updateRsvp", () => {
         guestName: "Test Guest",
         attending: true,
         partySize: 3,
+        displayOnGuestList: true,
         comment: "Updated note",
       },
     );
@@ -51,12 +54,19 @@ describe("updateRsvp", () => {
       guestName: "Test Guest",
       attending: false,
       partySize: null,
+      displayOnGuestList: false,
       comment: null,
     };
     mocks.updateRsvpForGuest.mockResolvedValue(declined);
 
     await expect(
-      updateRsvp({ ...validUpdate, attending: false, partySize: 18, comment: null }),
+      updateRsvp({
+        ...validUpdate,
+        attending: false,
+        partySize: 18,
+        displayOnGuestList: true,
+        comment: null,
+      }),
     ).resolves.toEqual({ ok: true, rsvp: declined });
     expect(mocks.updateRsvpForGuest).toHaveBeenCalledWith(
       expect.any(String),

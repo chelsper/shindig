@@ -48,6 +48,7 @@ export async function submitRsvp(input: unknown): Promise<SubmitRsvpResult> {
             guestName: validation.data.guestName,
             attending: validation.data.attending,
             partySize: validation.data.partySize,
+            displayOnGuestList: validation.data.displayOnGuestList,
             comment: validation.data.comment,
           },
         };

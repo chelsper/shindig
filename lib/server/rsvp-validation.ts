@@ -15,6 +15,7 @@ export type ValidatedRsvp = {
   guestName: string;
   attending: boolean;
   partySize: number | null;
+  displayOnGuestList: boolean;
   comment: string | null;
 };
 
@@ -22,6 +23,7 @@ export type ValidatedRsvpUpdate = {
   guestName: string;
   attending: boolean;
   partySize: number | null;
+  displayOnGuestList: boolean;
   comment: string | null;
 };
 
@@ -54,6 +56,7 @@ function validateRsvpFields(
   }
 
   let partySize: number | null = null;
+  let displayOnGuestList = false;
   if (submission.attending) {
     if (
       typeof submission.partySize !== "number" ||
@@ -68,6 +71,15 @@ function validateRsvpFields(
     }
 
     partySize = submission.partySize;
+
+    if (typeof submission.displayOnGuestList !== "boolean") {
+      return {
+        success: false,
+        message: "Please check your guest list preference and try again.",
+      };
+    }
+
+    displayOnGuestList = submission.displayOnGuestList;
   }
 
   if (
@@ -91,6 +103,7 @@ function validateRsvpFields(
       guestName,
       attending: submission.attending,
       partySize,
+      displayOnGuestList,
       comment,
     },
   };
