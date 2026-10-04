@@ -1,6 +1,7 @@
 import { OYSTER_ROAST_EVENT } from "../../../lib/oyster-roast-event";
 import { eventWeatherService } from "../../../lib/server/weather";
 import { getEventConfiguration } from "../../../lib/server/invitation-settings";
+import { reportWeatherFailure } from "../../../lib/server/weather/diagnostics";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,10 +15,13 @@ export async function GET(request: Request) {
   try {
     const event = await getEventConfiguration();
     if (new URL(request.url).searchParams.get("context") === "typical") {
-      return Response.json({ typical: await eventWeatherService.typical(event) }, { headers });
+      const typical = await eventWeatherService.typical(event);
+      if (!typical) return Response.json({ message: "Historical weather is temporarily unavailable. Please try again shortly." }, { status: 503, headers: { ...headers, "Retry-After": "60" } });
+      return Response.json({ typical }, { headers });
     }
     return Response.json({ weather: await eventWeatherService.live(event) }, { headers });
-  } catch {
+  } catch (error) {
+    reportWeatherFailure("configuration", error);
     return Response.json({ message: "The weather is taking a quick break. Please check back shortly." }, { status: 503, headers });
   }
 }

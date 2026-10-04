@@ -16,14 +16,22 @@ export function WeatherModule({ event }: { event?: OysterRoastEvent }) {
     const controller = new AbortController();
     let pending = false;
     let historyRequested = false;
+    let historyRetryAt = 0;
+    let needsHistory = false;
     let refreshAt = 0;
     async function loadTypical() {
-      if (historyRequested) return;
+      if (historyRequested || Date.now() < historyRetryAt || controller.signal.aborted) return;
       historyRequested = true;
+      historyRetryAt = Date.now() + 60_000;
       try {
         const response = await fetch("/api/weather?context=typical", { cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(55_000)]) });
-        if (!response.ok) throw new Error("Unavailable");
+        if (!response.ok) {
+          const retry = Number(response.headers.get("Retry-After"));
+          if (Number.isFinite(retry)) historyRetryAt = Date.now() + Math.max(60, Math.min(retry, 86400)) * 1000;
+          throw new Error("Unavailable");
+        }
         const data = await response.json() as { typical: TypicalWeather | null };
+        if (!data.typical) throw new Error("Unavailable");
         if (!controller.signal.aborted) setTypical(data.typical);
       } catch {
         if (!controller.signal.aborted) setTypical(null);
@@ -44,12 +52,14 @@ export function WeatherModule({ event }: { event?: OysterRoastEvent }) {
           // data expires, not ten minutes after this browser received it.
           refreshAt = Math.max(Date.now() + 60_000, Math.min(refreshAt, data.weather.expiresAt - 15_000));
           setWeather(data.weather);
-          if (!data.weather.forecast) void loadTypical();
+          needsHistory = !data.weather.forecast;
+          if (needsHistory) void loadTypical();
         }
       } catch {
         if (!controller.signal.aborted) {
           // Preserve only static sun/climate context, never old live conditions.
           setWeather((previous) => previous ? { ...previous, current: null, forecast: null, expiresAt: 0 } : null);
+          needsHistory = true;
           void loadTypical();
         }
       } finally {
@@ -61,6 +71,7 @@ export function WeatherModule({ event }: { event?: OysterRoastEvent }) {
       if (document.visibilityState === "hidden") return;
       setNow(Date.now());
       if (Date.now() >= refreshAt) void refresh();
+      if (needsHistory) void loadTypical();
     };
     void refresh();
     // Expire old conditions even when an open tab's network goes away.

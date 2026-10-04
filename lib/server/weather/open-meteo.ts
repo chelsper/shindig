@@ -1,6 +1,7 @@
 import "server-only";
 import { localDate, localHour, type EventForecast, type WeatherHour, type WeatherLocation } from "../../weather";
 import { WeatherUnavailable, type HistoricalDay, type WeatherProvider } from "./provider";
+import { reportWeatherFailure } from "./diagnostics";
 
 type ObjectValue = Record<string, unknown>;
 const object = (value: unknown): ObjectValue => value && typeof value === "object" && !Array.isArray(value) ? value as ObjectValue : {};
@@ -27,7 +28,7 @@ export function weatherCondition(value: unknown): string | null {
 
 function assertUnits(body: ObjectValue, group: string, units: Record<string, string>) {
   const actual = object(body[`${group}_units`]);
-  if (Object.entries(units).some(([key, value]) => actual[key] !== value)) throw new WeatherUnavailable();
+  if (Object.entries(units).some(([key, value]) => actual[key] !== value)) throw new WeatherUnavailable(60, "invalid-response");
 }
 
 // Open-Meteo daily labels use its returned fixed offset (which can differ from
@@ -69,28 +70,41 @@ function eventForecast(body: ObjectValue, event: WeatherLocation): EventForecast
 
 export function createOpenMeteoProvider(fetcher: typeof fetch = fetch, now = Date.now): WeatherProvider {
   const blockedUntil = new Map<string, number>();
-  async function request(kind: "live" | "history", event: WeatherLocation, params: Record<string, string>): Promise<ObjectValue> {
-    if ((blockedUntil.get(kind) ?? 0) > now()) throw new WeatherUnavailable();
+  async function request(kind: "live" | "history", event: WeatherLocation, params: Record<string, string>, budget?: AbortSignal): Promise<ObjectValue> {
+    if ((blockedUntil.get(kind) ?? 0) > now()) throw new WeatherUnavailable(Math.ceil((blockedUntil.get(kind)! - now()) / 1000), "cooldown");
     const key = process.env.OPEN_METEO_API_KEY?.trim();
     const host = kind === "history" ? "archive-api" : "api";
     const url = new URL(`https://${key ? "customer-" : ""}${host}.open-meteo.com/v1/${kind === "history" ? "archive" : "forecast"}`);
     url.search = new URLSearchParams({ latitude: String(event.coordinates.latitude), longitude: String(event.coordinates.longitude), timezone: event.timeZone, timeformat: "unixtime", temperature_unit: "fahrenheit", wind_speed_unit: "mph", precipitation_unit: "mm", ...params, ...(key ? { apikey: key } : {}) }).toString();
-    try {
-      const response = await fetcher(url, { cache: "no-store", redirect: "error", signal: AbortSignal.timeout(7000) });
-      if (!response.ok) {
-        const header = response.headers.get("Retry-After");
-        const retry = header && /^\d+$/.test(header) ? Number(header) : header ? (Date.parse(header) - now()) / 1000 : 60;
-        const seconds = Number.isFinite(retry) ? Math.max(60, Math.min(retry, 86400)) : 60;
-        blockedUntil.set(kind, now() + seconds * 1000);
-        throw new WeatherUnavailable(seconds);
+    for (let attempt = 0; ; attempt++) {
+      if (budget?.aborted) throw new WeatherUnavailable(60, "budget");
+      try {
+        const timeout = AbortSignal.timeout(7000);
+        const response = await fetcher(url, { cache: "no-store", redirect: "error", signal: budget ? AbortSignal.any([timeout, budget]) : timeout });
+        if (!response.ok) {
+          const header = response.headers.get("Retry-After");
+          const retry = header && /^\d+$/.test(header) ? Number(header) : header ? (Date.parse(header) - now()) / 1000 : 60;
+          const seconds = Number.isFinite(retry) ? Math.max(60, Math.min(retry, 86400)) : 60;
+          // Only rate limits/auth failures or an explicit server Retry-After
+          // pause the whole provider. A transient failure of one year must not
+          // suppress the other 19 independent windows.
+          if ([401, 403, 429].includes(response.status) || header) blockedUntil.set(kind, now() + seconds * 1000);
+          throw new WeatherUnavailable(seconds, response.status === 429 ? "rate-limit" : "http", response.status);
+        }
+        let body;
+        try { body = object(await response.json()); }
+        catch { throw new WeatherUnavailable(60, "invalid-response"); }
+        if (body.error || body.timezone !== event.timeZone) throw new WeatherUnavailable(60, "invalid-response");
+        return body;
+      } catch (error) {
+        const failure = error instanceof WeatherUnavailable ? error : new WeatherUnavailable(60,
+          budget?.aborted ? "budget" : error instanceof Error && ["TimeoutError", "AbortError"].includes(error.name) ? "timeout" : "network");
+        reportWeatherFailure(kind, failure);
+        const transient = ["timeout", "network"].includes(failure.reason) || (failure.status ?? 0) >= 500;
+        if (kind !== "history" || attempt >= 1 || !transient || budget?.aborted || (blockedUntil.get(kind) ?? 0) > now()) throw failure;
+        // One bounded retry; the shared 40-second history budget also covers it.
+        await new Promise((resolve) => setTimeout(resolve, 250));
       }
-      const body = object(await response.json());
-      if (body.error || body.timezone !== event.timeZone) throw new WeatherUnavailable();
-      return body;
-    } catch {
-      // Never log/return a provider URL, key, response body, or raw exception.
-      blockedUntil.set(kind, Math.max(blockedUntil.get(kind) ?? 0, now() + 60_000));
-      throw new WeatherUnavailable();
     }
   }
 
@@ -113,8 +127,8 @@ export function createOpenMeteoProvider(fetcher: typeof fetch = fetch, now = Dat
       try { forecast = includeForecast ? eventForecast(body, event) : null; } catch { /* A malformed forecast is unavailable, never guessed. */ }
       return { current, forecast };
     },
-    async history(event, window) {
-      const body = await request("history", event, { start_date: window.start, end_date: window.end, models: "era5", daily: "temperature_2m_max,temperature_2m_min,precipitation_sum", hourly: "temperature_2m" });
+    async history(event, window, signal) {
+      const body = await request("history", event, { start_date: window.start, end_date: window.end, models: "era5", daily: "temperature_2m_max,temperature_2m_min,precipitation_sum", hourly: "temperature_2m" }, signal);
       assertUnits(body, "daily", { time: "unixtime", temperature_2m_max: "°F", temperature_2m_min: "°F", precipitation_sum: "mm" });
       const daily = object(body.daily), hourly = object(body.hourly);
       const hourlyUnits = object(body.hourly_units);

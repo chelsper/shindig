@@ -1,5 +1,6 @@
 import "server-only";
 import { WeatherUnavailable } from "./provider";
+import { reportWeatherFailure } from "./diagnostics";
 
 export type WeatherCache = <T>(key: string, ttl: number, load: () => Promise<T>) => Promise<T>;
 
@@ -16,9 +17,18 @@ export function createWeatherCache(persist: WeatherCache = (_key, _ttl, load) =>
     for (const [oldKey, entry] of entries) if (entry.until <= time) entries.delete(oldKey);
     if (entries.size >= 64) entries.delete(entries.keys().next().value!);
     const entry = { until: (bucket + 1) * ttl, promise: Promise.resolve(undefined) as Promise<unknown> };
-    entry.promise = persist(cacheKey, ttl, load).catch(() => {
-      entry.until = now() + 60_000;
-      throw new WeatherUnavailable();
+    let loading: Promise<T> | undefined;
+    const loadOnce = () => loading ??= Promise.resolve().then(load);
+    entry.promise = Promise.resolve().then(() => persist(cacheKey, ttl, loadOnce)).catch((error) => {
+      // Cache infrastructure must not make available provider data unavailable.
+      // Reuse the same loader promise if a cache write failed after loading;
+      // never repeat a failed provider call here or bypass its cooldown.
+      if (!loading) reportWeatherFailure("cache", error);
+      return loadOnce();
+    }).catch((error) => {
+      const failure = error instanceof WeatherUnavailable ? error : new WeatherUnavailable();
+      entry.until = now() + Math.max(60, failure.retryAfter) * 1000;
+      throw failure;
     });
     entries.set(cacheKey, entry);
     return entry.promise as Promise<T>;

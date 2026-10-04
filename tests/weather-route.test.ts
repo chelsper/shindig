@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("server-only", () => ({}));
 const service = vi.hoisted(() => ({ live: vi.fn(), typical: vi.fn() }));
 vi.mock("../lib/server/weather", () => ({ eventWeatherService: service }));
 vi.mock("../lib/server/invitation-settings", () => ({ getEventConfiguration: vi.fn() }));
@@ -11,6 +12,14 @@ beforeEach(() => { vi.resetAllMocks(); vi.mocked(getEventConfiguration).mockReso
 afterEach(() => { event.features.weather = true; });
 
 describe("public weather route", () => {
+  it("returns a retryable failure instead of a successful null history response", async () => {
+    service.typical.mockResolvedValue(null);
+    const response = await GET(new Request("https://shindig.test/api/weather?context=typical"));
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Retry-After")).toBe("60");
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(await response.json()).toEqual({ message: "Historical weather is temporarily unavailable. Please try again shortly." });
+  });
   it("uses host-updated date and coordinates instead of the original defaults", async () => {
     const updated = { ...event, startsAtUtc: "2026-12-12T22:00:00.000Z", coordinates: { latitude: 30.1, longitude: -81.7 } };
     vi.mocked(getEventConfiguration).mockResolvedValue(updated);

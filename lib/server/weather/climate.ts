@@ -14,12 +14,15 @@ export function historyWindows(event: WeatherLocation, now: number): HistoryWind
   }).filter((window) => Date.parse(window.end) < now - 7 * DAY_MS);
 }
 
-export function calculateTypical(samples: { window: HistoryWindow; days: HistoricalDay[] }[]): TypicalWeather | null {
-  const complete = samples.filter(({ window, days }) => {
+export function isCompleteHistoryWindow(window: HistoryWindow, days: HistoricalDay[]): boolean {
     const expected = Array.from({ length: 7 }, (_, index) => new Date(Date.parse(window.start) + index * DAY_MS).toISOString().slice(0, 10));
     return days.length === 7 && expected.every((date) => days.filter((day) => day.date === date).length === 1)
-      && days.every((day) => Number.isFinite(day.high) && Number.isFinite(day.low) && Number.isFinite(day.precipitation) && day.precipitation >= 0);
-  });
+      && days.every((day) => Number.isFinite(day.high) && Number.isFinite(day.low) && day.high >= day.low && Number.isFinite(day.precipitation) && day.precipitation >= 0);
+}
+
+export function calculateTypical(samples: { window: HistoryWindow; days: HistoricalDay[] }[]): TypicalWeather | null {
+  const complete = samples.filter(({ window, days }) => isCompleteHistoryWindow(window, days))
+    .sort((a, b) => b.window.year - a.window.year);
   if (complete.length < 15) return null;
   const days = complete.flatMap((sample) => sample.days);
   const average = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;

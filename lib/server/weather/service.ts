@@ -1,11 +1,15 @@
 import "server-only";
 import { CLIMATE_WEATHER_TTL, LIVE_WEATHER_TTL, eventDaysAway, localDate, type EventWeather, type WeatherLocation } from "../../weather";
-import { type WeatherCache } from "./cache";
-import { calculateTypical, historyWindows } from "./climate";
+import { createWeatherCache, type WeatherCache } from "./cache";
+import { calculateTypical, historyWindows, isCompleteHistoryWindow } from "./climate";
 import { WeatherUnavailable, type HistoricalDay, type WeatherProvider } from "./provider";
 import { eventSun } from "./sun";
+import { reportWeatherFailure } from "./diagnostics";
 
 export function createWeatherService(provider: WeatherProvider, cache: WeatherCache, now = Date.now) {
+  // Do not wrap window cache reads inside another Next unstable_cache call:
+  // Next bypasses nested persistent reads, losing successful partial results.
+  const aggregates = createWeatherCache(undefined, now);
   const eventKey = (event: WeatherLocation) => JSON.stringify([provider.id, event.coordinates, event.timeZone, event.startsAtUtc]);
   return {
     async live(event: WeatherLocation): Promise<EventWeather> {
@@ -31,21 +35,34 @@ export function createWeatherService(provider: WeatherProvider, cache: WeatherCa
     async typical(event: WeatherLocation) {
       const windows = historyWindows(event, now());
       try {
-        return await cache(`climate:${eventKey(event)}:${windows.map((w) => w.year).join(",")}`, CLIMATE_WEATHER_TTL, async () => {
+        return await aggregates(`climate:${eventKey(event)}:${windows.map((w) => w.year).join(",")}`, CLIMATE_WEATHER_TTL, async () => {
           const samples: { window: typeof windows[number]; days: HistoricalDay[] }[] = [];
+          const budget = AbortSignal.timeout(40_000);
           let next = 0;
           // At most three concurrent requests; at most 20 seven-day windows.
           await Promise.all(Array.from({ length: 3 }, async () => {
-            while (next < windows.length) {
+            while (next < windows.length && !budget.aborted) {
               const window = windows[next++];
               try {
-                const days = await cache(`history:${eventKey(event)}:${window.start}:${window.end}`, CLIMATE_WEATHER_TTL, () => provider.history(event, window));
+                const days = await cache(`history:${eventKey(event)}:${window.start}:${window.end}`, CLIMATE_WEATHER_TTL, async () => {
+                  const days = await provider.history(event, window, budget);
+                  // Incomplete/empty responses must not become a 30-day success.
+                  if (!isCompleteHistoryWindow(window, days)) throw new WeatherUnavailable(60, "incomplete-history");
+                  return days;
+                });
                 samples.push({ window, days });
-              } catch { /* Only complete years enter the calculation. */ }
+              } catch (error) {
+                // A bad year does not discard good years; provider-wide 429s
+                // still honor the provider's cooldown without making more calls.
+                reportWeatherFailure("history", error, { year: window.year });
+              }
             }
           }));
           const result = calculateTypical(samples);
-          if (!result) throw new WeatherUnavailable();
+          if (!result) {
+            reportWeatherFailure("history-summary", new WeatherUnavailable(60, budget.aborted ? "budget" : "incomplete-history"), { completeYears: samples.length, requestedYears: windows.length });
+            throw new WeatherUnavailable();
+          }
           return result;
         });
       } catch { return null; }
