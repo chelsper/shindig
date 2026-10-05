@@ -24,9 +24,9 @@ describe("dynamic ICS route", () => {
       OYSTER_ROAST_EVENT.calendarFilename,
     );
     expect(ics).toContain(
-      `https://www.haveashindig.com/rsvp/${editToken}`,
+      `https://www.jaspershucks.app/rsvp/${editToken}`,
     );
-    expect(ics).toContain("URL:https://www.haveashindig.com/event\r\n");
+    expect(ics).toContain("URL:https://www.jaspershucks.app/event\r\n");
   });
 
   it("ignores malformed tokens and links only to the public event", async () => {
@@ -37,7 +37,7 @@ describe("dynamic ICS route", () => {
     );
     const ics = (await response.text()).replaceAll("\r\n ", "");
 
-    expect(ics).toContain("URL:https://www.haveashindig.com/event\r\n");
+    expect(ics).toContain("URL:https://www.jaspershucks.app/event\r\n");
     expect(ics).not.toContain("/rsvp/guessable");
   });
 

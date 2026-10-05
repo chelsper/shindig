@@ -1,26 +1,16 @@
-import { InvitationPage } from "../components/invitation-page";
-import { getEventConfiguration } from "../lib/server/invitation-settings";
-import { EventDetailsUnavailable } from "../components/event-details-unavailable";
+import { headers } from "next/headers";
+import { ShindigHome } from "../components/shindig-home";
+import { getInvitationMetadata, renderInvitation } from "../components/invitation-route";
+import { isOysterRoastHost, SHINDIG_SITE } from "../lib/site";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata() {
-  try {
-    const event = await getEventConfiguration();
-    return { title: event.title, description: event.description };
-  } catch { return { title: "Invitation | Shindig" }; }
+  if (isOysterRoastHost((await headers()).get("host"))) return getInvitationMetadata();
+  return { title: SHINDIG_SITE.title, description: SHINDIG_SITE.description, alternates: { canonical: SHINDIG_SITE.url } };
 }
 
 export default async function Home() {
-  const persistenceDisabled =
-    process.env.NODE_ENV === "development" && !process.env.DATABASE_URL?.trim();
-
-  let event;
-  try {
-    event = await getEventConfiguration();
-  } catch {
-    console.error("Invitation details unavailable.");
-    return <EventDetailsUnavailable />;
-  }
-  return <InvitationPage event={event} persistenceDisabled={persistenceDisabled} />;
+  if (isOysterRoastHost((await headers()).get("host"))) return renderInvitation();
+  return <ShindigHome />;
 }

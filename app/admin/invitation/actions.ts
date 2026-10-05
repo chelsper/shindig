@@ -28,7 +28,7 @@ export async function saveInvitation(input: unknown): Promise<SaveInvitationResu
     }
     const nextRevision = await saveInvitationSettings(validation.data, revision);
     if (nextRevision === null) return { ok: false, message: "Someone else just saved this invitation. Reload the editor before publishing your changes." };
-    for (const path of ["/", "/event", "/admin", "/admin/invitation", "/calendar/oyster-roast.ics", "/api/weather"]) revalidatePath(path);
+    for (const path of ["/", "/invitation", "/event", "/admin", "/admin/invitation", "/calendar/oyster-roast.ics", "/api/weather"]) revalidatePath(path);
     revalidatePath("/rsvp/[token]", "page");
     return { ok: true, revision: nextRevision, settings: validation.data };
   } catch {

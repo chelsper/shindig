@@ -104,7 +104,7 @@ export function InvitationEditor({ initialRecord, uploadConfigured }: { initialR
         <h1 className="mt-2 font-serif text-4xl tracking-[-0.04em] sm:text-5xl">Your invitation</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-[#202523]/65">Edit the page guests see before they RSVP. Nothing changes publicly until you save. Your guest responses and private update links stay exactly as they are.</p>
         <div className="mt-4 flex flex-wrap gap-3">
-          <a className={secondary} href="/" target="_blank" rel="noreferrer">View live invitation ↗</a>
+          <a className={secondary} href={OYSTER_ROAST_EVENT.websiteUrl} target="_blank" rel="noreferrer">View live invitation ↗</a>
           <button className={secondary} type="button" onClick={() => setPreviewOpen(!previewOpen)} aria-expanded={previewOpen} aria-controls="invitation-preview">{previewOpen ? "Hide" : "Show"} draft preview</button>
         </div>
       </section>

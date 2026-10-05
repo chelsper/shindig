@@ -31,7 +31,7 @@ describe("host-only invitation editing", () => {
     const result = await saveInvitation(request());
     expect(result).toEqual({ ok: true, settings, revision: 1 });
     expect(mocks.save).toHaveBeenCalledWith(settings, 0);
-    for (const path of ["/", "/event", "/admin", "/admin/invitation", "/calendar/oyster-roast.ics", "/api/weather"]) expect(mocks.revalidate).toHaveBeenCalledWith(path);
+    for (const path of ["/", "/invitation", "/event", "/admin", "/admin/invitation", "/calendar/oyster-roast.ics", "/api/weather"]) expect(mocks.revalidate).toHaveBeenCalledWith(path);
     expect(mocks.revalidate).toHaveBeenCalledWith("/rsvp/[token]", "page");
   });
   it.each([null, {}, { ...request(), revision: "0" }, { ...request(), settings: { ...settings, title: " " } }, { ...request(), startsAtLocal: "2026-03-08T02:30" }])("rejects invalid requests server-side", async (input) => {
@@ -64,7 +64,7 @@ describe("host-only invitation editing", () => {
   it("renders editable invitation fields and a storage warning, never an active guest form", async () => {
     vi.stubEnv("BLOB_READ_WRITE_TOKEN", "");
     const html = renderToStaticMarkup(await AdminInvitationPage());
-    for (const text of ["Your invitation", "Event title", "Description", "Starts", "RSVP heading", "Invitation artwork", "Save &amp; publish invitation", "Vercel Blob", 'href="/admin"', 'href="/"']) expect(html).toContain(text);
+    for (const text of ["Your invitation", "Event title", "Description", "Starts", "RSVP heading", "Invitation artwork", "Save &amp; publish invitation", "Vercel Blob", 'href="/admin"', 'href="https://www.jaspershucks.app/"']) expect(html).toContain(text);
     expect(html).not.toContain("Submit RSVP"); expect(html).not.toContain("DATABASE_URL");
   });
   it("renders a friendly setup error without exposing database details", async () => {

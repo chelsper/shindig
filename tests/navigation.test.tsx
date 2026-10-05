@@ -92,7 +92,7 @@ describe("screen navigation", () => {
       else vi.mocked(getRsvpForGuest).mockResolvedValue(null);
       const html = renderToStaticMarkup(await RsvpUpdatePage({ params: Promise.resolve({ token: state === "invalid" ? "invalid" : "a".repeat(43) }) }));
       expect(links(html)).toContainEqual(expect.objectContaining({ href: OYSTER_ROAST_EVENT.eventHub.path, label: "View Event Hub→" }));
-      expect(links(html)).toContainEqual(expect.objectContaining({ href: "/", label: "Return to invitation" }));
+      expect(links(html)).toContainEqual(expect.objectContaining({ href: OYSTER_ROAST_EVENT.websiteUrl, label: "Return to invitation" }));
       expect(html).toContain(state === "failure" ? "We couldn’t load your RSVP." : "This update link isn’t available.");
     } finally { log.mockRestore(); }
   });
@@ -137,7 +137,7 @@ describe("screen navigation", () => {
   it("keeps mobile and desktop invitation links pointing to the invitation, not the admin area", () => {
     const html = renderToStaticMarkup(<EventHubHeader headerSettings={DEFAULT_EVENT_HUB_HEADER} />);
     for (const label of ["Invitation", "Return to invitation"]) {
-      expect(links(html)).toContainEqual(expect.objectContaining({ label, href: "/" }));
+      expect(links(html)).toContainEqual(expect.objectContaining({ label, href: OYSTER_ROAST_EVENT.websiteUrl }));
     }
     expect(links(html)).toContainEqual(expect.objectContaining({ label: "Add to Calendar", href: "/calendar/oyster-roast.ics" }));
     expect(links(html).some((link) => link.href?.startsWith("/admin"))).toBe(false);

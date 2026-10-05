@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_INVITATION_SETTINGS, resolveEventConfiguration } from "../lib/invitation-settings";
 vi.mock("../app/actions", () => ({ submitRsvp: vi.fn() }));
+vi.mock("next/headers", () => ({ headers: async () => new Headers({ host: "www.jaspershucks.app" }) }));
 vi.mock("../lib/server/invitation-settings", () => ({ getEventConfiguration: vi.fn() }));
 import Home, { generateMetadata } from "../app/page";
 import { getEventConfiguration } from "../lib/server/invitation-settings";
@@ -20,7 +21,7 @@ describe("published invitation presentation", () => {
     for (const value of ["Changed roast", "Coming along?", "An invitation", "Changed address", "Saturday, December 12, 2026", "6:00 PM", "come hungry", "December ’26", "Submit RSVP", 'href="/event"']) expect(html).toContain(value);
     expect(html).not.toContain("<script>alert"); expect(html).toContain("&lt;script&gt;");
     expect(html).not.toContain("November 7");
-    expect(await generateMetadata()).toEqual({ title: event.title, description: event.description });
+    expect(await generateMetadata()).toEqual({ title: event.title, description: event.description, alternates: { canonical: event.websiteUrl } });
   });
   it("keeps Hub artwork separate but uses shared event details and directions", () => {
     const html = renderToStaticMarkup(<EventHubHeader event={event} headerSettings={DEFAULT_EVENT_HUB_HEADER} />);

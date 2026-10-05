@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 
-import { OYSTER_ROAST_EVENT } from "../lib/oyster-roast-event";
+import { SHINDIG_SITE } from "../lib/site";
 
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: OYSTER_ROAST_EVENT.title,
-  description: `Join us for an oyster roast on ${OYSTER_ROAST_EVENT.dateLabel} at ${OYSTER_ROAST_EVENT.timeLabel} in ${OYSTER_ROAST_EVENT.cityLabel}.`,
+  title: SHINDIG_SITE.title,
+  description: SHINDIG_SITE.description,
 };
 
 export default function RootLayout({

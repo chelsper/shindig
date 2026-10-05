@@ -83,7 +83,7 @@ export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT 
       <div className="page-texture" />
       <div className="relative mx-auto max-w-2xl">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#202523]/12 pb-5">
-          <Link className="font-serif text-xl tracking-[-0.02em] sm:text-2xl" href="/">
+          <Link className="font-serif text-xl tracking-[-0.02em] sm:text-2xl" href={event.websiteUrl}>
             Shindig
           </Link>
           <div className="flex flex-wrap items-center gap-2">
@@ -145,7 +145,7 @@ export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT 
               </button>
               <Link
                 className="mt-4 inline-flex text-xs font-semibold tracking-[0.14em] text-[#202523]/55 uppercase underline decoration-[#202523]/25 underline-offset-4"
-                href="/"
+                href={event.websiteUrl}
               >
                 Return to invitation
               </Link>

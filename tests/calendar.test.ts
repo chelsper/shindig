@@ -36,8 +36,9 @@ describe("Oyster Roast calendar support", () => {
     expect(unfolded).toContain(
       "LOCATION:172 Belmont Dr\\, St. Johns\\, FL 32259\r\n",
     );
-    expect(unfolded).toContain("URL:https://www.haveashindig.com/event\r\n");
-    expect(unfolded).toContain("View Event Hub: https://www.haveashindig.com/event");
+    expect(unfolded).toContain("URL:https://www.jaspershucks.app/event\r\n");
+    expect(unfolded).toContain("View Event Hub: https://www.jaspershucks.app/event");
+    expect(unfolded).toContain("UID:oyster-roast-2026@haveashindig.com\r\n");
     expect(unfolded).toContain(
       `Update your RSVP (private link): ${rsvpUrl}`,
     );
@@ -48,17 +49,17 @@ describe("Oyster Roast calendar support", () => {
   });
 
   it("links public calendar entries to the Hub without including a private RSVP link", () => {
-    expect(getEventHubUrl()).toBe("https://www.haveashindig.com/event");
+    expect(getEventHubUrl()).toBe("https://www.jaspershucks.app/event");
     const ics = unfoldIcs(createOysterRoastIcs());
     const google = new URL(getGoogleCalendarUrl()).searchParams.get("details");
     const outlook = new URL(getOutlookCalendarUrl()).searchParams.get("body");
 
     for (const description of [ics, google, outlook]) {
-      expect(description).toContain("View Event Hub: https://www.haveashindig.com/event");
+      expect(description).toContain("View Event Hub: https://www.jaspershucks.app/event");
       expect(description).not.toContain("/rsvp/");
       expect(description).not.toContain("private link");
     }
-    expect(ics).toContain("URL:https://www.haveashindig.com/event\r\n");
+    expect(ics).toContain("URL:https://www.jaspershucks.app/event\r\n");
   });
 
   it("builds a prefilled Google Calendar event from the canonical details", () => {
@@ -71,7 +72,7 @@ describe("Oyster Roast calendar support", () => {
       "20261107T220000Z/20261108T020000Z",
     );
     expect(url.searchParams.get("location")).toBe(OYSTER_ROAST_EVENT.address);
-    expect(url.searchParams.get("details")).toContain("View Event Hub: https://www.haveashindig.com/event");
+    expect(url.searchParams.get("details")).toContain("View Event Hub: https://www.jaspershucks.app/event");
     expect(url.searchParams.get("details")).toContain(`Update your RSVP (private link): ${rsvpUrl}`);
   });
 
@@ -84,7 +85,7 @@ describe("Oyster Roast calendar support", () => {
     expect(url.searchParams.get("startdt")).toBe("2026-11-07T22:00:00Z");
     expect(url.searchParams.get("enddt")).toBe("2026-11-08T02:00:00Z");
     expect(url.searchParams.get("location")).toBe(OYSTER_ROAST_EVENT.address);
-    expect(url.searchParams.get("body")).toContain("View Event Hub: https://www.haveashindig.com/event");
+    expect(url.searchParams.get("body")).toContain("View Event Hub: https://www.jaspershucks.app/event");
     expect(url.searchParams.get("body")).toContain(`Update your RSVP (private link): ${rsvpUrl}`);
   });
 });

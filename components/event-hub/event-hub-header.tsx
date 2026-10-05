@@ -46,7 +46,7 @@ export function EventHubHeader({
             </div>
             <Link
               className="hidden text-xs font-bold uppercase tracking-[0.12em] text-[#202523]/50 underline decoration-[#202523]/20 underline-offset-4 transition hover:text-[#355f9e] sm:inline-flex"
-              href="/"
+              href={event.websiteUrl}
             >
               Invitation
             </Link>
@@ -87,7 +87,7 @@ export function EventHubHeader({
 
           <Link
             className="mt-5 inline-flex text-xs font-bold uppercase tracking-[0.12em] text-[#202523]/50 underline decoration-[#202523]/20 underline-offset-4 sm:hidden"
-            href="/"
+            href={event.websiteUrl}
           >
             Return to invitation
           </Link>

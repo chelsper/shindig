@@ -1,5 +1,19 @@
 # Shindig
 
+## Brand home and event domains
+
+Both domains stay on the **same Vercel `shindig` project**, codebase and Neon database:
+
+- `www.haveashindig.com/` (and `haveashindig.com/`) is the Shindig brand home page.
+- `www.jaspershucks.app/` (and `jaspershucks.app/`) is the unchanged Oyster Roast invitation. `/event` is its Event Hub.
+- `/admin` on either domain uses the same protected tools and event data. Changes published from the Shindig admin also appear on Jasper Shucks. Sessions remain secure, host-only cookies; signing in on one domain does not automatically sign in on the other.
+- Existing `/event`, `/rsvp/[token]`, and `/calendar/oyster-roast.ics` routes on **both** domains remain available, without redirects that might discard query strings or private edit tokens. `/invitation` explicitly opens the existing invitation on either domain.
+- Invitation-return links, newly generated calendar descriptions and calendar RSVP edit URLs use the canonical Jasper Shucks domain. The calendar UID and event slug are unchanged; existing calendar entries and RSVP tokens retain their identity. Previously downloaded calendars are not automatically rewritten.
+
+`lib/site.ts` owns the domain mapping. Only exact Jasper Shucks hostnames select the invitation at `/`; other hosts (including localhost and Vercel previews) show the brand home. Root pages are request-rendered, so the host-dependent response is not statically shared across domains. Host selection changes presentation only, not authorization, credentials, or data access. The brand home does not query Neon or list event/guest details, and remains available during an event database outage.
+
+No new environment variables, dependencies or migrations are required. In Vercel → project → Settings → Domains, keep both domains attached to this project (not redirected to one another). Existing www/apex redirects within the same domain are fine. This step establishes the separate front doors; it does **not** yet add self-service event creation or new accounts.
+
 ## Editing the invitation
 
 The host can edit the main invitation at **`/admin/invitation`**, linked as
@@ -52,7 +66,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000) for the Shindig home page or [http://localhost:3000/invitation](http://localhost:3000/invitation) for the invitation. `/event` and `/admin` are unchanged. To check root-domain routing locally, request `/` with `Host: www.jaspershucks.app` and compare it with `Host: www.haveashindig.com`.
 
 `DATABASE_URL` is optional during local invitation UI work. When it is empty, the RSVP flow still completes but shows a development-only notice that the response was not persisted. Production submissions fail with a friendly message if the variable is missing.
 

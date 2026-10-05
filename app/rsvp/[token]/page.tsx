@@ -42,7 +42,7 @@ function LinkUnavailable({ loadFailed = false }: { loadFailed?: boolean }) {
         </div>
         <Link
           className="mt-3 inline-flex min-h-11 items-center text-xs font-bold tracking-[0.14em] text-[#214e91] uppercase underline decoration-[#214e91]/30 underline-offset-4"
-          href="/"
+          href={OYSTER_ROAST_EVENT.websiteUrl}
         >
           Return to invitation
         </Link>

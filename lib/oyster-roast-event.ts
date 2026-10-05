@@ -1,3 +1,5 @@
+import { OYSTER_ROAST_WEBSITE } from "./site";
+
 export type EventFeatures = {
   guestList: boolean;
   playlist: boolean;
@@ -47,7 +49,7 @@ export const OYSTER_ROAST_EVENT = {
   },
   calendarUid: "oyster-roast-2026@haveashindig.com",
   calendarFilename: "annualish-oyster-roast.ics",
-  websiteUrl: "https://www.haveashindig.com/",
+  websiteUrl: OYSTER_ROAST_WEBSITE,
   eventHub: {
     path: "/event",
     headerImage: {
