@@ -1,5 +1,26 @@
 # Shindig
 
+## Private event drafts
+
+Open **`/admin/events`** using **Your events** in the existing host dashboard. The live Oyster Roast has its own **Manage Oyster Roast** link. **Create event** opens `/admin/events/new`; saved drafts reopen at `/admin/events/[id]`.
+
+- Only a trimmed event name is required to save. Description, host name, venue, address, city/area and start/end times can be filled in later.
+- Every draft has its own IANA timezone (default `America/New_York`). Dates are stored as UTC and displayed in the event timezone, not the host computer's timezone. Changing the timezone keeps entered local clock times. Invalid dates and ambiguous/skipped DST times are rejected; end times require a start and must be later, within 168 hours.
+- **Save draft** persists to the new `events` table. A stable random creation ID prevents repeated first saves from inserting duplicate records. Identical creation retries can recover a lost response. Revision checks reject stale edits without overwriting a newer save. The UI disables repeat clicks, preserves input on failures, confirms successful saves and warns before leaving unsaved edits.
+- Drafts are **private and cannot be published in this milestone**. There is no public draft route, API, guest link, event directory, new RSVP flow, artwork upload, or publish action. The schema also restricts `status` to `draft`. A UUID is only a record identifier, never authorization. Pages, actions and the draft data layer all require the existing server-verified host session; all draft pages are noindex and request-rendered.
+- The existing live Oyster Roast remains in its existing tables/configuration. This milestone does not backfill or alter it, its RSVP records, private edit tokens, features, calendar identity, or public routes. Future publishing must add event-specific public routes and scoped data access before removing the database draft-only restriction.
+
+### Neon / Vercel setup
+
+1. In Neon, select the same project, branch and database used by production `DATABASE_URL`.
+2. Run [`010_create_event_drafts.sql`](db/migrations/010_create_event_drafts.sql). It adds only the `events` table and its draft-list index; no live records are seeded or modified. If an unrelated `events` table already exists, stop and inspect it before applying this migration.
+3. Deploy the code to the existing Vercel project. Existing **DATABASE_URL** and **ADMIN_PASSWORD** are sufficient; no new packages, credentials, storage services or domains are needed.
+4. Sign in at `/admin`, choose **Your events**, create a draft, save it, return to the list and reopen it. Confirm the draft is still labeled private. Repeat visits without a host session must go to the login screen.
+
+If the migration or database connection is missing, the draft list shows a setup/retry message and a save returns an error—not a false success or local-only persistence. Existing event screens are independent of this table.
+
+Quality checks include `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`. To verify the schema and write semantics against an **isolated test database** with migrations 001–010 applied, run `psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/event-drafts.integration.sql`. The integration test refuses databases without `test` in their name, seeds disposable sentinel data inside its transaction, and rolls back all changes.
+
 ## Brand home and event domains
 
 Both domains stay on the **same Vercel `shindig` project**, codebase and Neon database:
@@ -84,6 +105,8 @@ Set `ADMIN_PASSWORD` to a strong, unique password to enable the private host das
    - [`db/migrations/006_create_updates_and_questions.sql`](db/migrations/006_create_updates_and_questions.sql)
    - [`db/migrations/007_music_catalog.sql`](db/migrations/007_music_catalog.sql)
    - [`db/migrations/008_guest_interactions_and_polls.sql`](db/migrations/008_guest_interactions_and_polls.sql)
+   - [`db/migrations/009_invitation_settings.sql`](db/migrations/009_invitation_settings.sql)
+   - [`db/migrations/010_create_event_drafts.sql`](db/migrations/010_create_event_drafts.sql)
 3. In the Neon project dashboard, choose **Connect** and copy the pooled Postgres connection string.
 4. Put that connection string in `.env.local`:
 

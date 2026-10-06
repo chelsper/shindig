@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("../app/actions", () => ({ submitRsvp: vi.fn() }));
 vi.mock("../lib/server/invitation-settings", async () => ({ getEventConfiguration: async () => (await import("../lib/oyster-roast-event")).OYSTER_ROAST_EVENT }));
 vi.mock("../app/rsvp/actions", () => ({ updateRsvp: vi.fn() }));
-vi.mock("../lib/server/rsvps", () => ({ getRsvpForGuest: vi.fn() }));
+vi.mock("../lib/server/rsvps", () => ({ getRsvpForGuest: vi.fn(), getRsvpSummary: vi.fn().mockRejectedValue(new Error("offline")), listRsvps: vi.fn().mockResolvedValue([]) }));
 vi.mock("../lib/server/rsvp-edit-token", () => ({ hashRsvpEditToken: vi.fn().mockReturnValue("test-hash") }));
 
 vi.mock("../app/admin/actions", () => ({ createAdminGuest: vi.fn(), updateAdminGuest: vi.fn(), deleteAdminGuest: vi.fn(), logoutAdmin: vi.fn() }));
@@ -12,7 +12,7 @@ vi.mock("../app/admin/event/actions", () => ({ saveEventHeaderSettings: vi.fn() 
 vi.mock("../app/admin/playlist/actions", () => ({ deleteAdminPlaylistSuggestion: vi.fn() }));
 vi.mock("../app/admin/questions/actions", () => ({ answerGuestQuestion: vi.fn(), deleteGuestQuestion: vi.fn() }));
 vi.mock("../app/admin/updates/actions", () => ({ createHostUpdate: vi.fn(), editHostUpdate: vi.fn(), deleteHostUpdate: vi.fn() }));
-vi.mock("../lib/server/admin-session", () => ({ isAdminAuthenticated: vi.fn().mockResolvedValue(true) }));
+vi.mock("../lib/server/admin-session", () => ({ isAdminAuthenticated: vi.fn().mockResolvedValue(true), isAdminConfigured: vi.fn().mockReturnValue(true) }));
 vi.mock("../lib/server/playlist", () => ({ listPlaylistSuggestionsForAdmin: vi.fn().mockResolvedValue([]) }));
 vi.mock("../lib/server/questions", () => ({ listQuestionsForAdmin: vi.fn().mockResolvedValue([]) }));
 vi.mock("../lib/server/updates", () => ({ listHostUpdatesForAdmin: vi.fn().mockResolvedValue([]) }));
@@ -29,6 +29,7 @@ import { getRsvpForGuest } from "../lib/server/rsvps";
 import AdminPlaylistPage from "../app/admin/playlist/page";
 import AdminQuestionsPage from "../app/admin/questions/page";
 import AdminUpdatesPage from "../app/admin/updates/page";
+import AdminPage from "../app/admin/page";
 import { DEFAULT_EVENT_HUB_HEADER } from "../lib/event-hub-settings";
 import { OYSTER_ROAST_EVENT } from "../lib/oyster-roast-event";
 import type { AdminRsvp } from "../lib/server/rsvps";
@@ -137,9 +138,18 @@ describe("screen navigation", () => {
   it("links from the dashboard to each host tool, filters, and guest editor", () => {
     const html = renderToStaticMarkup(<AdminDashboard filter="all" rsvps={[guest]} summary={{ totalAttending: 1, totalPartySize: 1, totalResponses: 1, declined: 0 }} />);
     const destinations = links(html).map((link) => link.href);
-    for (const href of ["/admin/updates", "/admin/questions", "/admin/playlist", "/admin/event", "/admin/guests/new", `/admin/guests/${guest.id}/edit`, "/admin/export", "/admin", "/admin?status=attending", "/admin?status=declined"]) {
+    for (const href of ["/admin/events", "/admin/updates", "/admin/questions", "/admin/playlist", "/admin/event", "/admin/guests/new", `/admin/guests/${guest.id}/edit`, "/admin/export", "/admin", "/admin?status=attending", "/admin?status=declined"]) {
       expect(destinations).toContain(href);
     }
+  });
+
+  it("keeps event planning reachable when the live RSVP dashboard cannot load", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const html = renderToStaticMarkup(await AdminPage({ searchParams: Promise.resolve({}) }));
+      expect(html).toContain("The guest list couldn’t load.");
+      expect(links(html)).toContainEqual(expect.objectContaining({ href: "/admin/events", label: "Your events →" }));
+    } finally { log.mockRestore(); }
   });
 
   it("keeps mobile and desktop invitation links pointing to the invitation, not the admin area", () => {

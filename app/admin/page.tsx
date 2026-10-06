@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { AdminDashboard } from "../../components/admin/admin-dashboard";
 import { AdminLoginForm } from "../../components/admin/admin-login-form";
@@ -91,6 +92,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           <p className="mt-3 text-sm leading-relaxed text-[#202523]/60">
             Please refresh and try again in a moment. Your RSVP data has not been changed.
           </p>
+          <Link href="/admin/events" className="mt-5 inline-flex min-h-11 items-center text-sm font-semibold text-[#355f9e] underline underline-offset-4">
+            Your events →
+          </Link>
         </section>
       </main>
     );

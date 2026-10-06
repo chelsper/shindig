@@ -1,0 +1,110 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
+import { saveEventDraft } from "../../app/admin/events/actions";
+import { DRAFT_LIMITS, EMPTY_EVENT_DRAFT, type EventDraft } from "../../lib/event-drafts";
+import { eventLocalInput } from "../../lib/event-date-time";
+
+const panel = "rounded-[1.5rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 sm:p-7";
+const secondary = "inline-flex min-h-11 items-center justify-center rounded-full border border-[#355f9e]/25 bg-[#e9f2f8]/65 px-4 text-xs font-bold text-[#214e91] focus-visible:outline-2 focus-visible:outline-offset-4";
+
+export function EventDraftEditor({ id, initialDraft, timeZones, justSaved = false }: { id: string; initialDraft?: EventDraft; timeZones: string[]; justSaved?: boolean }) {
+  const router = useRouter();
+  const initial = initialDraft ?? EMPTY_EVENT_DRAFT;
+  const [fields, setFields] = useState(() => ({ ...initial, startsAtLocal: eventLocalInput(initial.startsAtUtc, initial.timeZone), endsAtLocal: eventLocalInput(initial.endsAtUtc, initial.timeZone) }));
+  const [revision, setRevision] = useState(initialDraft?.revision ?? 0);
+  const [dirty, setDirty] = useState(false);
+  const [saved, setSaved] = useState(justSaved);
+  const [error, setError] = useState<string | null>(null);
+  const [conflict, setConflict] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const busy = useRef(false);
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+  function change(key: keyof typeof fields, value: string) {
+    setFields((current) => ({ ...current, [key]: value }));
+    setDirty(true); setSaved(false); setError(null);
+  }
+  function allowLeave() { return !dirty || window.confirm("Leave without saving your draft changes?"); }
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy.current || conflict) return;
+    busy.current = true; setError(null); setSaved(false);
+    startTransition(async () => {
+      try {
+        const result = await saveEventDraft({ id, revision, fields });
+        if (!result.ok) { setError(result.message); setConflict(Boolean(result.conflict)); return; }
+        setRevision(result.revision); setDirty(false); setSaved(true);
+        if (revision === 0) router.replace(`/admin/events/${result.id}?saved=1`);
+      } catch { setError("We couldn’t confirm the save. Your changes are still here. Please try again."); }
+      finally { busy.current = false; }
+    });
+  }
+  const textField = (key: keyof typeof DRAFT_LIMITS, label: string, placeholder?: string) => <label className="field-label min-w-0">{label}
+    <input className="field-input min-w-0" name={key} required={key === "title"} maxLength={DRAFT_LIMITS[key]} value={fields[key]} onChange={(event) => change(key, event.target.value)} placeholder={placeholder} />
+  </label>;
+
+  return <main className="relative min-h-screen bg-[#f7f0e3] px-4 py-6 text-[#202523] sm:px-6 sm:py-9">
+    <div aria-hidden="true" className="page-texture" />
+    <div className="relative mx-auto max-w-3xl">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#202523]/12 pb-5">
+        <Link href="/admin/events" className="font-serif text-2xl" onClick={(event) => { if (!allowLeave()) event.preventDefault(); }}>Shindig</Link>
+        <Link href="/admin/events" className={secondary} onClick={(event) => { if (!allowLeave()) event.preventDefault(); }}>Back to your events</Link>
+      </header>
+      <section className="py-7">
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#355f9e]">Host Dashboard · Private draft</p>
+        <h1 className="mt-2 font-serif text-4xl tracking-[-0.04em] sm:text-5xl">{initialDraft ? "A Shindig in the making" : "Let’s make a Shindig"}</h1>
+        <p className="mt-3 max-w-xl text-sm leading-6 text-[#202523]/65">Start with a name. The rest can come together later. Saving here won’t publish an invitation or change the Oyster Roast.</p>
+      </section>
+      <form onSubmit={submit}>
+        <fieldset disabled={pending} className="min-w-0 space-y-5">
+          <section className={panel} aria-labelledby="draft-basics-heading">
+            <h2 id="draft-basics-heading" className="font-serif text-2xl">The good idea</h2>
+            <div className="mt-5 grid gap-5">
+              {textField("title", "Event name", "A backyard birthday, a just-because dinner…")}
+              <label className="field-label">Description (optional)<textarea className="field-input min-h-28 resize-y py-3" name="description" rows={4} maxLength={DRAFT_LIMITS.description} value={fields.description} onChange={(event) => change("description", event.target.value)} /></label>
+              {textField("hostName", "Hosted by (optional)")}
+            </div>
+          </section>
+          <section className={panel} aria-labelledby="draft-date-heading">
+            <h2 id="draft-date-heading" className="font-serif text-2xl">When shall we?</h2>
+            <p className="mt-2 text-sm leading-6 text-[#202523]/60">Not sure yet? Leave the dates blank.</p>
+            <div className="mt-5 grid gap-5">
+              <label className="field-label min-w-0">Event timezone<select name="timeZone" className="field-input min-w-0 max-w-full" value={fields.timeZone} onChange={(event) => change("timeZone", event.target.value)}>
+                {timeZones.map((zone) => <option key={zone} value={zone}>{zone.replaceAll("_", " ")}</option>)}
+              </select></label>
+              <p className="-mt-3 text-xs leading-5 text-[#202523]/60">Times below use this timezone, not your device’s. Changing the timezone keeps the clock times you entered.</p>
+              <div className="grid min-w-0 gap-5 sm:grid-cols-2">
+                <label className="field-label min-w-0">Starts (optional)<input name="startsAtLocal" type="datetime-local" className="field-input min-w-0 max-w-full" min="2000-01-01T00:00" max="2099-12-31T23:59" value={fields.startsAtLocal} onChange={(event) => change("startsAtLocal", event.target.value)} /></label>
+                <label className="field-label min-w-0">Ends (optional)<input name="endsAtLocal" type="datetime-local" className="field-input min-w-0 max-w-full" min="2000-01-01T00:00" max="2099-12-31T23:59" value={fields.endsAtLocal} onChange={(event) => change("endsAtLocal", event.target.value)} /></label>
+              </div>
+            </div>
+          </section>
+          <section className={panel} aria-labelledby="draft-place-heading">
+            <h2 id="draft-place-heading" className="font-serif text-2xl">A place to gather</h2>
+            <p className="mt-2 text-sm leading-6 text-[#202523]/60">These details are optional while you’re planning.</p>
+            <div className="mt-5 grid gap-5">
+              {textField("venue", "Venue (optional)", "The backyard")}
+              {textField("address", "Address (optional)")}
+              {textField("cityLabel", "City / area (optional)")}
+            </div>
+          </section>
+          <section className={`${panel} border-[#355f9e]/20`} aria-label="Save private draft">
+            <p className="text-sm leading-6 text-[#202523]/65">Private to the host dashboard. Artwork, RSVP settings, and publishing will be added in a later step. There is no guest link yet.</p>
+            {error && <p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm leading-6 text-red-900">{error}</p>}
+            {conflict && <a className={`${secondary} mt-3`} href={`/admin/events/${id}`} onClick={(event) => { if (!allowLeave()) event.preventDefault(); }}>Reopen saved draft</a>}
+            {saved && <p role="status" className="mt-4 rounded-xl bg-[#e4eee1] p-3 text-sm text-[#285630]">Draft saved. It remains private; no invitation has been published.</p>}
+            <button type="submit" className="primary-button mt-5 w-full" disabled={pending || conflict || !dirty || !fields.title.trim()}>{pending ? "Saving draft…" : "Save draft"}</button>
+            <p className="mt-2 text-center text-xs leading-5 text-[#202523]/55">{dirty ? "You have unsaved changes." : revision ? "Your saved draft is up to date." : "Only the event name is required."}</p>
+          </section>
+        </fieldset>
+      </form>
+    </div>
+  </main>;
+}
