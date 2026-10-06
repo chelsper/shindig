@@ -9,6 +9,7 @@ vi.mock("../lib/server/rsvps", () => ({ getRsvpForGuest: vi.fn(), getRsvpSummary
 vi.mock("../lib/server/rsvp-edit-token", () => ({ hashRsvpEditToken: vi.fn().mockReturnValue("test-hash") }));
 
 vi.mock("../app/admin/actions", () => ({ createAdminGuest: vi.fn(), updateAdminGuest: vi.fn(), deleteAdminGuest: vi.fn(), logoutAdmin: vi.fn() }));
+vi.mock("../app/admin/events/[id]/guests/actions", () => ({ createEventGuest: vi.fn(), updateEventGuest: vi.fn(), deleteEventGuest: vi.fn() }));
 vi.mock("../app/admin/event/actions", () => ({ saveEventHeaderSettings: vi.fn() }));
 vi.mock("../app/admin/playlist/actions", () => ({ deleteAdminPlaylistSuggestion: vi.fn() }));
 vi.mock("../app/admin/questions/actions", () => ({ answerGuestQuestion: vi.fn(), deleteGuestQuestion: vi.fn() }));

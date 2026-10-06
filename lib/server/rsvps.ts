@@ -9,8 +9,10 @@ import type {
 } from "./rsvp-validation";
 import { validateRsvpUpdate } from "./rsvp-validation";
 
-function fieldsForEvent(input: ValidatedRsvpUpdate, scope: EventScope): ValidatedRsvpUpdate {
-  const result = validateRsvpUpdate(input, { ...scope.rsvp, guestListEnabled: scope.features.guestList });
+function fieldsForEvent(input: ValidatedRsvpUpdate, scope: EventScope, host = false): ValidatedRsvpUpdate {
+  // Guest-facing switches must not erase host comments or saved visibility
+  // preferences during moderation. The public list still enforces its flag.
+  const result = validateRsvpUpdate(input, { ...scope.rsvp, allowComments: host || scope.rsvp.allowComments, guestListEnabled: host || scope.features.guestList });
   if (!result.success) throw new Error("Invalid RSVP for this event.");
   return result.data;
 }
@@ -234,7 +236,7 @@ export async function getRsvpSummary(scope: EventScope = OYSTER_ROAST_SCOPE): Pr
   };
 }
 
-export async function listRsvps(filter: RsvpFilter = "all", scope: EventScope = OYSTER_ROAST_SCOPE): Promise<AdminRsvp[]> {
+export async function listRsvps(filter: RsvpFilter = "all", scope: EventScope = OYSTER_ROAST_SCOPE, search = ""): Promise<AdminRsvp[]> {
   const eventSlug = eventScopeSlug(scope);
   const sql = neon(getDatabaseUrl());
   const attendanceFilter =
@@ -253,6 +255,7 @@ export async function listRsvps(filter: RsvpFilter = "all", scope: EventScope = 
     FROM rsvps
     WHERE event_slug = ${eventSlug}
       AND (${attendanceFilter}::boolean IS NULL OR attending = ${attendanceFilter})
+      AND strpos(lower(guest_name), lower(${search.trim().slice(0, 120)})) > 0
     ORDER BY created_at DESC
   `;
 
@@ -286,7 +289,7 @@ export async function getRsvpForAdmin(id: string, scope: EventScope = OYSTER_ROA
 export async function createRsvpForAdmin(id: string,
   rsvp: ValidatedRsvpUpdate, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<void> {
   const eventSlug = eventScopeSlug(scope);
-  rsvp = fieldsForEvent(rsvp, scope);
+  rsvp = fieldsForEvent(rsvp, scope, true);
   const sql = neon(getDatabaseUrl());
   const rows = await sql`
     INSERT INTO rsvps (
@@ -307,16 +310,26 @@ export async function createRsvpForAdmin(id: string,
       ${rsvp.displayOnGuestList},
       ${rsvp.comment}
     )
+    ON CONFLICT (id) DO NOTHING
     RETURNING id
   `;
 
-  if (!rows[0]) throw new Error("The RSVP could not be created.");
+  if (rows[0]) return;
+  // One form owns one UUID. Repeated clicks/lost-response retries acknowledge
+  // exactly the same host-created RSVP, never overwrite a guest or another event.
+  const existing = await sql`SELECT id FROM rsvps
+    WHERE id = ${id}::uuid AND event_slug = ${eventSlug} AND edit_token_hash IS NULL
+      AND guest_name = ${rsvp.guestName} AND attending = ${rsvp.attending}
+      AND party_size IS NOT DISTINCT FROM ${rsvp.partySize}::integer
+      AND display_on_guest_list = ${rsvp.displayOnGuestList}
+      AND comment IS NOT DISTINCT FROM ${rsvp.comment}::text LIMIT 1`;
+  if (!existing[0]) throw new Error("The RSVP could not be created.");
 }
 
 export async function updateRsvpForAdmin(id: string,
   rsvp: ValidatedRsvpUpdate, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<boolean> {
   const eventSlug = eventScopeSlug(scope);
-  rsvp = fieldsForEvent(rsvp, scope);
+  rsvp = fieldsForEvent(rsvp, scope, true);
   const sql = neon(getDatabaseUrl());
   const rows = await sql`
     UPDATE rsvps

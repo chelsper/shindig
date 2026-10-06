@@ -268,7 +268,7 @@ describe("admin RSVP queries", () => {
 
     const [queryParts, ...values] = mocks.sql.mock.calls[0];
     expect(queryParts.join("?")).toContain("ORDER BY created_at DESC");
-    expect(values).toEqual(["oyster-roast-2026", true, true]);
+    expect(values).toEqual(["oyster-roast-2026", true, true, ""]);
   });
 
   it("loads one RSVP for an authenticated admin edit page", async () => {
@@ -329,5 +329,33 @@ describe("admin RSVP queries", () => {
 
     await expect(listRsvps()).rejects.toThrow("Database access is not configured.");
     expect(mocks.neon).not.toHaveBeenCalled();
+  });
+
+  it("treats search as a literal, bounded, parameterized name substring", async () => {
+    mocks.sql.mockResolvedValue([]);
+    const search = "  O'Neil_%'; DROP TABLE rsvps; --  ";
+    await listRsvps("declined", undefined, search);
+    const [query, ...values] = mocks.sql.mock.lastCall!;
+    expect(query.join("?")).toContain("strpos(lower(guest_name), lower(?)) > 0");
+    expect(query.join("?")).not.toContain("DROP TABLE");
+    expect(values).toEqual(["oyster-roast-2026", false, false, search.trim()]);
+    await listRsvps("all", undefined, "a".repeat(200));
+    expect(mocks.sql.mock.lastCall!.at(-1)).toHaveLength(120);
+  });
+
+  it("acknowledges an identical duplicate host add without rewriting the row", async () => {
+    mocks.sql.mockResolvedValueOnce([]).mockResolvedValueOnce([{ id: rsvp.id }]);
+    await expect(createRsvpForAdmin(rsvp.id, savedRsvp)).resolves.toBeUndefined();
+    expect(mocks.sql.mock.calls[0][0].join("?")).toContain("ON CONFLICT (id) DO NOTHING");
+    const [query, ...values] = mocks.sql.mock.calls[1];
+    expect(query.join("?")).toContain("edit_token_hash IS NULL");
+    expect(query.join("?")).toContain("event_slug = ?");
+    expect(query.join("?")).toContain("comment IS NOT DISTINCT FROM");
+    expect(values).toEqual([rsvp.id, rsvp.eventSlug, rsvp.guestName, true, 4, true, rsvp.comment]);
+  });
+
+  it("rejects a conflicting host retry rather than updating someone else’s RSVP", async () => {
+    mocks.sql.mockResolvedValue([]);
+    await expect(createRsvpForAdmin(rsvp.id, savedRsvp)).rejects.toThrow("could not be created");
   });
 });

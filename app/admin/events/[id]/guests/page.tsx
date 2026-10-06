@@ -17,15 +17,19 @@ import { listQuestionsForAdmin } from "../../../../../lib/server/questions";
 import { listHostUpdatesForAdmin } from "../../../../../lib/server/updates";
 import { listPollsForAdmin } from "../../../../../lib/server/polls";
 import { listPlaylistSuggestionsForAdmin } from "../../../../../lib/server/playlist";
+import { guestListQuery } from "../../../../../lib/admin-guests";
+import { EventGuestList } from "../../../../../components/admin/event-guest-list";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Event responses | Shindig", robots: { index: false, follow: false }, referrer: "no-referrer" as const };
 const views = ["rsvps", "questions", "updates", "playlist", "polls"] as const;
 const labels = { rsvps: "Guest responses", questions: "Ask the Host", updates: "Host Updates", playlist: "Playlist", polls: "Polls" };
-export default async function EventGuests({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ view?: string }> }) {
+export default async function EventGuests({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ view?: string; filter?: string; q?: string; saved?: string }> }) {
   if (!(await isAdminAuthenticated())) redirect("/admin");
   const { id } = await params;
   if (!isDraftId(id)) notFound();
-  const slug = draftEventSlug(id), requested = (await searchParams).view;
+  const search = await searchParams;
+  const slug = draftEventSlug(id), requested = search.view;
+  const { filter, q } = guestListQuery(search);
   const view = views.find((v) => v === requested) ?? "rsvps";
   let data;
   try { data = await Promise.all([getPublishedEvent(slug), resolvePublicEventScope(slug)]); }
@@ -50,12 +54,11 @@ export default async function EventGuests({ params, searchParams }: { params: Pr
       const songs = await listPlaylistSuggestionsForAdmin(scope).catch(() => null);
       content = !songs ? failed : songs.length ? <ul className="space-y-4">{songs.map((song) => <li className="rounded-2xl border border-[#202523]/10 bg-[#fffaf1] p-5" key={song.id}><TrackDetails track={song} attribution={song.attribution} /><p className="my-3 text-xs">{song.suggestedBy ? `Suggested by ${song.suggestedBy}` : "No name provided"} · {song.applauseCount} applause</p><PlaylistDeleteButton id={song.id} songTitle={song.songTitle} /></li>)}</ul> : <p>No song suggestions yet.</p>;
     } else {
-      const result = await Promise.all([listRsvps("all", scope), getRsvpSummary(scope)]).catch(() => null);
+      const result = await Promise.all([listRsvps(filter, scope, q), getRsvpSummary(scope)]).catch(() => null);
       if (!result) content = failed;
       else {
       const [responses, summary] = result;
-      content = <><div className="mb-5 grid grid-cols-2 gap-3"><p className="rounded-2xl bg-[#e9f2f8] p-4"><strong className="block font-serif text-3xl">{summary.totalPartySize}</strong>guests attending</p><p className="rounded-2xl bg-[#e9f2f8] p-4"><strong className="block font-serif text-3xl">{summary.totalResponses}</strong>responses · {summary.declined} declined</p></div><a className="inline-flex min-h-11 text-sm text-[#355f9e] underline" href={`/admin/events/${id}/guests/export`}>Export CSV</a>
-        {responses.length ? <ul className="space-y-3">{responses.map((rsvp) => <li className="rounded-2xl border border-[#202523]/10 bg-[#fffaf1] p-5" key={rsvp.id}><h2 className="break-words font-serif text-2xl">{rsvp.guestName}</h2><p className="mt-2 text-sm">{rsvp.attending ? `Attending · Party of ${rsvp.partySize}` : "Can’t make it"} · {rsvp.attending && rsvp.displayOnGuestList ? "Name visible" : "Name hidden"}</p>{rsvp.comment && <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6">{rsvp.comment}</p>}<p className="mt-3 text-xs text-[#202523]/60">Submitted {new Intl.DateTimeFormat("en-US", { timeZone: event.timeZone, dateStyle: "medium", timeStyle: "short" }).format(new Date(rsvp.createdAt))}</p></li>)}</ul> : <p className="py-8 text-center">No responses yet. Your invitation is ready to share.</p>}</>;
+      content = <EventGuestList id={id} timeZone={event.timeZone} responses={responses} summary={summary} filter={filter} q={q} saved={search.saved} />;
     }
       }
   return <ContentShell title={labels[view]} contextLabel={event.title} description="Only this event’s responses and content. Guest names on private questions stay here." dashboardHref={`/admin/events/${id}/publish`}>

@@ -1,6 +1,58 @@
 # Shindig
 
-## Review, publish & share (Step 4B — current)
+## Guest management for published events (Step 5 — current)
+
+Open **Your events → Review & publish → View event responses**. The event's
+guest list now supports **Add Guest**, **Edit**, confirmed **Delete**, name search,
+and **All / Attending / Can’t Make It** filters. Search and filters combine; totals
+always describe the whole event. **Export all RSVPs** still exports the full event,
+not just the current search. Submitted/updated dates use the event's timezone.
+
+- Editors live at `/admin/events/[id]/guests/new` and
+  `/admin/events/[id]/guests/[guestId]/edit`. All navigation stays in that event.
+- Every read/action requires the existing host session. Actions resolve the
+  published event again, enforce its party-size limit, and bind every lookup/write
+  to its event slug. Unpublished/missing events cannot fall back to Jasper Shucks.
+- Hosts can edit names, attendance, party size, comments and name visibility.
+  Declines always store null party size and hidden names. Host comments and saved
+  visibility preferences remain manageable when guest-facing features are off;
+  the public Guest List still respects its flag and never returns hidden names.
+- One add form uses one UUID. Identical retries do not create another RSVP or
+  overwrite an existing guest. Updates preserve guest edit-token hashes and
+  creation timestamps; deletion invalidates that guest's existing update link.
+- Deletion requires a separate visible confirmation and a server-checked
+  confirmation value. Save/delete controls cannot run together while pending.
+  Failed saves retain typed input and show a friendly retry message.
+- Guest edits update the live RSVP list, totals and Hub without republishing event
+  settings. No messages are sent and no guest accounts are created.
+
+**Deployment:** no new migration, environment variable or application dependency.
+Deploy normally after checks. Existing Jasper Shucks routes/design remain intact.
+No production draft was published or production guest data changed for testing.
+
+Quality checks: `npm run lint`, `npm run typecheck`, `npm test`,
+`npm run build -- --webpack`. The opt-in
+`tests/event-guests-postgres.test.ts` runs the actual publication, guest actions,
+host actions and SQL against an isolated PostgreSQL runtime, with synthetic events
+only. The normal test command skips this one test unless configured:
+
+- Native: use the disposable `shindig_drafts_test` database with migrations 001–014
+  and set `SHINDIG_TEST_PG_SOCKET` to its `/private/tmp/...` Unix socket directory,
+  `SHINDIG_TEST_PSQL` to the `psql` executable, and optionally
+  `SHINDIG_TEST_PG_PORT` (default 55441). Its random fixtures are cleaned up.
+- In-process fallback: install `@electric-sql/pglite` in a **temporary directory**,
+  not this project; set `SHINDIG_TEST_PGLITE` to its absolute
+  `/private/tmp/.../node_modules/@electric-sql/pglite/dist/index.js` path. The test
+  applies all migrations to a fresh in-memory database and closes it afterward.
+
+With either option, run `npm test -- tests/event-guests-postgres.test.ts` (or the
+whole suite). Browser checks separately exercise the actual components with
+synthetic actions, including confirmation/cancel, failure preservation, pending
+states and mobile layout. These tests do not call production Neon or publish a
+real event. Closing RSVPs, unpublishing/archiving, custom URLs and QR codes remain
+future milestones.
+
+## Review, publish & share (Step 4B — completed)
 
 Open **Your events → a saved draft → Review & publish** at
 `/admin/events/[id]/publish`. Review the saved details, artwork, RSVP rules and
@@ -30,8 +82,8 @@ and identical lost-response retries do not create duplicate publications.
 - **View event responses** opens `/admin/events/[id]/guests`: private RSVP list,
   counts/CSV, and the existing question/update/playlist/poll managers, scoped to
   this published event. Module moderation remains possible when a module is hidden.
-  Host RSVP add/edit/delete for these new event screens is not part of this step;
-  guests can update their own response through their private link.
+  Step 5 adds host RSVP management here; guests can still update their own
+  response through their private link.
 
 ### Deployment preparation
 
