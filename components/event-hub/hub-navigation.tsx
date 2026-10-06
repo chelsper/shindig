@@ -47,7 +47,7 @@ function ModuleIcon({ icon }: { icon: HubModule["icon"] }) {
 }
 
 // Module content is composed on the server. This boundary only switches panels.
-export function HubNavigation({ modules }: { modules: HubModule[] }) {
+export function HubNavigation({ modules, eyebrow = "Around the roast" }: { modules: HubModule[]; eyebrow?: string }) {
   const [selectedId, setSelectedId] = useState(modules[0]?.id);
   const tabRefs = useRef<Partial<Record<HubModule["id"], HTMLButtonElement | null>>>({});
   const activeId = modules.some((module) => module.id === selectedId)
@@ -85,7 +85,7 @@ export function HubNavigation({ modules }: { modules: HubModule[] }) {
     <div className="mt-7 sm:mt-9">
       <nav aria-label="Event Hub features" className="mb-4 sm:mb-5">
         <p className="mb-3 px-1 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-[#202523]/55">
-          Around the roast
+          {eyebrow}
         </p>
         <div aria-label="Explore the event" className="flex flex-wrap gap-2.5" role="tablist">
           {modules.map((module, index) => (

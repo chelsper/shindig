@@ -61,7 +61,7 @@ export function EventDraftEditor({ id, initialDraft, timeZones, justSaved = fals
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#355f9e]">Host Dashboard · Private draft</p>
         <h1 className="mt-2 font-serif text-4xl tracking-[-0.04em] sm:text-5xl">{initialDraft ? "A Shindig in the making" : "Let’s make a Shindig"}</h1>
         <p className="mt-3 max-w-xl text-sm leading-6 text-[#202523]/65">Start with a name. The rest can come together later. Saving here won’t publish an invitation or change the Oyster Roast.</p>
-        {initialDraft && <Link className={`${secondary} mt-4`} href={`/admin/events/${id}/artwork`} onClick={(event) => { if (!allowLeave()) event.preventDefault(); }}>Invitation & artwork →</Link>}
+        {initialDraft && <nav aria-label="Draft setup" className="mt-4 flex flex-wrap gap-2"><span aria-current="page" className={`${secondary} border-[#355f9e]`}>Event basics</span><Link className={secondary} href={`/admin/events/${id}/artwork`} onClick={(event) => { if (!allowLeave()) event.preventDefault(); }}>Invitation & artwork →</Link><Link className={secondary} href={`/admin/events/${id}/settings`} onClick={(event) => { if (!allowLeave()) event.preventDefault(); }}>RSVP &amp; Hub settings →</Link></nav>}
       </section>
       <form onSubmit={submit}>
         <fieldset disabled={pending} className="min-w-0 space-y-5">
@@ -97,7 +97,7 @@ export function EventDraftEditor({ id, initialDraft, timeZones, justSaved = fals
             </div>
           </section>
           <section className={`${panel} border-[#355f9e]/20`} aria-label="Save private draft">
-            <p className="text-sm leading-6 text-[#202523]/65">Private to the host dashboard. Save your event basics to continue to invitation artwork. RSVP settings and publishing come later. There is no guest link yet.</p>
+            <p className="text-sm leading-6 text-[#202523]/65">Private to the host dashboard. Save your event basics to continue to artwork and RSVP &amp; Hub settings. Publishing comes later. There is no guest link yet.</p>
             {error && <p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm leading-6 text-red-900">{error}</p>}
             {conflict && <a className={`${secondary} mt-3`} href={`/admin/events/${id}`} onClick={(event) => { if (!allowLeave()) event.preventDefault(); }}>Reopen saved draft</a>}
             {saved && <p role="status" className="mt-4 rounded-xl bg-[#e4eee1] p-3 text-sm text-[#285630]">Draft saved. It remains private; no invitation has been published.</p>}

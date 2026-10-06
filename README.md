@@ -1,5 +1,55 @@
 # Shindig
 
+## Private draft RSVP & Event Hub settings (Step 3)
+
+Open **Your events → a saved draft → RSVP & Hub settings** at
+`/admin/events/[id]/settings`. Event basics and artwork link to this step.
+
+- Set a maximum party size of **1–20, including the person replying**, allow or
+  hide optional comments, and choose the initial “Show my name” checkbox state.
+  Guests will retain the choice to hide their name. Hidden attending households
+  still count; declined guests and comments never belong on the public list.
+- Choose the implemented Guest List, Playlist, Ask the Host, Polls, Host Updates,
+  and Weather modules. Photos and Potluck cannot be enabled, including through
+  forged requests. New drafts default to Guest List only, a party limit of 20,
+  optional comments, and a checked name-visibility choice. Defaults are not saved
+  until the host confirms them. Disabling Guest List hides its RSVP-specific UI
+  while preserving the host's preference for a later re-enable.
+- The phone-width preview responds to unsaved settings. Try attending/declined
+  and switch Hub tabs. It uses no live guest data, public RSVP actions, music
+  search, weather requests or guest-interaction cookies. Submit is disabled.
+  Polls are shown as a labeled preview; the eventual public tab remains
+  conditional on actual publishable polls.
+- A readiness checklist uses saved basics/artwork and the current settings.
+  Artwork and a calendar end time are recommended; event name, start, address,
+  and saved settings are essentials. Weather additionally calls out coordinate
+  confirmation in the future publishing step—never using Oyster Roast coordinates.
+  **This is not a publish validator or a publish button.** Event-specific public
+  routing/data scoping, provider readiness, and full launch validation remain Step 4.
+
+Setup: apply [`012_event_draft_settings.sql`](db/migrations/012_event_draft_settings.sql)
+after migrations 010 and 011 before deploying this step. It adds only
+`event_draft_settings`, with a foreign key to the private `events` table, bounded
+party size, non-null booleans, allowlisted boolean feature JSON, timestamps and
+revision checks. No live records are seeded, migrated, or changed. No new package,
+service, or environment variable is needed.
+
+The page, server action and server-only data layer all require the host session.
+Inputs are validated on the server and again at the data boundary. Writes are
+bound to the chosen draft; duplicate/stale saves cannot overwrite newer settings.
+Save failures preserve the form and do not display success. Pending saves lock
+the form, repeated clicks are ignored, and leaving unsaved changes warns the host.
+Missing schema/storage shows a setup/retry message rather than pretending to save.
+No settings or draft content is exposed through a public endpoint; Jasper Shucks
+continues to use its unchanged canonical live configuration and RSVP rules.
+
+Checks: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build -- --webpack`.
+Unit/component tests cover validation, defaults, privacy choices, feature previews,
+authentication, errors, revision guards, readiness and isolation. On an **isolated
+test database** with migrations 001–012, run
+`psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/event-draft-settings.integration.sql`.
+The integration test rejects non-test database names and rolls back all test rows.
+
 ## Private draft invitation & artwork
 
 After saving event basics, choose **Invitation & artwork** at `/admin/events/[id]`.
@@ -154,6 +204,7 @@ Set `ADMIN_PASSWORD` to a strong, unique password to enable the private host das
    - [`db/migrations/009_invitation_settings.sql`](db/migrations/009_invitation_settings.sql)
    - [`db/migrations/010_create_event_drafts.sql`](db/migrations/010_create_event_drafts.sql)
    - [`db/migrations/011_event_draft_artwork.sql`](db/migrations/011_event_draft_artwork.sql)
+   - [`db/migrations/012_event_draft_settings.sql`](db/migrations/012_event_draft_settings.sql)
 3. In the Neon project dashboard, choose **Connect** and copy the pooled Postgres connection string.
 4. Put that connection string in `.env.local`:
 

@@ -1,8 +1,9 @@
 /* eslint-disable @next/next/no-img-element -- Authenticated private images must not pass through the public image optimizer. */
 import type { EventDraft } from "../../lib/event-drafts";
 import { draftImageUrl, type DraftArtwork } from "../../lib/event-draft-artwork";
+import type { ReactNode } from "react";
 
-export function EventDraftPreview({ draft, artwork, view }: { draft: EventDraft; artwork: DraftArtwork; view: "invitation" | "hub" }) {
+export function EventDraftPreview({ draft, artwork, view, children }: { draft: EventDraft; artwork: DraftArtwork; view: "invitation" | "hub"; children?: ReactNode }) {
   const header = artwork.header.path ? artwork.header : artwork.invitation;
   const image = view === "hub" ? header : artwork.invitation;
   const date = draft.startsAtUtc ? new Intl.DateTimeFormat("en-US", { timeZone: draft.timeZone, weekday: "long", month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(new Date(draft.startsAtUtc)) : "Date & time to come";
@@ -17,7 +18,7 @@ export function EventDraftPreview({ draft, artwork, view }: { draft: EventDraft;
       {draft.hostName && <p className="break-words text-sm text-[#202523]/65">Hosted by {draft.hostName}</p>}
       <div className="space-y-2 border-y border-[#202523]/12 py-4 text-sm leading-6"><p>{date}</p><p className="break-words">{[draft.venue, draft.address, draft.cityLabel].filter(Boolean).join(" · ") || "Location to come"}</p></div>
       {draft.description && <p className="whitespace-pre-wrap break-words text-sm leading-6 text-[#202523]/65">{draft.description}</p>}
-      <p className="rounded-xl border border-dashed border-[#355f9e]/25 p-4 text-xs leading-5 text-[#202523]/60">{view === "hub" ? "Event features will be configured in a later step." : "The RSVP experience will be configured in a later step."} This preview cannot receive guest responses.</p>
+      {children ?? <p className="rounded-xl border border-dashed border-[#355f9e]/25 p-4 text-xs leading-5 text-[#202523]/60">Configure the guest experience in RSVP &amp; Hub settings. This artwork preview cannot receive guest responses.</p>}
     </div>
   </div>;
 }
