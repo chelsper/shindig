@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useRef, useState, useTransition } from "react";
 
 import { updateRsvp } from "../../app/rsvp/actions";
+import { updateEventRsvp } from "../../app/e/actions";
 import { OYSTER_ROAST_EVENT, type OysterRoastEvent } from "../../lib/oyster-roast-event";
 import { CalendarActions } from "../calendar-actions";
 import { EventHubLink } from "../event-hub-link";
@@ -25,6 +26,9 @@ type RsvpUpdateFormProps = {
 type RsvpChoice = "attending" | "declined";
 
 export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT }: RsvpUpdateFormProps) {
+  const eventSlug = event.slug;
+  const legacy = eventSlug === OYSTER_ROAST_EVENT.slug;
+  const rules = event.rsvp ?? { maxPartySize: 20, allowComments: true, guestListDefaultVisible: true };
   const [choice, setChoice] = useState<RsvpChoice>(
     initialRsvp.attending ? "attending" : "declined",
   );
@@ -49,7 +53,8 @@ export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT 
 
     startTransition(async () => {
       try {
-        const result = await updateRsvp({
+        const update = legacy ? updateRsvp : updateEventRsvp.bind(null, eventSlug);
+        const result = await update({
           editToken: token,
           guestName: name,
           attending: choice === "attending",
@@ -90,7 +95,7 @@ export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT 
             <p className="rounded-full border border-[#202523]/15 bg-white/40 px-3 py-1.5 text-[10px] font-semibold tracking-[0.18em] text-[#202523]/65 uppercase">
               Private RSVP
             </p>
-            <EventHubLink />
+            <EventHubLink href={event.eventHub.path} />
           </div>
         </header>
 
@@ -117,13 +122,13 @@ export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT 
               <p className="text-xs font-semibold tracking-[0.22em] text-[#355f9e] uppercase">RSVP updated</p>
               <h2 className="font-serif mt-3 text-3xl tracking-[-0.03em]">
                 {choice === "attending"
-                  ? "You’re on the shuck-it list!"
-                  : "Awww… shucks! We’ll miss you!"}
+                  ? legacy ? "You’re on the shuck-it list!" : "You’re on the list!"
+                  : legacy ? "Awww… shucks! We’ll miss you!" : "We’ll miss you!"}
               </h2>
               <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[#202523]/65">
                 {choice === "attending"
-                  ? `${partySize === "1" ? "Your spot is" : `All ${partySize} spots are`} saved for the roast.`
-                  : "Your response has been updated. We’ll raise an oyster to you."}
+                  ? `${partySize === "1" ? "Your spot is" : `All ${partySize} spots are`} saved${legacy ? " for the roast" : ""}.`
+                  : legacy ? "Your response has been updated. We’ll raise an oyster to you." : "Your response has been updated. Thanks for letting us know."}
               </p>
               {choice === "attending" ? (
                 <>
@@ -164,7 +169,7 @@ export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT 
                     aria-pressed={choice === "attending"}
                     className={`choice-button ${choice === "attending" ? "choice-button-active" : ""}`}
                     onClick={() => {
-                      if (choice === "declined") setDisplayOnGuestList(true);
+                      if (choice === "declined") setDisplayOnGuestList(rules.guestListDefaultVisible);
                       setChoice("attending");
                     }}
                     type="button"
@@ -207,7 +212,7 @@ export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT 
                       onChange={(event) => setPartySize(event.target.value)}
                       value={partySize}
                     >
-                      {Array.from({ length: 20 }, (_, index) => index + 1).map((number) => (
+                      {Array.from({ length: rules.maxPartySize }, (_, index) => index + 1).map((number) => (
                         <option key={number} value={number}>{number}</option>
                       ))}
                     </select>
@@ -215,7 +220,7 @@ export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT 
                 ) : null}
               </div>
 
-              <label className="field-label mt-4">
+              {rules.allowComments && <label className="field-label mt-4">
                 <span>Note <span className="normal-case tracking-normal">(optional)</span></span>
                 <textarea
                   className="field-input min-h-20 resize-none py-3 leading-5"
@@ -225,7 +230,7 @@ export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT 
                   rows={2}
                   value={comment}
                 />
-              </label>
+              </label>}
 
               {choice === "attending" && event.features.guestList ? (
                 <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-[#355f9e]/12 bg-[#e9f2f8]/45 px-3.5 py-3 text-sm text-[#202523]/70">

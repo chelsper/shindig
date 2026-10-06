@@ -4,8 +4,10 @@ import { useRef, useState, useTransition, type FormEvent } from "react";
 
 import { submitGuestQuestion } from "../../app/event/question-actions";
 import { QUESTION_LIMITS, type PublicQuestion } from "../../lib/questions";
+import { useGuestInteractions } from "../guest-interactions-provider";
 
 export function QuestionsModule({ questions, unavailable = false }: { questions: PublicQuestion[]; unavailable?: boolean }) {
+  const { eventSlug } = useGuestInteractions();
   const [showForm, setShowForm] = useState(false);
   const [question, setQuestion] = useState("");
   const [guestName, setGuestName] = useState("");
@@ -26,7 +28,7 @@ export function QuestionsModule({ questions, unavailable = false }: { questions:
       try {
         // Reuse on retries, including a lost response after a successful insert.
         requestToken.current ??= crypto.randomUUID();
-        const result = await submitGuestQuestion({ question, guestName, requestToken: requestToken.current });
+        const result = await submitGuestQuestion({ question, guestName, requestToken: requestToken.current }, ...eventSlug ? [eventSlug] as const : []);
         if (!result.ok) { setError(result.message); return; }
         setSent(true);
         setQuestion("");

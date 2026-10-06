@@ -18,8 +18,8 @@ export function InvitationEditor({ initialRecord, uploadConfigured }: { initialR
   const [publishedAddress, setPublishedAddress] = useState(initialRecord.settings.address);
   const [startsAtLocal, setStartsAtLocal] = useState(toEventLocalInput(settings.startsAtUtc));
   const [endsAtLocal, setEndsAtLocal] = useState(toEventLocalInput(settings.endsAtUtc));
-  const [latitude, setLatitude] = useState(String(settings.coordinates.latitude));
-  const [longitude, setLongitude] = useState(String(settings.coordinates.longitude));
+  const [latitude, setLatitude] = useState(String(settings.coordinates?.latitude ?? ""));
+  const [longitude, setLongitude] = useState(String(settings.coordinates?.longitude ?? ""));
   const [locationConfirmed, setLocationConfirmed] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [status, setStatus] = useState<string | null>(null);

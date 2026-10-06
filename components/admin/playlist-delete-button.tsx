@@ -3,10 +3,12 @@
 import { useActionState, useState } from "react";
 
 import { deleteAdminPlaylistSuggestion } from "../../app/admin/playlist/actions";
+import { useHostEvent } from "./host-event-context";
 
 export function PlaylistDeleteButton({ id, songTitle }: { id: string; songTitle: string }) {
+  const hostEvent = useHostEvent();
   const [confirming, setConfirming] = useState(false);
-  const [state, action, pending] = useActionState(deleteAdminPlaylistSuggestion.bind(null, id), { error: null });
+  const [state, action, pending] = useActionState((state: { error: string | null }, data: FormData) => deleteAdminPlaylistSuggestion(id, state, data, ...hostEvent.args), { error: null });
 
   return (
     <div className="mt-4 sm:mt-0 sm:max-w-60">

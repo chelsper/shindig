@@ -5,6 +5,7 @@ import { ContentShell } from "../../../components/admin/content-shell";
 import { isAdminAuthenticated } from "../../../lib/server/admin-session";
 import { listEventDrafts } from "../../../lib/server/event-drafts";
 import { OYSTER_ROAST_EVENT } from "../../../lib/oyster-roast-event";
+import { listHostPublications } from "../../../lib/server/event-publications";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Your Events | Shindig", robots: { index: false, follow: false }, referrer: "no-referrer" };
@@ -14,6 +15,8 @@ export default async function AdminEventsPage() {
   let drafts;
   try { drafts = await listEventDrafts(); }
   catch { console.error("Private event drafts could not be loaded."); }
+  let publications: Awaited<ReturnType<typeof listHostPublications>> = [];
+  try { publications = await listHostPublications(); } catch { console.error("Event publication list unavailable."); }
   return <ContentShell title="Your events" contextLabel="Event planning" description="One gathering already on the calendar. Room for your next good idea.">
     <section aria-label="Existing live event" className="rounded-[1.5rem] border border-[#355f9e]/20 bg-[#fffaf1]/90 p-5 sm:p-7">
       <p className="text-xs font-bold uppercase tracking-[0.15em] text-[#285630]">Live event</p>
@@ -24,9 +27,10 @@ export default async function AdminEventsPage() {
         <a className="inline-flex min-h-11 items-center text-sm text-[#355f9e] underline underline-offset-4" href={OYSTER_ROAST_EVENT.websiteUrl} target="_blank" rel="noreferrer">View invitation ↗</a>
       </div>
     </section>
+    {publications.length > 0 && <section className="mt-6 space-y-3" aria-label="Published events">{publications.map((event) => <Link className="block rounded-2xl border border-[#285630]/20 bg-[#eff5e8] p-5" href={`/admin/events/${event.id}/publish`} key={event.id}><p className="text-xs font-bold uppercase text-[#285630]">Published · Manage &amp; share</p><h2 className="mt-1 break-words font-serif text-2xl">{event.title}</h2></Link>)}</section>}
     <section className="mt-8 pb-8" aria-labelledby="draft-list-heading">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div><h2 id="draft-list-heading" className="font-serif text-3xl">In the making</h2><p className="mt-1 text-sm text-[#202523]/60">Private drafts. Nothing here is published.</p></div>
+        <div><h2 id="draft-list-heading" className="font-serif text-3xl">In the making</h2><p className="mt-1 text-sm text-[#202523]/60">Private working drafts. Saving changes here never updates a published version.</p></div>
         <Link href="/admin/events/new" className="primary-button inline-flex min-h-12 items-center px-5 text-sm">+ Create event</Link>
       </div>
       {!drafts ? <p role="alert" className="mt-5 rounded-2xl bg-[#fff4d8] p-5 text-sm leading-6 text-[#765319]">Drafts couldn’t load. If this is the first setup, apply migration 010 to your Neon database. Otherwise, refresh and try again. Your live event hasn’t changed.</p>

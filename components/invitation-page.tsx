@@ -5,6 +5,8 @@ import Link from "next/link";
 import { FormEvent, useRef, useState, useTransition } from "react";
 
 import { submitRsvp } from "../app/actions";
+import { submitEventRsvp } from "../app/e/actions";
+import { rsvpUpdatePath } from "../lib/calendar";
 import { CalendarActions } from "./calendar-actions";
 import { EventHubLink } from "./event-hub-link";
 import { OYSTER_ROAST_EVENT, eventMonthLabel, type OysterRoastEvent } from "../lib/oyster-roast-event";
@@ -57,10 +59,12 @@ type InvitationPageProps = {
 };
 
 export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = OYSTER_ROAST_EVENT }: InvitationPageProps) {
+  const legacy = oysterRoastEvent.slug === OYSTER_ROAST_EVENT.slug;
+  const rules = oysterRoastEvent.rsvp ?? { maxPartySize: 20, allowComments: true, guestListDefaultVisible: true };
   const [choice, setChoice] = useState<RsvpChoice>(null);
   const [name, setName] = useState("");
   const [partySize, setPartySize] = useState("1");
-  const [displayOnGuestList, setDisplayOnGuestList] = useState(true);
+  const [displayOnGuestList, setDisplayOnGuestList] = useState(rules.guestListDefaultVisible);
   const [comment, setComment] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [submissionPersisted, setSubmissionPersisted] = useState(true);
@@ -78,7 +82,7 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
 
   function handleChoice(nextChoice: Exclude<RsvpChoice, null>) {
     if (nextChoice === "attending" && choice === "declined") {
-      setDisplayOnGuestList(true);
+      setDisplayOnGuestList(rules.guestListDefaultVisible);
     }
     setChoice(nextChoice);
     setSubmitted(false);
@@ -120,7 +124,8 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
 
     startTransition(async () => {
       try {
-        const result = await submitRsvp({
+        const submit = legacy ? submitRsvp : submitEventRsvp.bind(null, oysterRoastEvent.slug);
+        const result = await submit({
           submissionId,
           editToken: nextEditToken,
           eventSlug: oysterRoastEvent.slug,
@@ -171,12 +176,12 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
             <p className="rounded-full border border-[#202523]/15 bg-white/40 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#202523]/65 sm:text-xs">
               {oysterRoastEvent.cityLabel}
             </p>
-            <EventHubLink />
+            <EventHubLink href={oysterRoastEvent.eventHub.path} />
           </div>
         </header>
 
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.16fr)_minmax(370px,0.84fr)] lg:gap-10">
-          <section aria-label="Oyster roast invitation artwork" className="relative">
+          {oysterRoastEvent.invitation.imageUrl ? <section aria-label={legacy ? "Oyster roast invitation artwork" : "Invitation artwork"} className="relative">
             <div className="hero-frame relative mx-auto max-w-[680px] overflow-hidden rounded-[1.75rem] bg-white shadow-[0_24px_70px_rgba(41,56,53,0.16)] sm:rounded-[2.25rem] lg:max-w-none">
               <Image
                 src={oysterRoastEvent.invitation.imageUrl}
@@ -185,10 +190,11 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
                 height={oysterRoastEvent.invitation.imageHeight}
                 className="h-auto w-full"
                 priority
+                unoptimized={!legacy}
                 sizes="(min-width: 1024px) 57vw, 100vw"
               />
             </div>
-          </section>
+          </section> : <section className="rounded-[2rem] border border-[#355f9e]/15 bg-[#e9f2f8]/60 p-10 sm:p-16"><p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#355f9e]">A good gathering awaits</p><p className="mt-6 font-serif text-5xl leading-tight">Good people.<br />A little time together.</p></section>}
 
           <section className="lg:sticky lg:top-8">
             <div className="mb-6 px-1 sm:mb-7">
@@ -232,13 +238,13 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
                   <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#355f9e]">RSVP received</p>
                   <h2 className="mt-3 font-serif text-3xl tracking-[-0.03em]">
                     {choice === "attending"
-                      ? "You’re on the shuck-it list!"
-                      : "Awww… shucks! We’ll miss you!"}
+                      ? legacy ? "You’re on the shuck-it list!" : "You’re on the list!"
+                      : legacy ? "Awww… shucks! We’ll miss you!" : "We’ll miss you!"}
                   </h2>
                   <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[#202523]/65">
                     {choice === "attending"
-                      ? `${partySize === "1" ? "Your spot is" : `All ${partySize} spots are`} saved for the roast.`
-                      : "Thanks for letting us know. We’ll raise an oyster to you."}
+                      ? `${partySize === "1" ? "Your spot is" : `All ${partySize} spots are`} saved${legacy ? " for the roast" : ""}.`
+                      : legacy ? "Thanks for letting us know. We’ll raise an oyster to you." : "Thanks for letting us know. We hope to see you next time."}
                   </p>
 
                   {!submissionPersisted && (
@@ -266,7 +272,7 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
                       </p>
                       <Link
                         className="mt-2 inline-flex text-xs font-bold uppercase tracking-[0.14em] text-[#214e91] underline decoration-[#214e91]/30 underline-offset-4 transition hover:decoration-[#214e91]"
-                        href={`/rsvp/${editToken}`}
+                        href={rsvpUpdatePath(editToken, oysterRoastEvent)}
                       >
                         Update RSVP
                       </Link>
@@ -349,7 +355,7 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
                               onChange={(event) => handlePartySizeChange(event.target.value)}
                               value={partySize}
                             >
-                              {Array.from({ length: 20 }, (_, index) => index + 1).map((number) => (
+                              {Array.from({ length: rules.maxPartySize }, (_, index) => index + 1).map((number) => (
                                 <option key={number} value={number}>
                                   {number}
                                 </option>
@@ -359,7 +365,7 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
                         )}
                       </div>
 
-                      <label className="field-label mt-4">
+                      {rules.allowComments && <label className="field-label mt-4">
                         <span>
                           Note <span className="normal-case tracking-normal">(optional)</span>
                         </span>
@@ -373,7 +379,7 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
                           rows={2}
                           value={comment}
                         />
-                      </label>
+                      </label>}
 
                       {choice === "attending" &&
                       oysterRoastEvent.features.guestList ? (
@@ -433,13 +439,13 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
             </div>
             <div className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-[#202523]/60">
               <p>No new RSVP needed to visit.</p>
-              <EventHubLink label="View Event Hub" />
+              <EventHubLink label="View Event Hub" href={oysterRoastEvent.eventHub.path} />
             </div>
           </section>
         </div>
 
         <footer className="mt-8 flex items-center justify-between border-t border-[#202523]/12 px-1 pt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#202523]/45 sm:mt-12">
-          <span>Shuck · Sip · Stay awhile</span>
+          <span>{legacy ? "Shuck · Sip · Stay awhile" : "Good people. Great gatherings."}</span>
           <span>{eventMonthLabel(oysterRoastEvent)}</span>
         </footer>
       </div>

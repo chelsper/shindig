@@ -26,7 +26,7 @@ export function GuestPoll({ poll }: { poll: PublicPoll }) {
     setError(null); setMessage(null);
     startTransition(async () => {
       try {
-        const result = await voteInPoll(poll.key, selected);
+        const result = await voteInPoll(poll.key, selected, ...guest.eventSlug ? [guest.eventSlug] as const : []);
         if (!result.ok) { setError(result.message); return; }
         guest.recordPoll(poll.key, result.data);
         setDraft(null); setEditing(false);

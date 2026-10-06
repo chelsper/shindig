@@ -4,8 +4,10 @@ import { setHostPollStatus } from "../../app/admin/polls/actions";
 import type { AdminPoll } from "../../lib/polls";
 import { PollResults } from "../event-hub/poll-results";
 import { PollEditor } from "./poll-editor";
+import { useHostEvent } from "./host-event-context";
 
 function HostPollCard({ poll }: { poll: AdminPoll }) {
+  const hostEvent = useHostEvent();
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +19,7 @@ function HostPollCard({ poll }: { poll: AdminPoll }) {
     busy.current = true; setError(null); setNotice(null);
     startTransition(async () => {
       try {
-        const result = await setHostPollStatus(poll.key, status, status === "DELETE_DRAFT" && confirmDelete);
+        const result = await setHostPollStatus(poll.key, status, status === "DELETE_DRAFT" && confirmDelete, ...hostEvent.args);
         if (!result.ok) { setError(result.message); return; }
         setNotice(status === "OPEN" ? "Poll is open." : status === "CLOSED" ? "Poll is closed." : "Poll archived; all responses preserved.");
       } catch { setError("We couldn’t update this poll. Please try again."); }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { calendarPath } from "../../lib/calendar";
 
 import type { EventHubHeaderSettings } from "../../lib/event-hub-settings";
 import { OYSTER_ROAST_EVENT, type OysterRoastEvent } from "../../lib/oyster-roast-event";
@@ -32,7 +33,7 @@ export function EventHubHeader({
 
   return (
     <header className="overflow-hidden rounded-[1.75rem] border border-[#202523]/10 bg-[#fffaf1]/90 shadow-[0_18px_50px_rgba(41,56,53,0.10)] sm:rounded-[2rem]">
-      <EventHeaderImage settings={headerSettings} />
+      {headerSettings.imageUrl && <EventHeaderImage settings={headerSettings} />}
 
       <div className="p-5 sm:p-7 lg:p-9">
           <div className="flex items-start justify-between gap-4">
@@ -69,7 +70,7 @@ export function EventHubHeader({
             <a
               className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-[#202523] bg-[#202523] px-3 text-center text-xs font-bold uppercase tracking-[0.1em] text-[#fffaf1] transition hover:border-[#355f9e] hover:bg-[#355f9e]"
               download={event.calendarFilename}
-              href="/calendar/oyster-roast.ics"
+              href={calendarPath(event)}
             >
               <CalendarIcon />
               Add to Calendar

@@ -2,12 +2,13 @@
 
 import { useRef, useState, useTransition, type FormEvent } from "react";
 import { answerGuestQuestion, deleteGuestQuestion } from "../../app/admin/questions/actions";
-import { OYSTER_ROAST_EVENT } from "../../lib/oyster-roast-event";
+import { useHostEvent } from "./host-event-context";
 import { QUESTION_LIMITS } from "../../lib/questions";
 import type { AdminQuestion } from "../../lib/server/questions";
 import { ContentDeleteButton } from "./content-delete-button";
 
 function HostQuestionCard({ question }: { question: AdminQuestion }) {
+  const hostEvent = useHostEvent();
   const [answer, setAnswer] = useState(question.answer ?? "");
   const [isPublished, setIsPublished] = useState(question.isPublished);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +24,7 @@ function HostQuestionCard({ question }: { question: AdminQuestion }) {
     setConfirmation(null);
     startTransition(async () => {
       try {
-        const result = await answerGuestQuestion(question.id, { answer, isPublished });
+        const result = await answerGuestQuestion(question.id, { answer, isPublished }, ...hostEvent.args);
         if (!result.ok) { setError(result.message); return; }
         setConfirmation(isPublished ? "Question and answer published." : "Saved privately. This question is not on the Event Hub.");
       } catch {
@@ -38,7 +39,7 @@ function HostQuestionCard({ question }: { question: AdminQuestion }) {
     <li className="rounded-[1.75rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 sm:p-7">
       <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
         <span className={`rounded-full px-3 py-1 font-semibold ${question.isPublished ? "bg-[#dcebdc] text-[#285630]" : "bg-[#e9f2f8] text-[#355f9e]"}`}>{question.isPublished ? "Published" : "Private"}</span>
-        <span className="text-[#202523]/55">{new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: OYSTER_ROAST_EVENT.timeZone }).format(new Date(question.createdAt))}</span>
+        <span className="text-[#202523]/55">{new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: hostEvent.timeZone }).format(new Date(question.createdAt))}</span>
       </div>
       <h2 className="whitespace-pre-wrap break-words font-serif text-2xl leading-snug">{question.question}</h2>
       <p className="mt-2 break-words text-xs leading-5 text-[#202523]/60">{question.guestName ? `From ${question.guestName} · Name visible only to you` : "No name provided"}</p>
@@ -53,7 +54,7 @@ function HostQuestionCard({ question }: { question: AdminQuestion }) {
           <button className="primary-button" disabled={pending} type="submit">{pending ? "Saving…" : "Save answer & visibility"}</button>
         </fieldset>
       </form>
-      <div className="mt-4 border-t border-[#202523]/10 pt-4"><ContentDeleteButton label="question and its answer" onDelete={() => deleteGuestQuestion(question.id, true)} /></div>
+      <div className="mt-4 border-t border-[#202523]/10 pt-4"><ContentDeleteButton label="question and its answer" onDelete={() => deleteGuestQuestion(question.id, true, ...hostEvent.args)} /></div>
     </li>
   );
 }

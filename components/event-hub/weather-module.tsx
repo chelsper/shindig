@@ -6,6 +6,7 @@ import { WeatherContent } from "./weather-content";
 import type { OysterRoastEvent } from "../../lib/oyster-roast-event";
 
 export function WeatherModule({ event }: { event?: OysterRoastEvent }) {
+  const eventQuery = event && event.slug !== "oyster-roast-2026" ? `event=${encodeURIComponent(event.slug)}` : "";
   const [weather, setWeather] = useState<EventWeather | null>(null);
   const [typical, setTypical] = useState<TypicalWeather | null | undefined>(undefined);
   const [loading, setLoading] = useState(true);
@@ -24,7 +25,7 @@ export function WeatherModule({ event }: { event?: OysterRoastEvent }) {
       historyRequested = true;
       historyRetryAt = Date.now() + 60_000;
       try {
-        const response = await fetch("/api/weather?context=typical", { cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(55_000)]) });
+        const response = await fetch(`/api/weather?context=typical${eventQuery ? `&${eventQuery}` : ""}`, { cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(55_000)]) });
         if (!response.ok) {
           const retry = Number(response.headers.get("Retry-After"));
           if (Number.isFinite(retry)) historyRetryAt = Date.now() + Math.max(60, Math.min(retry, 86400)) * 1000;
@@ -43,7 +44,7 @@ export function WeatherModule({ event }: { event?: OysterRoastEvent }) {
       pending = true;
       refreshAt = Date.now() + LIVE_WEATHER_TTL;
       try {
-        const response = await fetch("/api/weather", { cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(12_000)]) });
+        const response = await fetch(`/api/weather${eventQuery ? `?${eventQuery}` : ""}`, { cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(12_000)]) });
         if (!response.ok) throw new Error("Unavailable");
         const data = await response.json() as { weather: EventWeather };
         if (!data.weather || !Number.isFinite(data.weather.expiresAt)) throw new Error("Unavailable");
@@ -79,7 +80,7 @@ export function WeatherModule({ event }: { event?: OysterRoastEvent }) {
     document.addEventListener("visibilitychange", tick);
     window.addEventListener("focus", tick);
     return () => { controller.abort(); clearInterval(timer); document.removeEventListener("visibilitychange", tick); window.removeEventListener("focus", tick); };
-  }, [attempt]);
+  }, [attempt, eventQuery]);
 
   const fresh = weather ? freshWeather(weather, now) : null;
   return (

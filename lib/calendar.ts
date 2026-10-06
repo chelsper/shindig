@@ -2,6 +2,15 @@ import {
   OYSTER_ROAST_EVENT,
   type OysterRoastEvent,
 } from "./oyster-roast-event";
+import { eventPaths } from "./event-routes";
+
+export function calendarPath(event: OysterRoastEvent = OYSTER_ROAST_EVENT) {
+  return event.slug === OYSTER_ROAST_EVENT.slug ? "/calendar/oyster-roast.ics" : `${eventPaths(event.slug).invitation}/calendar.ics`;
+}
+export function rsvpUpdatePath(token: string, event: OysterRoastEvent = OYSTER_ROAST_EVENT) {
+  const prefix = event.slug === OYSTER_ROAST_EVENT.slug ? "" : eventPaths(event.slug).invitation;
+  return `${prefix}/rsvp/${encodeURIComponent(token)}`;
+}
 
 function formatUtcTimestamp(value: string | Date) {
   const date = value instanceof Date ? value : new Date(value);
@@ -65,7 +74,7 @@ export function getRsvpUpdateUrl(
   editToken: string,
   event: OysterRoastEvent = OYSTER_ROAST_EVENT,
 ) {
-  return new URL(`/rsvp/${encodeURIComponent(editToken)}`, event.websiteUrl).toString();
+  return new URL(rsvpUpdatePath(editToken, event), event.websiteUrl).toString();
 }
 
 export function createOysterRoastIcs(
@@ -76,7 +85,7 @@ export function createOysterRoastIcs(
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Shindig//Annualish Oyster Roast 2026//EN",
+    event.slug === OYSTER_ROAST_EVENT.slug ? "PRODID:-//Shindig//Annualish Oyster Roast 2026//EN" : "PRODID:-//Shindig//Event Invitation//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",

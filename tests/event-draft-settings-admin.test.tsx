@@ -48,7 +48,7 @@ describe("private draft settings page and server action", () => {
   });
   it("renders an editable private setup with navigation, preview, and checklist", async () => {
     const html = renderToStaticMarkup(await SettingsPage(context));
-    for (const text of ["Private party", "Maximum guests per RSVP", "Allow an optional comment", "Start “Show my name” checked", "Save draft settings", "Suggested defaults", "Getting ready to gather", "Guest experience preview", `href="/admin/events/${id}/artwork"`, "Still private."]) expect(html).toContain(text);
+    for (const text of ["Private party", "Maximum guests per RSVP", "Allow an optional comment", "Start “Show my name” checked", "Save draft settings", "Suggested defaults", "Getting ready to gather", "Guest experience preview", `href="/admin/events/${id}/artwork"`, "These draft choices stay private."]) expect(html).toContain(text);
     expect(html).not.toMatch(/Publish event|Share link|spotify.com|172 Belmont|DATABASE_URL|ADMIN_PASSWORD/);
     expect(metadata.robots).toEqual({ index: false, follow: false });
   });

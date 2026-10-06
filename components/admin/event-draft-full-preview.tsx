@@ -19,7 +19,7 @@ export function EventDraftFullPreview({ draft, artwork, record, view }: {
     <div aria-hidden="true" className="page-texture" />
     <div className="relative mx-auto max-w-6xl">
       <header className="mb-6 rounded-2xl border border-[#355f9e]/20 bg-[#e9f2f8] p-4 sm:p-5">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#355f9e]">Host-only preview · Not published</p>
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#355f9e]">Host-only draft preview · Not published automatically</p>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-[#202523]/70">Your saved event, at full size. Switch between the invitation and Hub to review the experience. Responses and other guest actions are disabled here.</p>
         {record.revision === 0 && <p className="mt-2 text-sm text-[#765319]">RSVP &amp; Hub choices are still suggested defaults. Save them in settings before your final review.</p>}
         <nav aria-label="Preview screens" className="mt-4 flex flex-wrap gap-2">
@@ -28,6 +28,7 @@ export function EventDraftFullPreview({ draft, artwork, record, view }: {
           <Link className={button} href={base}>Edit event</Link>
           <Link className={button} href={`${base}/artwork`}>Artwork</Link>
           <Link className={button} href={`${base}/settings`}>RSVP &amp; Hub settings</Link>
+          <Link className={button} href={`${base}/publish`}>Review &amp; publish</Link>
           <Link className={button} href="/admin/events">All events</Link>
         </nav>
       </header>
@@ -45,8 +46,8 @@ export function EventDraftFullPreview({ draft, artwork, record, view }: {
         </>}
       </EventDraftPreview>
       <footer className="mx-auto mt-6 max-w-4xl rounded-2xl border border-[#202523]/10 p-4 text-xs leading-5 text-[#202523]/60">
-        <p className="font-semibold">Reserved event routes · Not shareable yet</p>
-        <p className="mt-1">These stable paths are reserved for this event. They return an unavailable page until publishing is enabled; this preview requires your host session.</p>
+        <p className="font-semibold">Stable event routes · Check publication before sharing</p>
+        <p className="mt-1">These stable paths are reserved for this event. They show only the last explicitly published version, or an unavailable page if not published. This draft preview always requires your host session.</p>
         <p className="mt-2 break-all">Invitation: {paths.invitation}</p><p className="break-all">Hub: {paths.hub}</p>
       </footer>
     </div>

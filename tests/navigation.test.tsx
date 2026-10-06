@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../app/actions", () => ({ submitRsvp: vi.fn() }));
+vi.mock("../app/e/actions", () => ({ submitEventRsvp: vi.fn(), updateEventRsvp: vi.fn() }));
 vi.mock("../lib/server/invitation-settings", async () => ({ getEventConfiguration: async () => (await import("../lib/oyster-roast-event")).OYSTER_ROAST_EVENT }));
 vi.mock("../app/rsvp/actions", () => ({ updateRsvp: vi.fn() }));
 vi.mock("../lib/server/rsvps", () => ({ getRsvpForGuest: vi.fn(), getRsvpSummary: vi.fn().mockRejectedValue(new Error("offline")), listRsvps: vi.fn().mockResolvedValue([]) }));

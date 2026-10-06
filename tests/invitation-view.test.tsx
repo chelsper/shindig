@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_INVITATION_SETTINGS, resolveEventConfiguration } from "../lib/invitation-settings";
 vi.mock("../app/actions", () => ({ submitRsvp: vi.fn() }));
+vi.mock("../app/e/actions", () => ({ submitEventRsvp: vi.fn(), updateEventRsvp: vi.fn() }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers({ host: "www.jaspershucks.app" }) }));
 vi.mock("../lib/server/invitation-settings", () => ({ getEventConfiguration: vi.fn() }));
 import Home, { generateMetadata } from "../app/page";

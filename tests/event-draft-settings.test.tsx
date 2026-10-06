@@ -65,13 +65,13 @@ describe("private previews and readiness", () => {
   });
   it("tracks unsaved choices and missing basics instead of promising publication", () => {
     const items = draftReadiness(draft, EMPTY_DRAFT_ARTWORK, DEFAULT_DRAFT_SETTINGS, false);
-    expect(items.filter((item) => item.required && !item.complete).map((item) => item.id)).toEqual(["date", "location", "settings"]);
+    expect(items.filter((item) => item.required && !item.complete).map((item) => item.id)).toEqual(["date", "location", "settings", "end"]);
     expect(items.find((item) => item.id === "artwork")).toMatchObject({ complete: false, required: false });
-    const complete = draftReadiness({ ...draft, startsAtUtc: "2026-11-07T22:00:00.000Z", address: "123 Test Lane" }, EMPTY_DRAFT_ARTWORK, DEFAULT_DRAFT_SETTINGS, true);
+    const complete = draftReadiness({ ...draft, startsAtUtc: "2026-11-07T22:00:00.000Z", endsAtUtc: "2026-11-08T02:00:00.000Z", address: "123 Test Lane" }, EMPTY_DRAFT_ARTWORK, DEFAULT_DRAFT_SETTINGS, true);
     expect(complete.filter((item) => item.required && !item.complete)).toHaveLength(0);
   });
   it("does not silently reuse the Oyster Roast coordinates when weather is selected", () => {
     const items = draftReadiness(draft, EMPTY_DRAFT_ARTWORK, { ...DEFAULT_DRAFT_SETTINGS, features: { ...DEFAULT_DRAFT_SETTINGS.features, weather: true } }, true);
-    expect(items.find((item) => item.id === "weather")).toMatchObject({ complete: false, required: true, href: null });
+    expect(items.find((item) => item.id === "weather")).toMatchObject({ complete: false, required: true, href: `/admin/events/${draft.id}/publish` });
   });
 });

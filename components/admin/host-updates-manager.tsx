@@ -2,12 +2,13 @@
 
 import { useRef, useState, useTransition, type FormEvent } from "react";
 import { createHostUpdate, deleteHostUpdate, editHostUpdate } from "../../app/admin/updates/actions";
-import { OYSTER_ROAST_EVENT } from "../../lib/oyster-roast-event";
+import { useHostEvent } from "./host-event-context";
 import type { AdminHostUpdate } from "../../lib/server/updates";
 import { UPDATE_LIMITS } from "../../lib/updates";
 import { ContentDeleteButton } from "./content-delete-button";
 
 function UpdateEditor({ update, onSaved, onCancel }: { update?: AdminHostUpdate; onSaved?: () => void; onCancel?: () => void }) {
+  const hostEvent = useHostEvent();
   const [heading, setHeading] = useState(update?.heading ?? "");
   const [message, setMessage] = useState(update?.message ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -26,8 +27,8 @@ function UpdateEditor({ update, onSaved, onCancel }: { update?: AdminHostUpdate;
       try {
         requestId.current ??= crypto.randomUUID();
         const result = update
-          ? await editHostUpdate(update.id, { heading, message })
-          : await createHostUpdate(requestId.current, { heading, message });
+          ? await editHostUpdate(update.id, { heading, message }, ...hostEvent.args)
+          : await createHostUpdate(requestId.current, { heading, message }, ...hostEvent.args);
         if (!result.ok) { setError(result.message); return; }
         setSaved(true);
         if (!update) { setHeading(""); setMessage(""); requestId.current = null; }
@@ -59,11 +60,12 @@ function UpdateEditor({ update, onSaved, onCancel }: { update?: AdminHostUpdate;
 }
 
 function HostUpdateCard({ update }: { update: AdminHostUpdate }) {
+  const hostEvent = useHostEvent();
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(false);
   return (
     <li className="rounded-2xl border border-[#202523]/10 bg-[#fffaf1]/85 p-5 sm:p-6">
-      <p className="mb-3 text-xs text-[#355f9e]">Published {new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: OYSTER_ROAST_EVENT.timeZone }).format(new Date(update.publishedAt))}</p>
+      <p className="mb-3 text-xs text-[#355f9e]">Published {new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: hostEvent.timeZone }).format(new Date(update.publishedAt))}</p>
       {editing ? <UpdateEditor update={update} onCancel={() => setEditing(false)} onSaved={() => { setEditing(false); setSaved(true); }} /> : (
         <>
           {update.heading ? <h2 className="break-words font-serif text-2xl">{update.heading}</h2> : null}
@@ -71,7 +73,7 @@ function HostUpdateCard({ update }: { update: AdminHostUpdate }) {
           {saved ? <p className="mt-3 text-sm text-[#285630]" role="status">Update saved.</p> : null}
           <div className="mt-4 flex flex-wrap items-start gap-2">
             <button className="min-h-11 rounded-full border border-[#355f9e]/25 px-4 text-xs font-semibold text-[#355f9e]" onClick={() => { setEditing(true); setSaved(false); }} type="button">Edit</button>
-            <ContentDeleteButton label="update" onDelete={() => deleteHostUpdate(update.id, true)} />
+            <ContentDeleteButton label="update" onDelete={() => deleteHostUpdate(update.id, true, ...hostEvent.args)} />
           </div>
         </>
       )}

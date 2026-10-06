@@ -46,7 +46,7 @@ export function draftReadiness(draft: EventDraft, artwork: DraftArtwork, setting
     { id: "location", label: "Event address", complete: Boolean(draft.address.trim()), required: true, href: base },
     { id: "settings", label: "RSVP & Hub choices saved", complete: settingsSaved, required: true, href: `${base}/settings` },
     { id: "artwork", label: "Invitation artwork", complete: Boolean(artwork.invitation.path), required: false, href: `${base}/artwork` },
-    { id: "end", label: "End time for calendar entries", complete: Boolean(draft.endsAtUtc), required: false, href: base },
-    ...(settings.features.weather ? [{ id: "weather", label: "Confirm coordinates during publishing setup", complete: false, required: true, href: null }] : []),
+    { id: "end", label: "End time for calendar entries", complete: Boolean(draft.endsAtUtc), required: true, href: base },
+    ...(settings.features.weather ? [{ id: "weather", label: "Confirm coordinates during publishing setup", complete: false, required: true, href: `${base}/publish` }] : []),
   ];
 }

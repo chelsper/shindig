@@ -47,7 +47,7 @@ export function PlaylistModule({ suggestions, unavailable = false }: PlaylistMod
 
     startTransition(async () => {
       try {
-        const result = await submitPlaylistSuggestion({ provider: track.provider, providerTrackId: track.providerTrackId, suggestedBy });
+        const result = await submitPlaylistSuggestion({ provider: track.provider, providerTrackId: track.providerTrackId, suggestedBy }, ...guest.eventSlug ? [guest.eventSlug] as const : []);
         if (!result.ok) {
           setError(result.message);
           return;
@@ -79,7 +79,7 @@ export function PlaylistModule({ suggestions, unavailable = false }: PlaylistMod
     <section aria-labelledby="playlist-heading" className="rounded-[1.75rem] border border-[#202523]/10 bg-white/48 p-5 shadow-[0_14px_40px_rgb(32_37_35_/_0.05)] sm:p-7">
       <div className="border-b border-[#202523]/10 pb-5">
         <p className="text-[0.66rem] font-bold uppercase tracking-[0.2em] text-[#355f9e]">A soundtrack, together</p>
-        <h2 id="playlist-heading" className="mt-1.5 font-serif text-3xl tracking-[-0.03em] sm:text-4xl">Shuckin&apos; Playlist</h2>
+        <h2 id="playlist-heading" className="mt-1.5 font-serif text-3xl tracking-[-0.03em] sm:text-4xl">{guest.eventSlug ? "The soundtrack" : "Shuckin' Playlist"}</h2>
         <p className="mt-2 text-sm leading-6 text-[#202523]/65">Help build the soundtrack. Add a song or applaud someone else’s questionable taste.</p>
         <button
           aria-controls="playlist-suggestion-form"
@@ -110,7 +110,7 @@ export function PlaylistModule({ suggestions, unavailable = false }: PlaylistMod
                 suggestedBy={suggestedBy}
                 track={selection.track}
               />
-            ) : <MusicSearch onSelect={handleSelect} />}
+            ) : <MusicSearch onSelect={handleSelect} eventSlug={guest.eventSlug} />}
           </div>
         ) : null}
       </div>

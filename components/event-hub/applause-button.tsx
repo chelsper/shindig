@@ -17,7 +17,7 @@ export function ApplauseButton({ songKey, songTitle, count }: { songKey: string;
     startTransition(async () => {
       setOptimistic({ active: !active, count: Math.max(0, count + (active ? -1 : 1)) });
       try {
-        const result = await applaudSong(songKey, !active);
+        const result = await applaudSong(songKey, !active, ...guest.eventSlug ? [guest.eventSlug] as const : []);
         if (!result.ok) { setError(result.message); return; }
         guest.recordApplause(songKey, result.data.active);
       } catch { setError("Your applause didn’t save. Give it another try."); }

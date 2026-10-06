@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+vi.mock("../lib/server/event-publications", () => ({ listHostPublications: async () => [] }));
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), save: vi.fn(), get: vi.fn(), list: vi.fn(), revalidate: vi.fn(), redirect: vi.fn(), notFound: vi.fn(), replace: vi.fn() }));
 vi.mock("../lib/server/admin-session", () => ({ isAdminAuthenticated: mocks.auth }));
 vi.mock("../lib/server/event-drafts", () => ({ saveEventDraftRecord: mocks.save, getEventDraft: mocks.get, listEventDrafts: mocks.list }));
@@ -82,7 +83,7 @@ describe("private event draft actions and pages", () => {
   it("renders escaped user content and an explicit private save confirmation", () => {
     const html = renderToStaticMarkup(<EventDraftEditor id={id} initialDraft={{ ...draft, title: "<script>unsafe</script>" }} justSaved timeZones={["America/New_York"]} />);
     expect(html).not.toContain("<script>unsafe"); expect(html).toContain("&lt;script&gt;");
-    expect(html).toContain("Draft saved. It remains private; no invitation has been published.");
+    expect(html).toContain("Draft saved privately. Review and publish when you’re ready to update guest pages.");
     expect(html).toContain('href="/admin/events"');
   });
 });

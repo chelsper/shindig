@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/headers", () => ({ headers: vi.fn() }));
 vi.mock("../app/actions", () => ({ submitRsvp: vi.fn() }));
+vi.mock("../app/e/actions", () => ({ submitEventRsvp: vi.fn(), updateEventRsvp: vi.fn() }));
 vi.mock("../lib/server/invitation-settings", () => ({ getEventConfiguration: vi.fn() }));
 
 import { headers } from "next/headers";

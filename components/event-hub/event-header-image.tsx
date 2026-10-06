@@ -14,6 +14,7 @@ export function EventHeaderImage({ settings }: EventHeaderImageProps) {
         className="object-cover transition-transform duration-200"
         fill
         priority
+        unoptimized={settings.imageUrl.startsWith("/e/")}
         sizes="(min-width: 896px) 896px, 100vw"
         src={settings.imageUrl}
         style={{

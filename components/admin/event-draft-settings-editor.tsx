@@ -55,7 +55,7 @@ export function EventDraftSettingsEditor({ draft, artwork, initial }: { draft: E
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#355f9e]">Event setup · Private draft</p>
         <h1 className="mt-2 font-serif text-4xl tracking-[-0.035em] sm:text-5xl">Make it your kind of gathering</h1>
         <p className="mt-3 max-w-2xl break-words text-sm leading-6 text-[#202523]/65">RSVP &amp; Hub settings for {draft.title}. Keep it simple, or give your guests a few little ways to join in.</p>
-        <nav aria-label="Draft setup" className="mt-4 flex flex-wrap gap-2"><Link href={base} onClick={leave} className={button}>Event basics</Link><Link href={`${base}/artwork`} onClick={leave} className={button}>Invitation &amp; artwork</Link><span aria-current="page" className={`${button} border-[#355f9e]`}>RSVP &amp; Hub</span><Link href={`${base}/preview`} onClick={leave} className={button}>Full-page preview →</Link></nav>
+        <nav aria-label="Draft setup" className="mt-4 flex flex-wrap gap-2"><Link href={base} onClick={leave} className={button}>Event basics</Link><Link href={`${base}/artwork`} onClick={leave} className={button}>Invitation &amp; artwork</Link><span aria-current="page" className={`${button} border-[#355f9e]`}>RSVP &amp; Hub</span><Link href={`${base}/preview`} onClick={leave} className={button}>Full-page preview →</Link><Link href={`${base}/publish`} onClick={leave} className={button}>Review &amp; publish →</Link></nav>
       </section>
       <div className="grid min-w-0 gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,390px)]">
         <div className="min-w-0 space-y-5">
@@ -89,7 +89,7 @@ export function EventDraftSettingsEditor({ draft, artwork, initial }: { draft: E
             <p className="text-[0.65rem] font-bold uppercase tracking-widest text-[#355f9e]">Before it goes out</p><h2 id="readiness-heading" className="mt-2 font-serif text-2xl">Getting ready to gather</h2>
             <p className="mt-2 text-sm leading-6 text-[#202523]/60">{remaining ? `${remaining} ${remaining === 1 ? "detail needs" : "details need"} attention before review.` : "Your essentials are ready for the next review step."} Based on saved basics and artwork, plus the choices shown here.</p>
             <ul className="mt-3 divide-y divide-[#202523]/10">{readiness.map((item) => <li key={item.id} className="flex min-h-14 items-center gap-3 py-3 text-sm"><span aria-hidden="true" className={item.complete ? "text-[#285630]" : "text-[#355f9e]"}>{item.complete ? "✓" : "○"}</span><span className="min-w-0 flex-1">{item.href && !item.complete && item.id !== "settings" ? <Link href={item.href} onClick={leave} className="underline underline-offset-4">{item.label}</Link> : item.label}<span className="mt-1 block text-xs text-[#202523]/55">{item.complete ? "Complete" : item.required ? "Still to do" : "Recommended"}</span></span></li>)}</ul>
-            <p className="mt-4 rounded-xl bg-[#e9f2f8]/60 p-3 text-xs leading-5 text-[#355f9e]">Still private. Publishing, event-specific guest links and final integration checks come in the next step. No invitation has been sent or published.</p>
+            <p className="mt-4 rounded-xl bg-[#e9f2f8]/60 p-3 text-xs leading-5 text-[#355f9e]">These draft choices stay private. Use Review & publish to apply them to guest pages; saving here never changes a live event.</p>
           </section>
         </div>
         <section className="min-w-0 self-start md:sticky md:top-6" aria-label="Guest experience preview">

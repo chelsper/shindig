@@ -36,9 +36,9 @@ describe("event identity and server-resolved access", () => {
     expect(draftEventSlug(first)).not.toBe(draftEventSlug(second));
     expect(() => draftEventSlug("../admin")).toThrow(); expect(() => eventPaths("//evil.test")).toThrow();
   });
-  it("only resolves the current published event; drafts and unknown slugs are indistinguishable", () => {
-    expect(resolvePublicEventScope("oyster-roast-2026")).toBe(OYSTER_ROAST_SCOPE);
-    for (const slug of [draftEventSlug(first), "private-party", "../admin", "", "OYSTER-ROAST-2026"]) expect(resolvePublicEventScope(slug)).toBeNull();
+  it("resolves the legacy event while unpublished drafts and unknown slugs are indistinguishable", async () => {
+    expect(await resolvePublicEventScope("oyster-roast-2026")).toBe(OYSTER_ROAST_SCOPE);
+    for (const slug of [draftEventSlug(first), "private-party", "../admin", "", "OYSTER-ROAST-2026"]) expect(await resolvePublicEventScope(slug)).toBeNull();
     expect(mocks.draft).not.toHaveBeenCalled(); expect(mocks.auth).not.toHaveBeenCalled();
   });
   it("requires the host session before looking up a private scope", async () => {

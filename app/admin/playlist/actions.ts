@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { OYSTER_ROAST_EVENT } from "../../../lib/oyster-roast-event";
 import { isAdminAuthenticated } from "../../../lib/server/admin-session";
 import { deletePlaylistSuggestion } from "../../../lib/server/playlist";
+import { hostScopeArgs, refreshHostEvent } from "../../../lib/server/host-event";
 
 export type DeletePlaylistState = { error: string | null };
 
@@ -12,6 +13,7 @@ export async function deleteAdminPlaylistSuggestion(
   id: string,
   _previousState: DeletePlaylistState,
   formData: FormData,
+  eventSlug?: string,
 ): Promise<DeletePlaylistState> {
   if (!(await isAdminAuthenticated())) {
     return { error: "Your host session has expired. Sign in again before deleting." };
@@ -23,7 +25,8 @@ export async function deleteAdminPlaylistSuggestion(
     return { error: "Please confirm you want to delete this suggestion." };
   }
   try {
-    await deletePlaylistSuggestion(id);
+    await deletePlaylistSuggestion(id, ...await hostScopeArgs(eventSlug));
+    refreshHostEvent(eventSlug);
   } catch {
     console.error("Admin playlist deletion failed.");
     return { error: "We couldn’t delete that suggestion. Please try again." };

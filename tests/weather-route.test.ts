@@ -27,7 +27,7 @@ describe("public weather route", () => {
     expect(service.live).toHaveBeenCalledWith(updated);
   });
   it("uses only the configured event and returns no credentials or raw provider location", async () => {
-    const response = await GET(new Request("https://shindig.test/api/weather?latitude=0&longitude=0&event=other&url=https://example.com"));
+    const response = await GET(new Request("https://shindig.test/api/weather?latitude=0&longitude=0&url=https://example.com"));
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
     expect(service.live).toHaveBeenCalledWith(event);
@@ -35,6 +35,10 @@ describe("public weather route", () => {
     const data = await response.json();
     expect(data).toEqual({ weather });
     for (const key of ["latitude", "longitude", "apikey", "DATABASE_URL", "guest_name"]) expect(JSON.stringify(data)).not.toContain(key);
+  });
+  it("rejects an unknown event instead of silently returning Oyster Roast weather", async () => {
+    expect((await GET(new Request("https://shindig.test/api/weather?event=other"))).status).toBe(404);
+    expect(service.live).not.toHaveBeenCalled();
   });
   it("loads historical context separately without holding up live weather", async () => {
     const response = await GET(new Request("https://shindig.test/api/weather?context=typical"));

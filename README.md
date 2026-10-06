@@ -1,6 +1,72 @@
 # Shindig
 
-## Event-specific foundation & private full-page preview (Step 4A)
+## Review, publish & share (Step 4B — current)
+
+Open **Your events → a saved draft → Review & publish** at
+`/admin/events/[id]/publish`. Review the saved details, artwork, RSVP rules and
+Hub modules, check the explicit public-sharing confirmation, then **Publish event**.
+The review requires a start, end time, address, saved settings, and valid saved
+artwork if selected. Weather requires host-confirmed coordinates; it never uses
+the Oyster Roast location as a fallback. Missing music credentials are called out.
+No messages or invitations are sent automatically.
+
+Publication is a **snapshot**, not a change to the private working draft. Later
+draft edits—including replacement artwork and feature flags—remain private until
+**Publish changes**. Publication checks all reviewed revisions and the previous
+live revision atomically; stale tabs cannot overwrite a newer review. Rapid clicks
+and identical lost-response retries do not create duplicate publications.
+
+- Invitation: `/e/event-<UUID>`; Hub: `/e/event-<UUID>/event`.
+- Private RSVP updates: `/e/[slug]/rsvp/[token]`; calendar: `/e/[slug]/calendar.ics`.
+- Artwork: `/e/[slug]/artwork/invitation` or `/header`. The server streams only the
+  approved snapshot's image from private Blob storage. It accepts no blob path or
+  arbitrary URL. Unpublished uploads are still host-only. Images bypass the public
+  Next image optimizer and use no-store responses.
+- Guest rules and enabled modules come from the published snapshot on every
+  server action. Names/comments/privacy, token access, idempotency and all content
+  are scoped to that event. Unknown/unpublished events never fall back to Jasper
+  Shucks. Calendar descriptions point to this event's Hub and optional private edit
+  link. Declined guests do not see calendar actions.
+- **View event responses** opens `/admin/events/[id]/guests`: private RSVP list,
+  counts/CSV, and the existing question/update/playlist/poll managers, scoped to
+  this published event. Module moderation remains possible when a module is hidden.
+  Host RSVP add/edit/delete for these new event screens is not part of this step;
+  guests can update their own response through their private link.
+
+### Deployment preparation
+
+1. Apply [`014_event_publications.sql`](db/migrations/014_event_publications.sql)
+   after 001–013 in the target Neon database, then deploy. It adds only the
+   publication snapshot table; no event is published, seeded, copied or deleted.
+   It is safe to reapply and compatible with the prior app version.
+2. **No new packages or environment variables.** Retain server-only `DATABASE_URL`,
+   `ADMIN_PASSWORD`, and `EVENT_DRAFT_BLOB_READ_WRITE_TOKEN`. Retain the existing
+   Spotify credentials if Playlist is enabled; Open-Meteo requires no key.
+3. Review a saved draft in the deployed admin, then explicitly publish only when
+   it is intended to be public. Copy the invitation/Hub links from the share panel.
+   Check RSVP, private edit link, calendar and enabled modules with that event.
+4. Verify an unpublished draft and its artwork stay unavailable without a host
+   session, and later draft edits do not change the published version until approved.
+
+Jasper Shucks' existing domains, routes, design, configuration, RSVP/edit links,
+calendar identity, guest data and admin workflow are preserved. Shared links use
+the canonical Shindig domain rather than trusting a request host. Public event
+pages are noindex, not password-protected: anyone with their link can view them.
+Unpublishing/archiving, custom event URL aliases, accounts and notifications are
+not added in this step.
+
+Checks: `npm run lint`, `npm run typecheck`, `npm test`,
+`npm run build -- --webpack`. Apply 001–014 to a disposable database named
+`shindig_drafts_test`, then run `tests/event-publications.integration.sql`,
+`tests/event-scopes.integration.sql` and `tests/event-draft-settings.integration.sql`
+using `psql -v ON_ERROR_STOP=1 -f …`. The scripts refuse other database names and
+roll back their synthetic fixtures. Browser interaction/layout checks use synthetic
+local data, not real production submissions.
+
+The earlier milestone notes below describe their state at completion; Step 4B
+supersedes their statements that publishing/public event routes are still future work.
+
+## Event-specific foundation & private full-page preview (Step 4A — completed)
 
 Open **Your events → a saved draft → Full-page preview** at
 `/admin/events/[id]/preview`. Switch between Invitation and Event Hub; all links

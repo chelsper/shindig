@@ -5,7 +5,7 @@ import { hasMeaningfulMusicQuery, MUSIC_SEARCH, normalizeMusicQuery, type MusicA
 import { createMusicSearchClient, type MusicSearchState } from "../../lib/music-search-client";
 import { TrackDetails } from "./track-details";
 
-type MusicSearchProps = { onSelect: (track: MusicTrack, attribution: MusicAttribution) => void };
+type MusicSearchProps = { onSelect: (track: MusicTrack, attribution: MusicAttribution) => void; eventSlug?: string };
 
 export function MusicSearchResults({ result, onSelect }: MusicSearchProps & {
   result: MusicSearchResult;
@@ -24,11 +24,11 @@ export function MusicSearchResults({ result, onSelect }: MusicSearchProps & {
   );
 }
 
-export function MusicSearch({ onSelect }: MusicSearchProps) {
+export function MusicSearch({ onSelect, eventSlug }: MusicSearchProps) {
   const [query, setQuery] = useState("");
   const [revision, setRevision] = useState(0);
   const [state, setState] = useState<MusicSearchState>({ status: "idle" });
-  const [client] = useState(() => createMusicSearchClient());
+  const [client] = useState(() => createMusicSearchClient(fetch, Date.now, eventSlug));
   useEffect(() => client.run(query, setState), [client, query, revision]);
   return (
     <div>

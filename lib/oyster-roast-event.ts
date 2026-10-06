@@ -63,17 +63,24 @@ export const OYSTER_ROAST_EVENT = {
   features,
 } as const;
 
-// Identity, feature flags and routes stay fixed; hosts can edit presentation/details.
+// Shared presentation contract. Legacy identity stays canonical; published events
+// are constructed server-side from a reviewed snapshot, never browser settings.
 type EditableText = "title" | "description" | "venue" | "address" | "cityLabel" |
   "dateLabel" | "shortDateLabel" | "timeLabel" | "startsAtUtc" | "endsAtUtc";
-export type OysterRoastEvent = Omit<typeof OYSTER_ROAST_EVENT, EditableText | "coordinates" | "invitation"> &
+export type EventConfiguration =
   Record<EditableText, string> & {
-    coordinates: { latitude: number; longitude: number };
+    slug: string; hostTitle: string; timeZone: string;
+    calendarUid: string; calendarFilename: string; websiteUrl: string;
+    features: EventFeatures;
+    coordinates: { latitude: number; longitude: number } | null;
+    rsvp?: { maxPartySize: number; allowComments: boolean; guestListDefaultVisible: boolean };
+    eventHub: { path: string; headerImage: { url: string; alt: string; focalX: number; focalY: number; zoomPercent: number } };
     invitation: {
       eyebrow: string; timeNote: string; rsvpHeading: string;
       imageUrl: string; imageAlt: string; imageWidth: number; imageHeight: number;
     };
   };
+export type OysterRoastEvent = EventConfiguration;
 
 export function eventMonthLabel(event: OysterRoastEvent = OYSTER_ROAST_EVENT) {
   return new Intl.DateTimeFormat("en-US", { timeZone: event.timeZone, month: "long", year: "2-digit" })

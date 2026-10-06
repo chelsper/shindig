@@ -2,6 +2,7 @@ import {
   getGoogleCalendarUrl,
   getOutlookCalendarUrl,
   getRsvpUpdateUrl,
+  calendarPath,
 } from "../lib/calendar";
 import { OYSTER_ROAST_EVENT, type OysterRoastEvent } from "../lib/oyster-roast-event";
 
@@ -34,8 +35,8 @@ export function CalendarActions({ editToken, event = OYSTER_ROAST_EVENT }: Calen
   const googleCalendarUrl = getGoogleCalendarUrl(rsvpUrl, event);
   const outlookCalendarUrl = getOutlookCalendarUrl(rsvpUrl, event);
   const icsUrl = editToken
-    ? `/calendar/oyster-roast.ics?token=${encodeURIComponent(editToken)}`
-    : "/calendar/oyster-roast.ics";
+    ? `${calendarPath(event)}?token=${encodeURIComponent(editToken)}`
+    : calendarPath(event);
   const linkClassName =
     "flex min-h-12 items-center justify-center rounded-xl border border-[#202523]/15 bg-white/55 px-2 text-xs font-bold text-[#202523]/72 transition hover:border-[#355f9e]/45 hover:text-[#214e91]";
 

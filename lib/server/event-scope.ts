@@ -5,6 +5,7 @@ import type { DraftSettings } from "../event-draft-settings";
 import { isAdminAuthenticated } from "./admin-session";
 import { getEventDraft } from "./event-drafts";
 import { getDraftSettings } from "./event-draft-settings";
+import { getEventPublication } from "./event-publications";
 
 const brand: unique symbol = Symbol("server-resolved-event");
 export type EventScope = Readonly<{
@@ -46,11 +47,12 @@ export function requireEventFeature(scope: EventScope, feature: keyof EventFeatu
   if (!eventFeatureEnabled(scope, feature)) throw new Error("This event feature is not available.");
 }
 
-// Step 4A deliberately has no public draft lookup. Unknown/unpublished slugs
-// have exactly the same response, even for a signed-in host. Publishing later
-// belongs here, not in the pages or browser-provided flags.
-export function resolvePublicEventScope(slug: string): EventScope | null {
-  return slug === OYSTER_ROAST_EVENT.slug ? OYSTER_ROAST_SCOPE : null;
+// No public draft lookup, even for signed-in hosts. Only explicitly published
+// settings authorize guest data access. Every action re-resolves its locator.
+export async function resolvePublicEventScope(slug: string): Promise<EventScope | null> {
+  if (slug === OYSTER_ROAST_EVENT.slug) return OYSTER_ROAST_SCOPE;
+  const publication = await getEventPublication(slug);
+  return publication ? issue(publication.slug, "public", publication.snapshot.settings) : null;
 }
 
 export async function getHostDraftScope(id: string): Promise<EventScope | null> {

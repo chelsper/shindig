@@ -1,9 +1,11 @@
 "use client";
 import { useRef, useState, useTransition, type FormEvent } from "react";
 import { saveHostPoll } from "../../app/admin/polls/actions";
+import { useHostEvent } from "./host-event-context";
 import { POLL_LIMITS, type AdminPoll, type PollOption } from "../../lib/polls";
 
 export function PollEditor({ poll, onSaved, onCancel }: { poll?: AdminPoll; onSaved: () => void; onCancel: () => void }) {
+  const hostEvent = useHostEvent();
   const [question, setQuestion] = useState(poll?.question ?? "");
   const [eyebrow, setEyebrow] = useState(poll?.eyebrow ?? "IMPORTANT RESEARCH");
   const [options, setOptions] = useState<PollOption[]>(poll?.options ?? [{ key: "", text: "" }, { key: "", text: "" }]);
@@ -33,7 +35,7 @@ export function PollEditor({ poll, onSaved, onCancel }: { poll?: AdminPoll; onSa
         requestKey.current ??= crypto.randomUUID();
         const keyedOptions = options.map((option) => ({ ...option, key: option.key || crypto.randomUUID() }));
         setOptions(keyedOptions);
-        const result = await saveHostPoll(requestKey.current, { question, eyebrow, options: keyedOptions, allowMultiple: multiple, showResults, showClosedResults: closedResults, sortOrder: order }, !poll);
+        const result = await saveHostPoll(requestKey.current, { question, eyebrow, options: keyedOptions, allowMultiple: multiple, showResults, showClosedResults: closedResults, sortOrder: order }, !poll, ...hostEvent.args);
         if (!result.ok) { setError(result.message); return; }
         onSaved();
       } catch { setError("We couldn’t save this poll. Please try again."); }

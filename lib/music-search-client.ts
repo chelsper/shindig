@@ -9,7 +9,7 @@ const unavailable = "Music search is taking a quick break. Please try again soon
 
 // The browser knows only Shindig's contract. Cancelling also guards against a
 // late response from a transport that ignores AbortSignal.
-export function createMusicSearchClient(fetcher: typeof fetch = fetch, now = Date.now) {
+export function createMusicSearchClient(fetcher: typeof fetch = fetch, now = Date.now, eventSlug?: string) {
   let cooldownUntil = 0;
   return {
     run(input: string, update: (state: MusicSearchState) => void) {
@@ -26,7 +26,7 @@ export function createMusicSearchClient(fetcher: typeof fetch = fetch, now = Dat
         update({ status: "loading" });
         timeout = setTimeout(() => controller.abort(), 15000);
         try {
-          const response = await fetcher(`/api/music/search?${new URLSearchParams({ q: query })}`, { signal: controller.signal, cache: "no-store" });
+          const response = await fetcher(`/api/music/search?${new URLSearchParams({ q: query, ...(eventSlug ? { event: eventSlug } : {}) })}`, { signal: controller.signal, cache: "no-store" });
           const data = await response.json() as MusicSearchResponse;
           if (!active) return;
           if (response.status === 429) {
