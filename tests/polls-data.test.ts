@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ neon: vi.fn(), sql: vi.fn() }));
 vi.mock("server-only", () => ({}));
 vi.mock("@neondatabase/serverless", () => ({ neon: mocks.neon }));
-import { listPublicPolls, listGuestPollStates, listPollsForAdmin, setPollVote, savePoll, changePollStatus } from "../lib/server/polls";
+import { listPublicPolls, listGuestPollStates, setPollVote, savePoll, changePollStatus } from "../lib/server/polls";
 import { listGuestApplause, setPlaylistApplause } from "../lib/server/applause";
 import { OYSTER_ROAST_EVENT } from "../lib/oyster-roast-event";
 import { adminPoll, pollInput, pollKey, pollOptions, pollResults, publicPoll } from "./fixtures/polls";
@@ -32,14 +32,17 @@ describe("public poll and applause projections", () => {
     await expect(listPublicPolls()).resolves.toEqual([closed]);
   });
   it("skips the public query when disabled without removing admin access", async () => {
-    const previous = OYSTER_ROAST_EVENT.features.polls;
-    OYSTER_ROAST_EVENT.features.polls = false;
+    vi.resetModules();
+    const { OYSTER_ROAST_EVENT: config } = await import("../lib/oyster-roast-event");
+    const previous = config.features.polls;
+    config.features.polls = false;
     try {
-      await expect(listPublicPolls()).resolves.toEqual([]);
+      const data = await import("../lib/server/polls");
+      await expect(data.listPublicPolls()).resolves.toEqual([]);
       expect(mocks.sql).not.toHaveBeenCalled();
       mocks.sql.mockResolvedValue([{ ...adminPoll, ...privateFields }]);
-      await expect(listPollsForAdmin()).resolves.toEqual([adminPoll]);
-    } finally { OYSTER_ROAST_EVENT.features.polls = previous; }
+      await expect(data.listPollsForAdmin()).resolves.toEqual([adminPoll]);
+    } finally { config.features.polls = previous; }
   });
   it("loads only this browser's choices and enforces visibility in SQL", async () => {
     mocks.sql.mockResolvedValue([{ key: pollKey, selected: [pollOptions[0].key], results: pollResults, ...privateFields }]);

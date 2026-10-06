@@ -3,7 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { neon } from "@neondatabase/serverless";
 
-import { OYSTER_ROAST_EVENT } from "../oyster-roast-event";
+import { OYSTER_ROAST_SCOPE, eventScopeSlug, eventFeatureEnabled, requireEventFeature, type EventScope } from "./event-scope";
 import type { CatalogSuggestion, PublicPlaylistSuggestion } from "../playlist";
 import { musicAttribution } from "./music";
 
@@ -18,14 +18,16 @@ function database() {
   return neon(databaseUrl);
 }
 
-export async function listPublicPlaylistSuggestions(): Promise<PublicPlaylistSuggestion[]> {
+export async function listPublicPlaylistSuggestions(scope: EventScope = OYSTER_ROAST_SCOPE): Promise<PublicPlaylistSuggestion[]> {
+  const eventSlug = eventScopeSlug(scope);
+  if (!eventFeatureEnabled(scope, "playlist")) return [];
   const sql = database();
   const rows = await sql`
     SELECT public_key AS key, provider, provider_track_id AS "providerTrackId", song_title AS "songTitle", artist,
       album, artwork_url AS "artworkUrl", external_url AS "externalUrl", explicit, suggested_by AS "suggestedBy",
       (SELECT count(*)::integer FROM playlist_applause a WHERE a.playlist_suggestion_id = s.id) AS "applauseCount"
     FROM playlist_suggestions s
-    WHERE event_slug = ${OYSTER_ROAST_EVENT.slug}
+    WHERE event_slug = ${eventSlug}
     ORDER BY created_at DESC, id DESC
   `;
 
@@ -50,15 +52,15 @@ function publicSuggestion(row: Record<string, unknown>, newestRank: number): Pub
   };
 }
 
-export async function createPlaylistSuggestion(
-  suggestion: CatalogSuggestion,
-): Promise<"added" | "duplicate"> {
+export async function createPlaylistSuggestion(suggestion: CatalogSuggestion, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<"added" | "duplicate"> {
+  const eventSlug = eventScopeSlug(scope);
+  requireEventFeature(scope, "playlist");
   const sql = database();
   const rows = await sql`
     INSERT INTO playlist_suggestions (id, event_slug, provider, provider_track_id,
       song_title, artist, album, artwork_url, external_url, explicit, suggested_by)
     VALUES (
-      ${randomUUID()}, ${OYSTER_ROAST_EVENT.slug}, ${suggestion.provider}, ${suggestion.providerTrackId},
+      ${randomUUID()}, ${eventSlug}, ${suggestion.provider}, ${suggestion.providerTrackId},
       ${suggestion.songTitle}, ${suggestion.artist}, ${suggestion.album}, ${suggestion.artworkUrl},
       ${suggestion.externalUrl}, ${suggestion.explicit}, ${suggestion.suggestedBy}
     )
@@ -68,7 +70,8 @@ export async function createPlaylistSuggestion(
   return rows.length > 0 ? "added" : "duplicate";
 }
 
-export async function listPlaylistSuggestionsForAdmin(): Promise<AdminPlaylistSuggestion[]> {
+export async function listPlaylistSuggestionsForAdmin(scope: EventScope = OYSTER_ROAST_SCOPE): Promise<AdminPlaylistSuggestion[]> {
+  const eventSlug = eventScopeSlug(scope);
   const sql = database();
   const rows = await sql`
     SELECT id::text, public_key AS key, provider, provider_track_id AS "providerTrackId", song_title AS "songTitle", artist,
@@ -76,7 +79,7 @@ export async function listPlaylistSuggestionsForAdmin(): Promise<AdminPlaylistSu
       suggested_by AS "suggestedBy", created_at AS "createdAt",
       (SELECT count(*)::integer FROM playlist_applause a WHERE a.playlist_suggestion_id = s.id) AS "applauseCount"
     FROM playlist_suggestions s
-    WHERE event_slug = ${OYSTER_ROAST_EVENT.slug}
+    WHERE event_slug = ${eventSlug}
     ORDER BY created_at DESC, id DESC
   `;
   return rows.map((row, index) => ({
@@ -86,11 +89,12 @@ export async function listPlaylistSuggestionsForAdmin(): Promise<AdminPlaylistSu
   }));
 }
 
-export async function deletePlaylistSuggestion(id: string): Promise<boolean> {
+export async function deletePlaylistSuggestion(id: string, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<boolean> {
+  const eventSlug = eventScopeSlug(scope);
   const sql = database();
   const rows = await sql`
     DELETE FROM playlist_suggestions
-    WHERE id = ${id}::uuid AND event_slug = ${OYSTER_ROAST_EVENT.slug}
+    WHERE id = ${id}::uuid AND event_slug = ${eventSlug}
     RETURNING 1 AS deleted
   `;
   return rows.length > 0;

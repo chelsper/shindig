@@ -55,7 +55,7 @@ export function EventDraftSettingsEditor({ draft, artwork, initial }: { draft: E
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#355f9e]">Event setup · Private draft</p>
         <h1 className="mt-2 font-serif text-4xl tracking-[-0.035em] sm:text-5xl">Make it your kind of gathering</h1>
         <p className="mt-3 max-w-2xl break-words text-sm leading-6 text-[#202523]/65">RSVP &amp; Hub settings for {draft.title}. Keep it simple, or give your guests a few little ways to join in.</p>
-        <nav aria-label="Draft setup" className="mt-4 flex flex-wrap gap-2"><Link href={base} onClick={leave} className={button}>Event basics</Link><Link href={`${base}/artwork`} onClick={leave} className={button}>Invitation &amp; artwork</Link><span aria-current="page" className={`${button} border-[#355f9e]`}>RSVP &amp; Hub</span></nav>
+        <nav aria-label="Draft setup" className="mt-4 flex flex-wrap gap-2"><Link href={base} onClick={leave} className={button}>Event basics</Link><Link href={`${base}/artwork`} onClick={leave} className={button}>Invitation &amp; artwork</Link><span aria-current="page" className={`${button} border-[#355f9e]`}>RSVP &amp; Hub</span><Link href={`${base}/preview`} onClick={leave} className={button}>Full-page preview →</Link></nav>
       </section>
       <div className="grid min-w-0 gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,390px)]">
         <div className="min-w-0 space-y-5">

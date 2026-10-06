@@ -1,6 +1,6 @@
 import "server-only";
 import { neon } from "@neondatabase/serverless";
-import { OYSTER_ROAST_EVENT } from "../oyster-roast-event";
+import { OYSTER_ROAST_SCOPE, eventScopeSlug, eventFeatureEnabled, requireEventFeature, type EventScope } from "./event-scope";
 import type { AdminPoll, PollInput, PollOption, PollResults, PublicPoll } from "../polls";
 import type { GuestPollState } from "../guest-interactions";
 
@@ -22,8 +22,9 @@ function publicPoll(row: Row): PublicPoll {
   return { key: String(row.key), question: String(row.question), eyebrow: row.eyebrow == null ? null : String(row.eyebrow), status: row.status as PublicPoll["status"], allowMultiple: Boolean(row.allowMultiple), showResults: Boolean(row.showResults), options: options(row.options), results: results(row.results) };
 }
 
-export async function listPublicPolls(): Promise<PublicPoll[]> {
-  if (!OYSTER_ROAST_EVENT.features.polls) return [];
+export async function listPublicPolls(scope: EventScope = OYSTER_ROAST_SCOPE): Promise<PublicPoll[]> {
+  const eventSlug = eventScopeSlug(scope);
+  if (!eventFeatureEnabled(scope, "polls")) return [];
   const sql = database();
   const rows = await sql`
     SELECT p.public_key AS key, p.question, p.eyebrow, p.status, p.allow_multiple AS "allowMultiple",
@@ -31,14 +32,16 @@ export async function listPublicPolls(): Promise<PublicPoll[]> {
       CASE WHEN p.status = 'CLOSED' AND p.show_closed_results
         THEN jsonb_build_object('responses', t.responses, 'options', t.counts) ELSE NULL END AS results
     FROM polls p JOIN shindig_poll_totals t ON t.poll_id = p.id
-    WHERE p.event_slug = ${OYSTER_ROAST_EVENT.slug}
+    WHERE p.event_slug = ${eventSlug}
       AND (p.status = 'OPEN' OR (p.status = 'CLOSED' AND p.show_closed_results))
     ORDER BY CASE WHEN p.status = 'OPEN' THEN 0 ELSE 1 END, p.sort_order, p.created_at DESC, p.id
   `;
   return rows.map(publicPoll);
 }
 
-export async function listGuestPollStates(hash: string): Promise<Record<string, GuestPollState>> {
+export async function listGuestPollStates(hash: string, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<Record<string, GuestPollState>> {
+  const eventSlug = eventScopeSlug(scope);
+  if (!eventFeatureEnabled(scope, "polls")) return {};
   const sql = database();
   const rows = await sql`
     SELECT p.public_key AS key,
@@ -47,20 +50,23 @@ export async function listGuestPollStates(hash: string): Promise<Record<string, 
       CASE WHEN (p.status = 'OPEN' AND p.show_results) OR (p.status = 'CLOSED' AND p.show_closed_results)
         THEN jsonb_build_object('responses', t.responses, 'options', t.counts) ELSE NULL END AS results
     FROM polls p JOIN shindig_poll_totals t ON t.poll_id = p.id
-    WHERE p.event_slug = ${OYSTER_ROAST_EVENT.slug}
+    WHERE p.event_slug = ${eventSlug}
       AND (p.status = 'OPEN' OR (p.status = 'CLOSED' AND p.show_closed_results))
       AND EXISTS (SELECT 1 FROM poll_votes v WHERE v.poll_id = p.id AND v.voter_token_hash = ${hash})
   `;
   return Object.fromEntries(rows.map((row) => [String(row.key), { selected: Array.isArray(row.selected) ? row.selected.map(String) : [], results: results(row.results) }]));
 }
 
-export async function setPollVote(key: string, selected: string[], hash: string): Promise<boolean> {
+export async function setPollVote(key: string, selected: string[], hash: string, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<boolean> {
+  const eventSlug = eventScopeSlug(scope);
+  requireEventFeature(scope, "polls");
   const sql = database();
-  const rows = await sql`SELECT shindig_set_poll_vote(${OYSTER_ROAST_EVENT.slug}, ${key}::uuid, ${selected}::uuid[], ${hash}) AS saved`;
+  const rows = await sql`SELECT shindig_set_poll_vote(${eventSlug}, ${key}::uuid, ${selected}::uuid[], ${hash}) AS saved`;
   return rows[0]?.saved === true;
 }
 
-export async function listPollsForAdmin(): Promise<AdminPoll[]> {
+export async function listPollsForAdmin(scope: EventScope = OYSTER_ROAST_SCOPE): Promise<AdminPoll[]> {
+  const eventSlug = eventScopeSlug(scope);
   const sql = database();
   const rows = await sql`
     SELECT p.public_key AS key, p.question, p.eyebrow, p.status, p.allow_multiple AS "allowMultiple",
@@ -68,22 +74,24 @@ export async function listPollsForAdmin(): Promise<AdminPoll[]> {
       (p.voting_started_at IS NOT NULL) AS "votingStarted", t.options,
       jsonb_build_object('responses', t.responses, 'options', t.counts) AS results
     FROM polls p JOIN shindig_poll_totals t ON t.poll_id = p.id
-    WHERE p.event_slug = ${OYSTER_ROAST_EVENT.slug}
+    WHERE p.event_slug = ${eventSlug}
     ORDER BY CASE WHEN p.status = 'ARCHIVED' THEN 1 ELSE 0 END, p.sort_order, p.created_at DESC, p.id
   `;
   return rows.map((row) => ({ ...publicPoll(row), status: row.status as AdminPoll["status"], showClosedResults: Boolean(row.showClosedResults), sortOrder: Number(row.sortOrder), votingStarted: Boolean(row.votingStarted), results: results(row.results)! }));
 }
 
-export async function savePoll(key: string, input: PollInput, create: boolean): Promise<boolean> {
+export async function savePoll(key: string, input: PollInput, create: boolean, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<boolean> {
+  const eventSlug = eventScopeSlug(scope);
   const sql = database();
-  const rows = await sql`SELECT shindig_save_poll(${OYSTER_ROAST_EVENT.slug}, ${key}::uuid,
+  const rows = await sql`SELECT shindig_save_poll(${eventSlug}, ${key}::uuid,
     ${input.question}, ${input.eyebrow}, ${input.allowMultiple}, ${input.showResults}, ${input.showClosedResults},
     ${input.sortOrder}, ${JSON.stringify(input.options)}::jsonb, ${create}) AS saved`;
   return rows[0]?.saved === true;
 }
 
-export async function changePollStatus(key: string, status: "OPEN" | "CLOSED" | "ARCHIVED" | "DELETE_DRAFT"): Promise<boolean> {
+export async function changePollStatus(key: string, status: "OPEN" | "CLOSED" | "ARCHIVED" | "DELETE_DRAFT", scope: EventScope = OYSTER_ROAST_SCOPE): Promise<boolean> {
+  const eventSlug = eventScopeSlug(scope);
   const sql = database();
-  const rows = await sql`SELECT shindig_poll_status(${OYSTER_ROAST_EVENT.slug}, ${key}::uuid, ${status}) AS saved`;
+  const rows = await sql`SELECT shindig_poll_status(${eventSlug}, ${key}::uuid, ${status}) AS saved`;
   return rows[0]?.saved === true;
 }

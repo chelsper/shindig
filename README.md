@@ -1,5 +1,62 @@
 # Shindig
 
+## Event-specific foundation & private full-page preview (Step 4A)
+
+Open **Your events → a saved draft → Full-page preview** at
+`/admin/events/[id]/preview`. Switch between Invitation and Event Hub; all links
+stay within that draft's host-only preview/setup. This uses saved basics, private
+artwork/crop, RSVP rules and module choices. Unsaved/default choices are labeled.
+It is responsive rather than limited to a phone-width mockup. RSVP submission,
+calendar and directions are disabled, and no guest data, provider requests or
+guest-interaction cookies are loaded. The preview and private images require the
+existing host session; previews are dynamic, noindex and no-referrer.
+
+Each draft has an immutable identity `event-<draft UUID>`, independent of its title.
+`lib/event-routes.ts` supplies `/e/[slug]` and `/e/[slug]/event`. **These are reserved
+routes, not shareable guest links yet.** Every unpublished/unknown slug returns
+404 without querying draft content, including for signed-in hosts. Only the
+existing `oyster-roast-2026` public scope resolves; its aliases redirect to
+`/invitation` and `/event`. Jasper Shucks' domains, existing routes, artwork,
+calendar/edit links, live settings and guest experience remain unchanged.
+
+`lib/server/event-scope.ts` issues immutable, server-only event scopes. Serialized
+objects, arbitrary slugs and browser-supplied feature flags cannot authorize data
+access. Draft scopes additionally require host authentication and an existing
+draft/settings record. RSVP, guest-list, playlist, Q&A, updates, applause and poll
+operations bind all reads/writes to that scope; unchanged callers default to the
+live Oyster Roast. RSVP limits/comment/privacy rules are enforced again at the
+data boundary. Token lookups and duplicate retries include the event; question
+retry hashes are namespaced for new events while retaining legacy hash compatibility.
+Disabled modules skip public queries and block guest writes. Admin moderation of
+disabled modules remains possible. Public projections still exclude private fields.
+
+### Deployment preparation
+
+1. Apply [`013_event_data_scopes.sql`](db/migrations/013_event_data_scopes.sql) after
+   migrations 001–012 in the database for the target environment, then deploy.
+   It adds an identity registry, backfills existing drafts, automatically registers
+   new drafts, and replaces four single-event checks with event foreign keys
+   (also protecting polls). Existing RSVP/song/question/update/poll rows, edit
+   tokens, privacy choices and publication states are preserved. Reapplying is safe.
+   It is compatible with the prior app version during a rolling deployment.
+2. No new packages, environment variables or external services are required.
+3. Check a saved draft's full-page invitation/Hub preview while signed in, then
+   verify the same preview requires login in a private browser and its reserved
+   `/e/…` routes return 404. Review the existing Jasper Shucks invitation/Hub.
+
+No publishing, guest access to drafts, live-event migration, host content-management
+screens for draft modules, or production deployment is performed by this step.
+**Step 4B** still needs publication lifecycle/validation, public artwork delivery,
+event-configured guest form/action bindings, calendar/edit links, provider readiness
+(including confirmed weather coordinates), share links and a deliberate host
+publish action. This foundation deliberately does not make a draft live.
+
+Checks: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build -- --webpack`.
+For real SQL isolation checks, apply 001–013 to an **isolated disposable Postgres
+database named `shindig_drafts_test`**, then run
+`psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/event-scopes.integration.sql`.
+The script refuses other database names and rolls back all synthetic fixtures.
+
 ## Private draft RSVP & Event Hub settings (Step 3)
 
 Open **Your events → a saved draft → RSVP & Hub settings** at
@@ -25,7 +82,8 @@ Open **Your events → a saved draft → RSVP & Hub settings** at
   and saved settings are essentials. Weather additionally calls out coordinate
   confirmation in the future publishing step—never using Oyster Roast coordinates.
   **This is not a publish validator or a publish button.** Event-specific public
-  routing/data scoping, provider readiness, and full launch validation remain Step 4.
+  routing/data scoping are covered by Step 4A above; publication, provider readiness,
+  and full launch validation remain Step 4B.
 
 Setup: apply [`012_event_draft_settings.sql`](db/migrations/012_event_draft_settings.sql)
 after migrations 010 and 011 before deploying this step. It adds only

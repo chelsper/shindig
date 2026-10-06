@@ -1,7 +1,7 @@
 import "server-only";
 
 import { neon } from "@neondatabase/serverless";
-import { OYSTER_ROAST_EVENT } from "../oyster-roast-event";
+import { OYSTER_ROAST_SCOPE, eventScopeSlug, eventFeatureEnabled, type EventScope } from "./event-scope";
 import type { PublicHostUpdate } from "../updates";
 import type { UpdateInput } from "./event-content-validation";
 
@@ -21,48 +21,53 @@ function publicUpdate(row: Record<string, unknown>): PublicHostUpdate {
   };
 }
 
-export async function listPublicHostUpdates(): Promise<PublicHostUpdate[]> {
-  if (!OYSTER_ROAST_EVENT.features.updates) return [];
+export async function listPublicHostUpdates(scope: EventScope = OYSTER_ROAST_SCOPE): Promise<PublicHostUpdate[]> {
+  const eventSlug = eventScopeSlug(scope);
+  if (!eventFeatureEnabled(scope, "updates")) return [];
   const sql = database();
   const rows = await sql`
     SELECT heading, message, published_at AS "publishedAt"
     FROM event_updates
-    WHERE event_slug = ${OYSTER_ROAST_EVENT.slug} AND published_at IS NOT NULL
+    WHERE event_slug = ${eventSlug} AND published_at IS NOT NULL
     ORDER BY published_at DESC, id DESC
   `;
   return rows.map(publicUpdate);
 }
 
-export async function listHostUpdatesForAdmin(): Promise<AdminHostUpdate[]> {
+export async function listHostUpdatesForAdmin(scope: EventScope = OYSTER_ROAST_SCOPE): Promise<AdminHostUpdate[]> {
+  const eventSlug = eventScopeSlug(scope);
   const sql = database();
   const rows = await sql`
     SELECT id::text, heading, message, published_at AS "publishedAt"
-    FROM event_updates WHERE event_slug = ${OYSTER_ROAST_EVENT.slug}
+    FROM event_updates WHERE event_slug = ${eventSlug}
     ORDER BY published_at DESC, id DESC
   `;
   return rows.map((row) => ({ id: String(row.id), ...publicUpdate(row) }));
 }
 
-export async function insertHostUpdate(id: string, input: UpdateInput): Promise<void> {
+export async function insertHostUpdate(id: string, input: UpdateInput, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<void> {
+  const eventSlug = eventScopeSlug(scope);
   const sql = database();
   await sql`
     INSERT INTO event_updates (id, event_slug, heading, message)
-    VALUES (${id}::uuid, ${OYSTER_ROAST_EVENT.slug}, ${input.heading}, ${input.message})
+    VALUES (${id}::uuid, ${eventSlug}, ${input.heading}, ${input.message})
     ON CONFLICT (id) DO NOTHING
   `;
 }
 
-export async function updateHostUpdate(id: string, input: UpdateInput): Promise<boolean> {
+export async function updateHostUpdate(id: string, input: UpdateInput, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<boolean> {
+  const eventSlug = eventScopeSlug(scope);
   const sql = database();
   const rows = await sql`
     UPDATE event_updates SET heading = ${input.heading}, message = ${input.message}, updated_at = now()
-    WHERE event_slug = ${OYSTER_ROAST_EVENT.slug} AND id = ${id}::uuid
+    WHERE event_slug = ${eventSlug} AND id = ${id}::uuid
     RETURNING 1 AS updated
   `;
   return rows.length > 0;
 }
 
-export async function removeHostUpdate(id: string): Promise<void> {
+export async function removeHostUpdate(id: string, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<void> {
+  const eventSlug = eventScopeSlug(scope);
   const sql = database();
-  await sql`DELETE FROM event_updates WHERE event_slug = ${OYSTER_ROAST_EVENT.slug} AND id = ${id}::uuid`;
+  await sql`DELETE FROM event_updates WHERE event_slug = ${eventSlug} AND id = ${id}::uuid`;
 }

@@ -2,11 +2,18 @@ import "server-only";
 
 import { neon } from "@neondatabase/serverless";
 
-import { OYSTER_ROAST_EVENT } from "../oyster-roast-event";
+import { OYSTER_ROAST_SCOPE, eventScopeSlug, eventFeatureEnabled, type EventScope } from "./event-scope";
 import type {
   ValidatedRsvp,
   ValidatedRsvpUpdate,
 } from "./rsvp-validation";
+import { validateRsvpUpdate } from "./rsvp-validation";
+
+function fieldsForEvent(input: ValidatedRsvpUpdate, scope: EventScope): ValidatedRsvpUpdate {
+  const result = validateRsvpUpdate(input, { ...scope.rsvp, guestListEnabled: scope.features.guestList });
+  if (!result.success) throw new Error("Invalid RSVP for this event.");
+  return result.data;
+}
 
 export type SavedRsvp = {
   id: string;
@@ -53,8 +60,6 @@ type DatabaseAdminRsvp = Omit<AdminRsvp, "createdAt" | "updatedAt"> & {
   updatedAt: string | Date;
 };
 
-const OYSTER_ROAST_SLUG = OYSTER_ROAST_EVENT.slug;
-
 function getDatabaseUrl() {
   const databaseUrl = process.env.DATABASE_URL?.trim();
 
@@ -86,10 +91,11 @@ function normalizeAdminRsvp(rsvp: DatabaseAdminRsvp): AdminRsvp {
   };
 }
 
-export async function saveRsvp(
-  rsvp: ValidatedRsvp,
-  editTokenHash: string,
-): Promise<SaveRsvpResult> {
+export async function saveRsvp(rsvp: ValidatedRsvp,
+  editTokenHash: string, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<SaveRsvpResult> {
+  const eventSlug = eventScopeSlug(scope);
+  if (rsvp.eventSlug !== eventSlug) throw new Error("Invalid RSVP event.");
+  rsvp = { ...rsvp, ...fieldsForEvent(rsvp, scope) };
   const databaseUrl = process.env.DATABASE_URL?.trim();
 
   if (!databaseUrl) {
@@ -110,7 +116,7 @@ export async function saveRsvp(
     )
     VALUES (
       ${rsvp.id}::uuid,
-      ${rsvp.eventSlug},
+      ${eventSlug},
       ${rsvp.guestName},
       ${rsvp.attending},
       ${rsvp.partySize},
@@ -146,6 +152,7 @@ export async function saveRsvp(
       edit_token_hash AS "editTokenHash"
     FROM rsvps
     WHERE id = ${rsvp.id}::uuid
+      AND event_slug = ${eventSlug}
     LIMIT 1
   `;
   const existingRsvp = existingRows[0] as
@@ -159,9 +166,8 @@ export async function saveRsvp(
   return { status: "duplicate", rsvp: withoutEditTokenHash(existingRsvp) };
 }
 
-export async function getRsvpForGuest(
-  editTokenHash: string,
-): Promise<GuestRsvp | null> {
+export async function getRsvpForGuest(editTokenHash: string, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<GuestRsvp | null> {
+  const eventSlug = eventScopeSlug(scope);
   const sql = neon(getDatabaseUrl());
   const rows = await sql`
     SELECT
@@ -171,7 +177,7 @@ export async function getRsvpForGuest(
       display_on_guest_list AS "displayOnGuestList",
       comment
     FROM rsvps
-    WHERE event_slug = ${OYSTER_ROAST_SLUG}
+    WHERE event_slug = ${eventSlug}
       AND edit_token_hash = ${editTokenHash}
     LIMIT 1
   `;
@@ -179,10 +185,10 @@ export async function getRsvpForGuest(
   return (rows[0] as GuestRsvp | undefined) ?? null;
 }
 
-export async function updateRsvpForGuest(
-  editTokenHash: string,
-  rsvp: ValidatedRsvpUpdate,
-): Promise<GuestRsvp | null> {
+export async function updateRsvpForGuest(editTokenHash: string,
+  rsvp: ValidatedRsvpUpdate, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<GuestRsvp | null> {
+  const eventSlug = eventScopeSlug(scope);
+  rsvp = fieldsForEvent(rsvp, scope);
   const sql = neon(getDatabaseUrl());
   const rows = await sql`
     UPDATE rsvps
@@ -193,7 +199,7 @@ export async function updateRsvpForGuest(
       display_on_guest_list = ${rsvp.displayOnGuestList},
       comment = ${rsvp.comment},
       updated_at = now()
-    WHERE event_slug = ${OYSTER_ROAST_SLUG}
+    WHERE event_slug = ${eventSlug}
       AND edit_token_hash = ${editTokenHash}
     RETURNING
       guest_name AS "guestName",
@@ -206,7 +212,8 @@ export async function updateRsvpForGuest(
   return (rows[0] as GuestRsvp | undefined) ?? null;
 }
 
-export async function getRsvpSummary(): Promise<RsvpSummary> {
+export async function getRsvpSummary(scope: EventScope = OYSTER_ROAST_SCOPE): Promise<RsvpSummary> {
+  const eventSlug = eventScopeSlug(scope);
   const sql = neon(getDatabaseUrl());
   const rows = await sql`
     SELECT
@@ -215,7 +222,7 @@ export async function getRsvpSummary(): Promise<RsvpSummary> {
       COUNT(*) FILTER (WHERE NOT attending)::int AS declined,
       COALESCE(SUM(party_size) FILTER (WHERE attending), 0)::int AS "totalPartySize"
     FROM rsvps
-    WHERE event_slug = ${OYSTER_ROAST_SLUG}
+    WHERE event_slug = ${eventSlug}
   `;
   const summary = rows[0] as Partial<RsvpSummary> | undefined;
 
@@ -227,7 +234,8 @@ export async function getRsvpSummary(): Promise<RsvpSummary> {
   };
 }
 
-export async function listRsvps(filter: RsvpFilter = "all"): Promise<AdminRsvp[]> {
+export async function listRsvps(filter: RsvpFilter = "all", scope: EventScope = OYSTER_ROAST_SCOPE): Promise<AdminRsvp[]> {
+  const eventSlug = eventScopeSlug(scope);
   const sql = neon(getDatabaseUrl());
   const attendanceFilter =
     filter === "attending" ? true : filter === "declined" ? false : null;
@@ -243,7 +251,7 @@ export async function listRsvps(filter: RsvpFilter = "all"): Promise<AdminRsvp[]
       created_at AS "createdAt",
       updated_at AS "updatedAt"
     FROM rsvps
-    WHERE event_slug = ${OYSTER_ROAST_SLUG}
+    WHERE event_slug = ${eventSlug}
       AND (${attendanceFilter}::boolean IS NULL OR attending = ${attendanceFilter})
     ORDER BY created_at DESC
   `;
@@ -251,7 +259,8 @@ export async function listRsvps(filter: RsvpFilter = "all"): Promise<AdminRsvp[]
   return rows.map((row) => normalizeAdminRsvp(row as DatabaseAdminRsvp));
 }
 
-export async function getRsvpForAdmin(id: string): Promise<AdminRsvp | null> {
+export async function getRsvpForAdmin(id: string, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<AdminRsvp | null> {
+  const eventSlug = eventScopeSlug(scope);
   const sql = neon(getDatabaseUrl());
   const rows = await sql`
     SELECT
@@ -265,7 +274,7 @@ export async function getRsvpForAdmin(id: string): Promise<AdminRsvp | null> {
       created_at AS "createdAt",
       updated_at AS "updatedAt"
     FROM rsvps
-    WHERE event_slug = ${OYSTER_ROAST_SLUG}
+    WHERE event_slug = ${eventSlug}
       AND id = ${id}::uuid
     LIMIT 1
   `;
@@ -274,10 +283,10 @@ export async function getRsvpForAdmin(id: string): Promise<AdminRsvp | null> {
   return rsvp ? normalizeAdminRsvp(rsvp) : null;
 }
 
-export async function createRsvpForAdmin(
-  id: string,
-  rsvp: ValidatedRsvpUpdate,
-): Promise<void> {
+export async function createRsvpForAdmin(id: string,
+  rsvp: ValidatedRsvpUpdate, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<void> {
+  const eventSlug = eventScopeSlug(scope);
+  rsvp = fieldsForEvent(rsvp, scope);
   const sql = neon(getDatabaseUrl());
   const rows = await sql`
     INSERT INTO rsvps (
@@ -291,7 +300,7 @@ export async function createRsvpForAdmin(
     )
     VALUES (
       ${id}::uuid,
-      ${OYSTER_ROAST_SLUG},
+      ${eventSlug},
       ${rsvp.guestName},
       ${rsvp.attending},
       ${rsvp.partySize},
@@ -304,10 +313,10 @@ export async function createRsvpForAdmin(
   if (!rows[0]) throw new Error("The RSVP could not be created.");
 }
 
-export async function updateRsvpForAdmin(
-  id: string,
-  rsvp: ValidatedRsvpUpdate,
-): Promise<boolean> {
+export async function updateRsvpForAdmin(id: string,
+  rsvp: ValidatedRsvpUpdate, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<boolean> {
+  const eventSlug = eventScopeSlug(scope);
+  rsvp = fieldsForEvent(rsvp, scope);
   const sql = neon(getDatabaseUrl());
   const rows = await sql`
     UPDATE rsvps
@@ -318,7 +327,7 @@ export async function updateRsvpForAdmin(
       display_on_guest_list = ${rsvp.displayOnGuestList},
       comment = ${rsvp.comment},
       updated_at = now()
-    WHERE event_slug = ${OYSTER_ROAST_SLUG}
+    WHERE event_slug = ${eventSlug}
       AND id = ${id}::uuid
     RETURNING id
   `;
@@ -326,11 +335,12 @@ export async function updateRsvpForAdmin(
   return Boolean(rows[0]);
 }
 
-export async function deleteRsvpForAdmin(id: string): Promise<boolean> {
+export async function deleteRsvpForAdmin(id: string, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<boolean> {
+  const eventSlug = eventScopeSlug(scope);
   const sql = neon(getDatabaseUrl());
   const rows = await sql`
     DELETE FROM rsvps
-    WHERE event_slug = ${OYSTER_ROAST_SLUG}
+    WHERE event_slug = ${eventSlug}
       AND id = ${id}::uuid
     RETURNING id
   `;
@@ -338,14 +348,16 @@ export async function deleteRsvpForAdmin(id: string): Promise<boolean> {
   return Boolean(rows[0]);
 }
 
-export async function getPublicGuestList(): Promise<PublicGuestList> {
+export async function getPublicGuestList(scope: EventScope = OYSTER_ROAST_SCOPE): Promise<PublicGuestList> {
+  const eventSlug = eventScopeSlug(scope);
+  if (!eventFeatureEnabled(scope, "guestList")) return { totalGuestCount: 0, guests: [] };
   const sql = neon(getDatabaseUrl());
   const [totalRows, guestRows] = await Promise.all([
     sql`
       SELECT
         COALESCE(SUM(party_size), 0)::int AS "totalGuestCount"
       FROM rsvps
-      WHERE event_slug = ${OYSTER_ROAST_SLUG}
+      WHERE event_slug = ${eventSlug}
         AND attending = true
     `,
     sql`
@@ -353,7 +365,7 @@ export async function getPublicGuestList(): Promise<PublicGuestList> {
         guest_name AS "guestName",
         party_size::int AS "partySize"
       FROM rsvps
-      WHERE event_slug = ${OYSTER_ROAST_SLUG}
+      WHERE event_slug = ${eventSlug}
         AND attending = true
         AND display_on_guest_list = true
       ORDER BY LOWER(guest_name), created_at

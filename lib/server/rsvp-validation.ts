@@ -7,11 +7,12 @@ const UUID_V4_PATTERN =
 
 const MAX_GUEST_NAME_LENGTH = 120;
 const MAX_COMMENT_LENGTH = 1_000;
-const MAX_PARTY_SIZE = 20;
+export type RsvpRules = { maxPartySize: number; allowComments: boolean; guestListEnabled: boolean };
+const DEFAULT_RULES: RsvpRules = { maxPartySize: 20, allowComments: true, guestListEnabled: true };
 
 export type ValidatedRsvp = {
   id: string;
-  eventSlug: typeof OYSTER_ROAST_EVENT_SLUG;
+  eventSlug: string;
   guestName: string;
   attending: boolean;
   partySize: number | null;
@@ -37,6 +38,7 @@ type UpdateValidationResult =
 
 function validateRsvpFields(
   submission: Record<string, unknown>,
+  rules: RsvpRules,
 ): UpdateValidationResult {
   if (typeof submission.guestName !== "string") {
     return { success: false, message: "Please enter your name." };
@@ -62,24 +64,24 @@ function validateRsvpFields(
       typeof submission.partySize !== "number" ||
       !Number.isInteger(submission.partySize) ||
       submission.partySize < 1 ||
-      submission.partySize > MAX_PARTY_SIZE
+      submission.partySize > rules.maxPartySize
     ) {
       return {
         success: false,
-        message: `Party size must be between 1 and ${MAX_PARTY_SIZE}.`,
+        message: `Party size must be between 1 and ${rules.maxPartySize}.`,
       };
     }
 
     partySize = submission.partySize;
 
-    if (typeof submission.displayOnGuestList !== "boolean") {
+    if (rules.guestListEnabled && typeof submission.displayOnGuestList !== "boolean") {
       return {
         success: false,
         message: "Please check your guest list preference and try again.",
       };
     }
 
-    displayOnGuestList = submission.displayOnGuestList;
+    displayOnGuestList = rules.guestListEnabled && submission.displayOnGuestList === true;
   }
 
   if (
@@ -104,21 +106,22 @@ function validateRsvpFields(
       attending: submission.attending,
       partySize,
       displayOnGuestList,
-      comment,
+      comment: rules.allowComments ? comment : null,
     },
   };
 }
 
-export function validateRsvpUpdate(input: unknown): UpdateValidationResult {
+export function validateRsvpUpdate(input: unknown, rules: RsvpRules = DEFAULT_RULES): UpdateValidationResult {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     return { success: false, message: "Please check your response and try again." };
   }
 
-  return validateRsvpFields(input as Record<string, unknown>);
+  return validateRsvpFields(input as Record<string, unknown>, rules);
 }
 
 export function validateRsvpSubmission(
   input: unknown,
+  event: { slug: string; rules: RsvpRules } = { slug: OYSTER_ROAST_EVENT_SLUG, rules: DEFAULT_RULES },
 ): SubmissionValidationResult {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     return { success: false, message: "Please check your response and try again." };
@@ -133,11 +136,11 @@ export function validateRsvpSubmission(
     return { success: false, message: "Please refresh the page and try again." };
   }
 
-  if (submission.eventSlug !== OYSTER_ROAST_EVENT_SLUG) {
+  if (submission.eventSlug !== event.slug) {
     return { success: false, message: "This invitation is no longer available." };
   }
 
-  const fields = validateRsvpFields(submission);
+  const fields = validateRsvpFields(submission, event.rules);
 
   if (!fields.success) return fields;
 
@@ -145,7 +148,7 @@ export function validateRsvpSubmission(
     success: true,
     data: {
       id: submission.submissionId,
-      eventSlug: OYSTER_ROAST_EVENT_SLUG,
+      eventSlug: event.slug,
       ...fields.data,
     },
   };

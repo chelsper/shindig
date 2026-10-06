@@ -45,8 +45,10 @@ describe("public event content privacy", () => {
   it("does not even connect to Neon for disabled public modules", async () => {
     mocks.event.features.questions = false;
     mocks.event.features.updates = false;
-    await expect(listPublicQuestions()).resolves.toEqual([]);
-    await expect(listPublicHostUpdates()).resolves.toEqual([]);
+    // Configuration is captured in an immutable server-issued event scope.
+    vi.resetModules();
+    await expect((await import("../lib/server/questions")).listPublicQuestions()).resolves.toEqual([]);
+    await expect((await import("../lib/server/updates")).listPublicHostUpdates()).resolves.toEqual([]);
     expect(mocks.neon).not.toHaveBeenCalled();
   });
 
