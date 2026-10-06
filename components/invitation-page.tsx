@@ -188,9 +188,6 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
                 sizes="(min-width: 1024px) 57vw, 100vw"
               />
             </div>
-            <div aria-hidden="true" className="shell-stamp">
-              EST.<br />2026
-            </div>
           </section>
 
           <section className="lg:sticky lg:top-8">

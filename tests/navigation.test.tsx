@@ -62,6 +62,14 @@ describe("screen navigation", () => {
     expect(html).not.toContain("come hungry");
   });
 
+  it("keeps the invitation artwork free of the decorative established-year badge", () => {
+    const html = renderToStaticMarkup(<InvitationPage persistenceDisabled={false} />);
+    expect(html).toContain("Oyster roast invitation artwork");
+    expect(html).toContain("oyster-roast-invitation.png");
+    expect(html).not.toContain("shell-stamp");
+    expect(html).not.toContain("EST.<br");
+  });
+
   it.each([false, true])("provides Hub navigation before any RSVP, including preview=%s", (persistenceDisabled) => {
     const html = renderToStaticMarkup(<InvitationPage persistenceDisabled={persistenceDisabled} />);
     const destinations = links(html).filter((link) => link.href === OYSTER_ROAST_EVENT.eventHub.path);
