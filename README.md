@@ -1,5 +1,51 @@
 # Shindig
 
+## Private draft invitation & artwork
+
+After saving event basics, choose **Invitation & artwork** at `/admin/events/[id]`.
+The protected `/admin/events/[id]/artwork` editor supports separate invitation and
+Hub header images, accessible descriptions, header focal point/zoom, and a
+phone-width invitation/Hub preview. Invitations show the whole image; the header
+can reuse that image or use its own. Previewed artwork is not saved until **Save
+draft artwork**. Saved event basics supply the preview text and event-local date.
+The preview has no working RSVP form, calendar, public URL or publish action.
+
+Setup for this step (separate from the deployed draft foundation):
+
+1. Apply [`011_event_draft_artwork.sql`](db/migrations/011_event_draft_artwork.sql)
+   after migration 010 in the same Neon database. It adds only
+   `event_draft_artwork`, referencing private drafts; existing live data is untouched.
+2. In Vercel → Shindig → Storage, create a **Private** Blob store. Configure its
+   read/write token as **EVENT_DRAFT_BLOB_READ_WRITE_TOKEN**, server-only, for the
+   intended environment. Do **not** replace the existing public
+   `BLOB_READ_WRITE_TOKEN` used by the live Oyster Roast editors. Redeploy after
+   configuring the variable. No additional npm packages are required.
+3. Save a draft, open its artwork editor, upload an image, add a description,
+   inspect the two previews, save and reopen. Without private storage, the editor
+   explains setup and disables uploads; without migration 011 it shows a retry/setup
+   message rather than claiming to save.
+
+Privacy follows [Vercel's private storage guidance](https://vercel.com/docs/vercel-blob/private-storage):
+images require storage authentication and are streamed through a host-authenticated
+`/admin/events/[id]/artwork/image` route, **not** through Next's public image
+optimizer. Responses are private/no-store with `nosniff`. Uploads require a valid
+host session, same-origin request, existing draft, allowed image signature/type,
+and at most 4 MB (including an actual streamed-body limit). Generated file paths
+are scoped to the draft and image slot. Browser previews also check dimensions
+(maximum 12,000 pixels per side). SVG, arbitrary external image URLs, and
+cross-draft paths are rejected. Credentials are never sent to the browser.
+
+Artwork saves have independent revision checks, preserving event basics and other
+drafts. A failed save preserves input, stale saves require reopening, and duplicate
+clicks are disabled. Removing/replacing an image changes only the draft reference;
+it does **not** permanently delete files. Unattached private uploads are retained
+for now; storage cleanup is a future maintenance task. The live Oyster Roast
+artwork and settings are unchanged.
+
+Run `psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/event-draft-artwork.integration.sql`
+against a disposable local test database with migrations 001–011 applied. The
+test checks persistence, isolation and revision guards, then rolls back.
+
 ## Private event drafts
 
 Open **`/admin/events`** using **Your events** in the existing host dashboard. The live Oyster Roast has its own **Manage Oyster Roast** link. **Create event** opens `/admin/events/new`; saved drafts reopen at `/admin/events/[id]`.
@@ -7,7 +53,7 @@ Open **`/admin/events`** using **Your events** in the existing host dashboard. T
 - Only a trimmed event name is required to save. Description, host name, venue, address, city/area and start/end times can be filled in later.
 - Every draft has its own IANA timezone (default `America/New_York`). Dates are stored as UTC and displayed in the event timezone, not the host computer's timezone. Changing the timezone keeps entered local clock times. Invalid dates and ambiguous/skipped DST times are rejected; end times require a start and must be later, within 168 hours.
 - **Save draft** persists to the new `events` table. A stable random creation ID prevents repeated first saves from inserting duplicate records. Identical creation retries can recover a lost response. Revision checks reject stale edits without overwriting a newer save. The UI disables repeat clicks, preserves input on failures, confirms successful saves and warns before leaving unsaved edits.
-- Drafts are **private and cannot be published in this milestone**. There is no public draft route, API, guest link, event directory, new RSVP flow, artwork upload, or publish action. The schema also restricts `status` to `draft`. A UUID is only a record identifier, never authorization. Pages, actions and the draft data layer all require the existing server-verified host session; all draft pages are noindex and request-rendered.
+- Drafts are **private and cannot be published in this milestone**. There is no public draft route, API, guest link, event directory, new RSVP flow, or publish action. Private artwork setup is described above. The schema also restricts `status` to `draft`. A UUID is only a record identifier, never authorization. Pages, actions and the draft data layer all require the existing server-verified host session; all draft pages are noindex and request-rendered.
 - The existing live Oyster Roast remains in its existing tables/configuration. This milestone does not backfill or alter it, its RSVP records, private edit tokens, features, calendar identity, or public routes. Future publishing must add event-specific public routes and scoped data access before removing the database draft-only restriction.
 
 ### Neon / Vercel setup
@@ -107,6 +153,7 @@ Set `ADMIN_PASSWORD` to a strong, unique password to enable the private host das
    - [`db/migrations/008_guest_interactions_and_polls.sql`](db/migrations/008_guest_interactions_and_polls.sql)
    - [`db/migrations/009_invitation_settings.sql`](db/migrations/009_invitation_settings.sql)
    - [`db/migrations/010_create_event_drafts.sql`](db/migrations/010_create_event_drafts.sql)
+   - [`db/migrations/011_event_draft_artwork.sql`](db/migrations/011_event_draft_artwork.sql)
 3. In the Neon project dashboard, choose **Connect** and copy the pooled Postgres connection string.
 4. Put that connection string in `.env.local`:
 
