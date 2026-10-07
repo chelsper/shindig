@@ -14,6 +14,12 @@ vi.mock("next/navigation", () => ({ redirect: (url: string) => { throw new Error
 vi.mock("@neondatabase/serverless", () => ({ neon: () => query }));
 import { saveEventDraftRecord } from "../lib/server/event-drafts";
 import { saveDraftSettingsRecord } from "../lib/server/event-draft-settings";
+import { getDraftArtwork, saveDraftArtworkRecord } from "../lib/server/event-draft-artwork";
+import { createPlaylistSuggestion, listPlaylistSuggestionsForAdmin } from "../lib/server/playlist";
+import { insertGuestQuestion, listQuestionsForAdmin } from "../lib/server/questions";
+import { insertHostUpdate, listHostUpdatesForAdmin } from "../lib/server/updates";
+import { savePoll, listPollsForAdmin } from "../lib/server/polls";
+import { rsvpsToCsv } from "../lib/server/rsvp-csv";
 import { getPublishedEvent, getHostEventPublication, publishEventRecord, changeEventLifecycleRecord, listHostPublications } from "../lib/server/event-publications";
 import { resolvePublicEventScope, resolveHostEventScope, OYSTER_ROAST_SCOPE } from "../lib/server/event-scope";
 import { submitEventRsvp, updateEventRsvp } from "../app/e/actions";
@@ -78,7 +84,7 @@ describe.skipIf(!socket && !embeddedModule)("real local publish → RSVP → hos
     if (embedded) { await embedded.close(); vi.unstubAllEnvs(); return; }
     // Only this run's random synthetic identities, in the named disposable DB.
     const events = ids.map(literal).join(","), scopes = slugs.map(literal).join(",");
-    await sql(`BEGIN; DELETE FROM rsvps WHERE event_slug IN (${scopes}); DELETE FROM event_publications WHERE event_id IN (${events}); DELETE FROM event_draft_settings WHERE event_id IN (${events}); DELETE FROM event_data_scopes WHERE event_id IN (${events}); DELETE FROM events WHERE id IN (${events}); COMMIT;`);
+    await sql(`BEGIN; DELETE FROM rsvps WHERE event_slug IN (${scopes}); DELETE FROM playlist_suggestions WHERE event_slug IN (${scopes}); DELETE FROM event_questions WHERE event_slug IN (${scopes}); DELETE FROM event_updates WHERE event_slug IN (${scopes}); DELETE FROM polls WHERE event_slug IN (${scopes}); DELETE FROM event_publications WHERE event_id IN (${events}); DELETE FROM event_draft_artwork WHERE event_id IN (${events}); DELETE FROM event_draft_settings WHERE event_id IN (${events}); DELETE FROM event_data_scopes WHERE event_id IN (${events}); DELETE FROM events WHERE id IN (${events}); COMMIT;`);
     vi.unstubAllEnvs();
   });
   it("publishes two disposable events, then enforces privacy and isolation through real queries", async () => {
@@ -178,6 +184,68 @@ describe.skipIf(!socket && !embeddedModule)("real local publish → RSVP → hos
     expect((await updateEventRsvp(slugs[0], { ...fields, partySize: 1, editToken: hiddenToken })).ok).toBe(true);
     const clicks = await Promise.all([changeEventLifecycleRecord(ids[0], 7, "close-rsvps"), changeEventLifecycleRecord(ids[0], 7, "close-rsvps")]);
     expect(clicks.filter((value) => value === 8)).toHaveLength(1); expect(clicks.filter((value) => value === null)).toHaveLength(1);
+
+    // Archive keeps both the published snapshot and unreviewed artwork/content.
+    expect(await saveDraftArtworkRecord(ids[0], 0, { ...snapshot.artwork, header: { ...snapshot.artwork.header, focalX: 42 } })).toBe(1);
+    const contentScope = (await resolvePublicEventScope(slugs[0]))!;
+    expect(await createPlaylistSuggestion({ provider: "spotify", providerTrackId: "a".repeat(22), songTitle: "Synthetic song", artist: "Test artist", album: null, artworkUrl: null, externalUrl: `https://open.spotify.com/track/${"a".repeat(22)}`, explicit: false, suggestedBy: "Synthetic guest" }, contentScope)).toBe("added");
+    await insertGuestQuestion({ question: "Synthetic private question?", guestName: "Synthetic guest", requestToken: randomUUID() }, contentScope);
+    await insertHostUpdate(randomUUID(), { heading: null, message: "Synthetic host update." }, contentScope);
+    expect(await savePoll(randomUUID(), { question: "Synthetic poll?", eyebrow: null, allowMultiple: false, showResults: true, showClosedResults: true, sortOrder: 0, options: [{ key: randomUUID(), text: "One" }, { key: randomUUID(), text: "Two" }] }, true, contentScope)).toBe(true);
+    async function retainedData() {
+      const hostScope = (await resolveHostEventScope(slugs[0]))!;
+      return {
+        guests: await listRsvps("all", hostScope), artwork: await getDraftArtwork(ids[0]),
+        songs: await listPlaylistSuggestionsForAdmin(hostScope), questions: await listQuestionsForAdmin(hostScope),
+        updates: await listHostUpdatesForAdmin(hostScope), polls: await listPollsForAdmin(hostScope),
+        edit: await getRsvpForGuest(hashRsvpEditToken(hiddenToken), hostScope),
+      };
+    }
+    const retainedBefore = await retainedData();
+    expect(retainedBefore.songs).toHaveLength(1); expect(retainedBefore.questions).toHaveLength(1);
+    expect(retainedBefore.updates).toHaveLength(1); expect(retainedBefore.polls).toHaveLength(1);
+    expect(await changeEventLifecycleRecord(ids[0], 8, "reopen-rsvps")).toBe(9);
+    const publishedBefore = (await getHostEventPublication(slugs[0]))!;
+    const archiveClicks = await Promise.all([changeEventLifecycleRecord(ids[0], 9, "archive"), changeEventLifecycleRecord(ids[0], 9, "archive")]);
+    expect(archiveClicks.filter((value) => value === 10)).toHaveLength(1); expect(archiveClicks.filter((value) => value === null)).toHaveLength(1);
+    expect(await getHostEventPublication(slugs[0])).toMatchObject({ visibility: "archived", rsvpsOpen: false, revision: 10, snapshot: publishedBefore.snapshot, sourceRevisions: publishedBefore.sourceRevisions, publishedAt: publishedBefore.publishedAt });
+    expect((await listHostPublications()).find((p) => p.id === ids[0])).toMatchObject({ visibility: "archived", hasUnpublishedChanges: true });
+    expect(await getPublishedEvent(slugs[0])).toBeNull(); expect(await resolvePublicEventScope(slugs[0])).toBeNull();
+    state.authenticated = false;
+    expect((await submitEventRsvp(slugs[0], { ...submit, submissionId: randomUUID() })).ok).toBe(false);
+    expect((await updateEventRsvp(slugs[0], { ...fields, partySize: 1, editToken: hiddenToken })).ok).toBe(false);
+    await expect(saveRsvp({ ...fields, id: randomUUID(), eventSlug: slugs[0] }, hashRsvpEditToken("e".repeat(43)), a)).rejects.toThrow();
+    expect(await updateRsvpForGuest(hashRsvpEditToken(hiddenToken), { ...fields, partySize: 1 }, a)).toBeNull();
+    await expect(resolveHostEventScope(slugs[0])).rejects.toThrow("Host access required");
+    state.authenticated = true;
+    expect((await hostScopeArgs(slugs[0]))[0]?.access).toBe("host");
+    expect(await retainedData()).toEqual(retainedBefore);
+    expect(rsvpsToCsv((await retainedData()).guests)).toBe(rsvpsToCsv(retainedBefore.guests));
+    // Even a current archived revision cannot reopen or republish without restore.
+    for (const action of ["reopen-rsvps", "unpublish", "archive"] as const) expect(await changeEventLifecycleRecord(ids[0], 10, action)).toBeNull();
+    expect(await publishEventRecord(ids[0], { details: 1, artwork: 1, settings: 2, publication: 10 }, null)).toBeNull();
+    expect(await changeEventLifecycleRecord(ids[0], 9, "restore")).toBeNull();
+    expect(await changeEventLifecycleRecord(ids[1], 1, "restore")).toBeNull();
+    if (embedded) await embedded.exec(await readFile("db/migrations/016_event_archive.sql", "utf8"));
+    else await sql(await readFile("db/migrations/016_event_archive.sql", "utf8"));
+    expect(await getHostEventPublication(slugs[0])).toMatchObject({ visibility: "archived", rsvpsOpen: false, revision: 10 });
+    await expect(query`UPDATE event_publications SET rsvps_open = true WHERE event_id = ${ids[0]}::uuid RETURNING revision`).rejects.toThrow();
+    expect(await changeEventLifecycleRecord(ids[0], 10, "restore")).toBe(11);
+    expect(await getHostEventPublication(slugs[0])).toMatchObject({ visibility: "unpublished", rsvpsOpen: false, revision: 11, snapshot: publishedBefore.snapshot, sourceRevisions: publishedBefore.sourceRevisions, publishedAt: publishedBefore.publishedAt });
+    expect(await getPublishedEvent(slugs[0])).toBeNull(); expect(await resolvePublicEventScope(slugs[0])).toBeNull();
+    expect(await retainedData()).toEqual(retainedBefore);
+    expect(await publishEventRecord(ids[0], { details: 1, artwork: 1, settings: 2, publication: 11 }, null)).toBe(12);
+    expect((await getPublishedEvent(slugs[0]))!.websiteUrl).toBe(event.websiteUrl);
+    expect((await getPublishedEvent(slugs[0]))!.rsvpsOpen).toBe(false);
+    expect(await changeEventLifecycleRecord(ids[0], 12, "reopen-rsvps")).toBe(13);
+    expect((await updateEventRsvp(slugs[0], { ...fields, partySize: 1, editToken: hiddenToken })).ok).toBe(true);
+    // A private/unpublished event can also be archived, without touching event A.
+    expect(await changeEventLifecycleRecord(ids[1], 1, "unpublish")).toBe(2);
+    expect(await changeEventLifecycleRecord(ids[1], 2, "archive")).toBe(3);
+    expect(await changeEventLifecycleRecord(ids[1], 3, "restore")).toBe(4);
+    expect(await getHostEventPublication(slugs[1])).toMatchObject({ visibility: "unpublished", rsvpsOpen: false });
+    expect((await getRsvpSummary(b)).totalResponses).toBe(0);
+    expect((await getHostEventPublication(slugs[0]))!.revision).toBe(13);
     expect(await getRsvpSummary(OYSTER_ROAST_SCOPE)).toEqual(legacyBefore);
   }, 30000);
 });

@@ -12,7 +12,7 @@ import { RsvpUpdateForm } from "../components/rsvp/rsvp-update-form";
 import { EventPublishReview } from "../components/admin/event-publish-review";
 import { createOysterRoastIcs, getRsvpUpdateUrl, calendarPath } from "../lib/calendar";
 import { eventId, eventSlug, draft, snapshot } from "./fixtures/publication";
-import { eventStatus, hasUnpublishedChanges } from "../lib/event-lifecycle";
+import { availableLifecycleActions, eventStatus, hasUnpublishedChanges } from "../lib/event-lifecycle";
 
 describe("publication validation and public projection", () => {
   it("requires real calendar times, address and valid settings", () => {
@@ -62,6 +62,11 @@ describe("published guest screens and calendar", () => {
     expect(html).not.toContain(`href="/e/${eventSlug}`); expect(html).not.toContain("Your gathering is live");
     expect(html).not.toContain("Confirm: Unpublish");
   });
+  it("renders archived review with restore, host access and CSV but no publication controls or public links", () => {
+    const html = renderToStaticMarkup(<EventPublishReview draft={draft} artwork={{ settings: snapshot.artwork, revision: 0 }} settings={{ settings: snapshot.settings, revision: 3 }} live={{ revision: 6, publishedAt: "2026-10-06", coordinates: null, visibility: "archived", rsvpsOpen: false, hasUnpublishedChanges: false }} />);
+    for (const text of ["Archived", "Restore event", "Everything is saved", "Export all RSVPs", 'href="/admin/events?view=archived"', `href="/admin/events/${eventId}/guests"`]) expect(html).toContain(text);
+    for (const text of ["<form", "Reopen RSVPs", "Publish changes", "Republish reviewed event", "Ready to invite", `href="/e/${eventSlug}`, "Confirm: Restore event"]) expect(html).not.toContain(text);
+  });
   it("links directly between invitation and Hub without requiring another RSVP", () => {
     const html = renderToStaticMarkup(<InvitationPage event={event} persistenceDisabled={false} />);
     expect(html).toContain(`href="/e/${eventSlug}/event"`); expect(html).toContain("Garden Supper");
@@ -97,6 +102,12 @@ describe("status labels and saved change detection", () => {
     expect(eventStatus({ visibility: "published", rsvpsOpen: true })).toBe("Published");
     expect(eventStatus({ visibility: "published", rsvpsOpen: false })).toBe("Published · RSVPs closed");
     expect(eventStatus({ visibility: "unpublished", rsvpsOpen: true })).toBe("Unpublished");
+    expect(eventStatus({ visibility: "archived", rsvpsOpen: false })).toBe("Archived");
+  });
+  it("offers only restore while archived and archive for published or unpublished gatherings", () => {
+    expect(availableLifecycleActions({ visibility: "archived", rsvpsOpen: false })).toEqual(["restore"]);
+    expect(availableLifecycleActions({ visibility: "published", rsvpsOpen: true })).toEqual(["close-rsvps", "unpublish", "archive"]);
+    expect(availableLifecycleActions({ visibility: "unpublished", rsvpsOpen: false })).toEqual(["reopen-rsvps", "archive"]);
   });
   it("detects saved changes to each independently reviewed part", () => {
     const saved = { details: 2, artwork: 0, settings: 3 };

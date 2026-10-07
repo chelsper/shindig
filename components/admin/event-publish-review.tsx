@@ -28,11 +28,17 @@ export function EventPublishReview({ draft, artwork, settings, live, musicConfig
   const problems = publicationProblems({ details: draft, artwork: artwork.settings, settings: settings.settings, coordinates });
   if (!settings.revision) problems.push("Save your RSVP & Hub choices.");
   const versions = { details: draft.revision, artwork: artwork.revision, settings: settings.revision, publication: live?.revision ?? 0 };
+  const archived = live?.visibility === "archived";
   const button = "inline-flex min-h-11 items-center text-sm font-semibold text-[#355f9e] underline underline-offset-4";
   return <div className="space-y-6 pb-10">
     <nav className="flex flex-wrap gap-x-5" aria-label="Event setup"><Link className={button} href="/admin/events">All events</Link><Link className={button} href={base}>Details</Link><Link className={button} href={`${base}/artwork`}>Artwork</Link><Link className={button} href={`${base}/settings`}>RSVP &amp; Hub</Link><Link className={button} href={`${base}/preview`}>Private preview</Link></nav>
     <div role="status" className="text-sm leading-6 text-[#202523]/70"><span className="font-semibold">{eventStatus(live)}</span>{live && <span> · {live.hasUnpublishedChanges ? "Unpublished changes — review the saved version below." : "Saved draft matches the last published version."}</span>}</div>
     {live && <EventLifecycleControls key={live.revision} id={draft.id} live={live} />}
+    {archived && <section className="rounded-3xl border border-[#202523]/15 bg-[#e9f2f8]/50 p-5 sm:p-7">
+      <h2 className="font-serif text-2xl">Everything is saved</h2>
+      <p className="mt-2 text-sm leading-6">Guest responses, artwork, playlist suggestions, questions, updates and polls stay with this event. Host tools and CSV export remain available. Nothing can be republished until you restore the event.</p>
+      <div className="mt-3 flex flex-wrap gap-x-5"><Link className={button} href={`${base}/guests`}>Manage saved responses &amp; content →</Link><a className={button} href={`${base}/guests/export`}>Export all RSVPs</a><Link className={button} href="/admin/events?view=archived">Archived events</Link></div>
+    </section>}
     {live?.visibility === "unpublished" && !success && <section className="rounded-3xl border border-[#b78228]/25 bg-[#fff4d8] p-5 sm:p-7"><h2 className="font-serif text-2xl">Your gathering is private again</h2><p className="mt-2 text-sm leading-6">Shared links are unavailable. Nothing has been deleted. Review the saved version below before republishing; the same links and guest update links will work again.</p><Link className={button} href={`${base}/guests`}>Manage saved responses &amp; content →</Link></section>}
     {(live?.visibility === "published" || success) && <section aria-label="Share your event" className="rounded-3xl border border-[#285630]/20 bg-[#eff5e8] p-5 sm:p-7">
       <h2 className="font-serif text-3xl">Your gathering is live</h2><p className="mt-2 text-sm leading-6">Share either link. {live?.rsvpsOpen === false ? "RSVPs and guest edits are closed; guests can still visit the invitation and Hub." : "Guests can RSVP from the invitation and return to the Hub anytime."}</p>
@@ -41,7 +47,7 @@ export function EventPublishReview({ draft, artwork, settings, live, musicConfig
       <p className="mt-3 text-xs leading-5">Saved draft edits stay private until you publish changes. Previously shared links remain the same.</p>
     </section>}
     <section className="rounded-3xl border border-[#202523]/10 bg-[#fffaf1] p-5 sm:p-7">
-      <p className="text-xs font-bold uppercase tracking-wider text-[#355f9e]">Saved version to publish</p><h2 className="mt-2 break-words font-serif text-3xl">{draft.title}</h2>
+      <p className="text-xs font-bold uppercase tracking-wider text-[#355f9e]">{archived ? "Private working copy" : "Saved version to publish"}</p><h2 className="mt-2 break-words font-serif text-3xl">{draft.title}</h2>
       <dl className="mt-5 space-y-4 text-sm leading-6">
         <div><dt className="font-semibold">Invitation</dt><dd>{draft.hostName ? `Hosted by ${draft.hostName}` : "No host name shown"}</dd><dd className="mt-1 whitespace-pre-wrap break-words">{draft.description || "No description"}</dd></div>
         <div><dt className="font-semibold">When</dt><dd>{draft.startsAtUtc ? new Intl.DateTimeFormat("en-US", { timeZone: draft.timeZone, dateStyle: "full", timeStyle: "short" }).format(new Date(draft.startsAtUtc)) : "Start time missing"}</dd><dd>{draft.endsAtUtc ? `Ends ${new Intl.DateTimeFormat("en-US", { timeZone: draft.timeZone, dateStyle: "medium", timeStyle: "short" }).format(new Date(draft.endsAtUtc))}` : "End time missing"} · {draft.timeZone}</dd></div>
@@ -51,11 +57,11 @@ export function EventPublishReview({ draft, artwork, settings, live, musicConfig
         <div><dt className="font-semibold">Event Hub</dt><dd>{DRAFT_HUB_MODULES.filter((m) => settings.settings.features[m.id]).map((m) => m.label).join(" · ") || "Event details only"}</dd></div>
       </dl>
       {artwork.settings.invitation.path && <Image className="mt-4 h-auto max-h-64 w-auto rounded-xl" src={draftImageUrl(draft.id, artwork.settings.invitation.path)} alt={artwork.settings.invitation.alt} width={180} height={240} unoptimized />}
-      {settings.settings.features.playlist && !musicConfigured && <p className="mt-4 rounded-xl bg-[#fff4d8] p-4 text-sm leading-6">Music search isn’t configured in this environment yet. Saved songs still display, but new suggestions need the Spotify server credentials. You can publish with this temporary unavailable state or turn Playlist off first.</p>}
-      {settings.settings.features.weather && <fieldset className="mt-5 rounded-2xl bg-[#e9f2f8]/60 p-4"><legend className="px-1 text-sm font-semibold">Confirm weather location</legend><p className="text-xs leading-5">Use coordinates for the address above, not your current device location. Changing the address requires checking these again. These coordinates will be public.</p><div className="mt-3 grid gap-3 sm:grid-cols-2"><label className="field-label">Latitude<input className="field-input" type="number" step="any" min="-90" max="90" value={latitude} onChange={(e) => { setLatitude(e.target.value); setConfirmed(false); }} /></label><label className="field-label">Longitude<input className="field-input" type="number" step="any" min="-180" max="180" value={longitude} onChange={(e) => { setLongitude(e.target.value); setConfirmed(false); }} /></label></div></fieldset>}
+      {!archived && settings.settings.features.playlist && !musicConfigured && <p className="mt-4 rounded-xl bg-[#fff4d8] p-4 text-sm leading-6">Music search isn’t configured in this environment yet. Saved songs still display, but new suggestions need the Spotify server credentials. You can publish with this temporary unavailable state or turn Playlist off first.</p>}
+      {!archived && settings.settings.features.weather && <fieldset className="mt-5 rounded-2xl bg-[#e9f2f8]/60 p-4"><legend className="px-1 text-sm font-semibold">Confirm weather location</legend><p className="text-xs leading-5">Use coordinates for the address above, not your current device location. Changing the address requires checking these again. These coordinates will be public.</p><div className="mt-3 grid gap-3 sm:grid-cols-2"><label className="field-label">Latitude<input className="field-input" type="number" step="any" min="-90" max="90" value={latitude} onChange={(e) => { setLatitude(e.target.value); setConfirmed(false); }} /></label><label className="field-label">Longitude<input className="field-input" type="number" step="any" min="-180" max="180" value={longitude} onChange={(e) => { setLongitude(e.target.value); setConfirmed(false); }} /></label></div></fieldset>}
     </section>
-    {!success && <form className="rounded-3xl border border-[#355f9e]/20 p-5 sm:p-7" onSubmit={(e) => {
-      e.preventDefault(); if (busy.current || !confirmed || problems.length) return;
+    {!success && !archived && <form className="rounded-3xl border border-[#355f9e]/20 p-5 sm:p-7" onSubmit={(e) => {
+      e.preventDefault(); if (busy.current || !confirmed || problems.length || archived) return;
       busy.current = true; setMessage("");
       startTransition(async () => { try {
         const result = await publishEvent(draft.id, versions, settings.settings.features.weather ? coordinates : null, confirmed);

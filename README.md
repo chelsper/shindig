@@ -1,6 +1,44 @@
 # Shindig
 
-## Event lifecycle controls (Step 6A — current)
+## Archive & restore events (Step 6B — current)
+
+Open **Your events → Manage & share → Archive event** for a previously published
+Shindig event. Confirm separately before anything changes. Unfinished drafts stay
+in the existing draft list; Jasper Shucks is not part of this archive workflow.
+
+- Archiving moves an event out of **Active events** into **Archived**, hides every
+  public event page and closes guest RSVP submissions/edits. No event or guest
+  data is deleted. Details, both saved/published artwork, RSVP edit tokens,
+  responses, songs, questions, updates and polls remain stored.
+- The archived review retains **View event responses** and **Export all RSVPs**.
+  Authenticated hosts can still manage their saved data; guest access is blocked
+  server-side, not merely hidden in the interface.
+- **Restore event** requires confirmation and returns it to the active list as
+  **Unpublished**, with RSVPs **closed**. It never makes the event public. Review
+  and republish separately, then explicitly reopen RSVPs if desired. Existing
+  event URLs and guest edit links work again once the relevant controls allow it.
+- Archived events cannot be published or reopened directly, including through a
+  stale browser tab. Archive, restore and publish share the same revision checks.
+  A database constraint also prevents an archived event from having open RSVPs.
+- Nothing is sent to guests. Archiving cannot recall calendar downloads,
+  screenshots or information already displayed in an open browser. There is no
+  automatic archiving, permanent event deletion or extra event settings screen.
+
+**Before deployment:** apply [`016_event_archive.sql`](db/migrations/016_event_archive.sql)
+in the target Neon database after migrations 001–015, then deploy. This atomic,
+reapplicable migration extends the publication visibility constraint and adds
+the archived/closed constraint; it does not update any existing record. Do not
+reapply migration 015 or roll back to pre-016 application code after events have
+been archived: older code does not understand or fully protect archived events.
+No new packages or environment variables are required.
+
+Verification includes lifecycle validation/authentication, active/archived list
+separation, empty/error states, confirmation/pending/failure UI, and an isolated
+PostgreSQL archive → restore → republish workflow. The latter checks data and
+CSV retention, guest-token continuity, stale/rapid actions, the database
+constraint and migration reapplication. No production event is used for testing.
+
+## Event lifecycle controls (Step 6A — completed)
 
 Open **Your events → Manage & share** for an event created in Shindig. The review
 now shows **Draft**, **Published**, **Published · RSVPs closed**, or **Unpublished**,
@@ -43,7 +81,7 @@ Checks: lint, typecheck, full tests, production build and synthetic mobile brows
 verification. The opt-in PostgreSQL workflow below also tests close/reopen,
 unpublish/republish, host access while private, retained tokens/counts, migration
 reapplication, stale scopes, stale publish reviews and rapid repeated controls.
-No production event is changed for testing. Archiving remains a later milestone.
+No production event is changed for testing. Step 6B adds archiving above.
 
 ## Guest management for published events (Step 5 — completed)
 
@@ -82,7 +120,7 @@ Quality checks: `npm run lint`, `npm run typecheck`, `npm test`,
 host actions and SQL against an isolated PostgreSQL runtime, with synthetic events
 only. The normal test command skips this one test unless configured:
 
-- Native: use the disposable `shindig_drafts_test` database with migrations 001–015
+- Native: use the disposable `shindig_drafts_test` database with migrations 001–016
   and set `SHINDIG_TEST_PG_SOCKET` to its `/private/tmp/...` Unix socket directory,
   `SHINDIG_TEST_PSQL` to the `psql` executable, and optionally
   `SHINDIG_TEST_PG_PORT` (default 55441). Its random fixtures are cleaned up.
@@ -95,7 +133,7 @@ With either option, run `npm test -- tests/event-guests-postgres.test.ts` (or th
 whole suite). Browser checks separately exercise the actual components with
 synthetic actions, including confirmation/cancel, failure preservation, pending
 states and mobile layout. These tests do not call production Neon or publish a
-real event. Archiving, custom URLs and QR codes remain future milestones.
+real event. Custom URLs and QR codes remain future milestones.
 
 ## Review, publish & share (Step 4B — completed)
 
@@ -429,6 +467,7 @@ Set `ADMIN_PASSWORD` to a strong, unique password to enable the private host das
    - [`db/migrations/013_event_data_scopes.sql`](db/migrations/013_event_data_scopes.sql)
    - [`db/migrations/014_event_publications.sql`](db/migrations/014_event_publications.sql)
    - [`db/migrations/015_event_lifecycle.sql`](db/migrations/015_event_lifecycle.sql)
+   - [`db/migrations/016_event_archive.sql`](db/migrations/016_event_archive.sql)
 3. In the Neon project dashboard, choose **Connect** and copy the pooled Postgres connection string.
 4. Put that connection string in `.env.local`:
 

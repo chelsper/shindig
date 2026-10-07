@@ -24,7 +24,8 @@ function validSlug(slug: string) {
 function parsePublication(row: Record<string, unknown>, slug: string): EventPublication {
   const source = row.sourceRevisions as PublicationVersions | undefined;
   if (row.slug !== slug || typeof row.id !== "string" || draftEventSlug(row.id) !== slug || !isDraftRevision(row.revision) || row.revision < 1 ||
-      !["published", "unpublished"].includes(String(row.visibility)) || typeof row.rsvpsOpen !== "boolean" || !source ||
+      !["published", "unpublished", "archived"].includes(String(row.visibility)) || typeof row.rsvpsOpen !== "boolean" ||
+      (row.visibility === "archived" && row.rsvpsOpen) || !source ||
       ![source.details, source.artwork, source.settings, source.publication].every(isDraftRevision)) throw new Error("Invalid publication.");
   return { id: row.id, slug, snapshot: parsePublicationSnapshot(row.id, row.snapshot), revision: row.revision,
     publishedAt: new Date(row.publishedAt as string).toISOString(), sourceRevisions: source,
@@ -75,12 +76,17 @@ export async function changeEventLifecycleRecord(id: string, revision: number, a
   // Explicit desired states, never toggles. A stale page cannot reverse a newer
   // host decision; the same revision also protects the publish review.
   const rows = await database()`UPDATE event_publications SET
-      visibility = CASE WHEN ${action} = 'unpublish' THEN 'unpublished' ELSE visibility END,
-      rsvps_open = CASE WHEN ${action} = 'close-rsvps' THEN false WHEN ${action} = 'reopen-rsvps' THEN true ELSE rsvps_open END,
+      visibility = CASE WHEN ${action} = 'archive' THEN 'archived'
+        WHEN ${action} IN ('unpublish', 'restore') THEN 'unpublished' ELSE visibility END,
+      rsvps_open = CASE WHEN ${action} IN ('close-rsvps', 'archive', 'restore') THEN false
+        WHEN ${action} = 'reopen-rsvps' THEN true ELSE rsvps_open END,
       revision = revision + 1
     WHERE event_id = ${id}::uuid AND revision = ${revision}
-      AND ((${action} = 'unpublish' AND visibility = 'published') OR
-        (${action} = 'close-rsvps' AND rsvps_open) OR (${action} = 'reopen-rsvps' AND NOT rsvps_open))
+      AND ((${action} = 'restore' AND visibility = 'archived') OR
+        (${action} = 'archive' AND visibility IN ('published', 'unpublished')) OR
+        (${action} = 'unpublish' AND visibility = 'published') OR
+        (${action} = 'close-rsvps' AND visibility <> 'archived' AND rsvps_open) OR
+        (${action} = 'reopen-rsvps' AND visibility <> 'archived' AND NOT rsvps_open))
     RETURNING revision`;
   return rows.length ? rows[0].revision as number : null;
 }
@@ -109,9 +115,11 @@ export async function publishEventRecord(id: string, versions: PublicationVersio
     WHERE e.id = ${id}::uuid AND e.status = 'draft' AND e.revision = ${versions.details}
       AND s.revision = ${versions.settings} AND coalesce(a.revision, 0) = ${versions.artwork}
       AND coalesce(p.revision, 0) = ${versions.publication}
+      AND p.visibility IS DISTINCT FROM 'archived'
     ON CONFLICT (event_id) DO UPDATE SET snapshot = EXCLUDED.snapshot, source_revisions = EXCLUDED.source_revisions,
       revision = event_publications.revision + 1, published_at = now(), visibility = 'published'
       WHERE event_publications.revision = ${versions.publication}
+        AND event_publications.visibility <> 'archived'
     RETURNING revision`;
   if (rows.length) return rows[0].revision as number;
   // Lost-response/double-click retry acknowledges exactly the same publication,

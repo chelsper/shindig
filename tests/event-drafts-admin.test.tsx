@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-vi.mock("../lib/server/event-publications", () => ({ listHostPublications: async () => [] }));
-const mocks = vi.hoisted(() => ({ auth: vi.fn(), save: vi.fn(), get: vi.fn(), list: vi.fn(), revalidate: vi.fn(), redirect: vi.fn(), notFound: vi.fn(), replace: vi.fn() }));
+vi.mock("../lib/server/event-publications", () => ({ listHostPublications: mocks.publications }));
+const mocks = vi.hoisted(() => ({ auth: vi.fn(), save: vi.fn(), get: vi.fn(), list: vi.fn(), publications: vi.fn(), revalidate: vi.fn(), redirect: vi.fn(), notFound: vi.fn(), replace: vi.fn() }));
 vi.mock("../lib/server/admin-session", () => ({ isAdminAuthenticated: mocks.auth }));
 vi.mock("../lib/server/event-drafts", () => ({ saveEventDraftRecord: mocks.save, getEventDraft: mocks.get, listEventDrafts: mocks.list }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
@@ -19,6 +19,7 @@ const draft: EventDraft = { ...EMPTY_EVENT_DRAFT, title: "Private party", id, st
 const props = { params: Promise.resolve({ id }), searchParams: Promise.resolve({}) };
 beforeEach(() => {
   vi.resetAllMocks(); mocks.auth.mockResolvedValue(true); mocks.save.mockResolvedValue({ id, revision: 1 }); mocks.get.mockResolvedValue(draft); mocks.list.mockResolvedValue([]);
+  mocks.publications.mockResolvedValue([]);
   mocks.redirect.mockImplementation(() => { throw new Error("redirect"); }); mocks.notFound.mockImplementation(() => { throw new Error("not found"); });
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -28,9 +29,10 @@ describe("private event draft actions and pages", () => {
   it("checks the admin session before reads, form rendering or writes", async () => {
     mocks.auth.mockResolvedValue(false);
     expect(await saveEventDraft({ id, revision: 0, fields })).toMatchObject({ ok: false, message: expect.stringContaining("session") });
-    for (const page of [() => EventsPage(), () => NewPage(), () => EditPage(props)]) await expect(page()).rejects.toThrow("redirect");
+    for (const page of [() => EventsPage({}), () => EventsPage({ searchParams: Promise.resolve({ view: "archived" }) }), () => NewPage(), () => EditPage(props)]) await expect(page()).rejects.toThrow("redirect");
     expect(mocks.redirect).toHaveBeenCalledWith("/admin");
     expect(mocks.get).not.toHaveBeenCalled(); expect(mocks.list).not.toHaveBeenCalled(); expect(mocks.save).not.toHaveBeenCalled();
+    expect(mocks.publications).not.toHaveBeenCalled();
   });
   it("saves normalized event-local data and only refreshes private draft routes", async () => {
     expect(await saveEventDraft({ id, revision: 0, fields })).toEqual({ ok: true, id, revision: 1 });
@@ -54,14 +56,48 @@ describe("private event draft actions and pages", () => {
   });
   it("lists private drafts separately from the existing live event", async () => {
     mocks.list.mockResolvedValue([draft]);
-    const html = renderToStaticMarkup(await EventsPage());
+    const html = renderToStaticMarkup(await EventsPage({}));
     for (const text of ["Live event", "Manage Oyster Roast", "Private draft", "Private party", "Date to be decided", 'href="/admin/events/new"', `href="/admin/events/${id}"`]) expect(html).toContain(text);
     expect(html).not.toMatch(/Publish event|Share link|Submit RSVP/);
   });
+  it("removes archived events and their working copies from the active list", async () => {
+    mocks.list.mockResolvedValue([draft]);
+    mocks.publications.mockResolvedValue([{ id, title: "Archived gathering", visibility: "archived", rsvpsOpen: false, hasUnpublishedChanges: true }]);
+    const html = renderToStaticMarkup(await EventsPage({}));
+    expect(html).toContain("Manage Oyster Roast"); expect(html).toContain("Archived (1)");
+    expect(html).not.toContain("Archived gathering"); expect(html).not.toContain("Private party");
+    expect(html).not.toContain(`href="/admin/events/${id}"`);
+  });
+  it("shows only archived events in the separate view with retained host navigation", async () => {
+    mocks.list.mockResolvedValue([draft]);
+    mocks.publications.mockResolvedValue([{ id, title: "Archived gathering", visibility: "archived", rsvpsOpen: false, hasUnpublishedChanges: true }, { id: "7ac5edab-22aa-447d-8931-91132a16798a", title: "Still active", visibility: "published", rsvpsOpen: true, hasUnpublishedChanges: false }]);
+    const html = renderToStaticMarkup(await EventsPage({ searchParams: Promise.resolve({ view: "archived" }) }));
+    for (const text of ["Archived gathering", "View &amp; restore", "All saved data retained", `href="/admin/events/${id}/publish"`]) expect(html).toContain(text);
+    expect(html).toMatch(/<a[^>]*aria-current="page"[^>]*href="\/admin\/events\?view=archived"/);
+    for (const text of ["Manage Oyster Roast", "Still active", "Private party", "In the making"]) expect(html).not.toContain(text);
+  });
+  it("provides an archived empty state, and does not mistake a query failure for an empty archive", async () => {
+    const params = { searchParams: Promise.resolve({ view: "archived" }) };
+    expect(renderToStaticMarkup(await EventsPage(params))).toContain("No archived events yet");
+    mocks.publications.mockRejectedValue(new Error("postgresql://secret"));
+    const html = renderToStaticMarkup(await EventsPage(params));
+    expect(html).toContain("Event statuses couldn’t load");
+    expect(html).not.toContain("No archived events yet"); expect(html).not.toContain("secret");
+  });
+  it("returns restored events to the active private list without a public label", async () => {
+    mocks.list.mockResolvedValue([draft]);
+    mocks.publications.mockResolvedValue([{ id, title: "Restored gathering", visibility: "unpublished", rsvpsOpen: false, hasUnpublishedChanges: false }]);
+    const html = renderToStaticMarkup(await EventsPage({}));
+    expect(html).toContain("Restored gathering"); expect(html).toContain("Unpublished"); expect(html).toContain("Private party");
+    expect(html).toContain("Archived (0)");
+  });
+  it.each(["unknown", ["archived"]])("ignores malformed list selectors %j", async (view) => {
+    expect(renderToStaticMarkup(await EventsPage({ searchParams: Promise.resolve({ view }) }))).toContain("Manage Oyster Roast");
+  });
   it("shows a friendly empty state or setup error, not invented draft data", async () => {
-    expect(renderToStaticMarkup(await EventsPage())).toContain("next good gathering");
+    expect(renderToStaticMarkup(await EventsPage({}))).toContain("next good gathering");
     mocks.list.mockRejectedValue(new Error("private connection string"));
-    const html = renderToStaticMarkup(await EventsPage());
+    const html = renderToStaticMarkup(await EventsPage({}));
     expect(html).toContain("migration 010"); expect(html).not.toContain("private connection");
   });
   it("starts a blank draft with a unique creation key without database writes", async () => {
