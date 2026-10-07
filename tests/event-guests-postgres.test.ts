@@ -20,7 +20,7 @@ import { insertGuestQuestion, listQuestionsForAdmin } from "../lib/server/questi
 import { insertHostUpdate, listHostUpdatesForAdmin } from "../lib/server/updates";
 import { savePoll, listPollsForAdmin } from "../lib/server/polls";
 import { rsvpsToCsv } from "../lib/server/rsvp-csv";
-import { getPublishedEvent, getHostEventPublication, publishEventRecord, changeEventLifecycleRecord, listHostPublications } from "../lib/server/event-publications";
+import { getPublishedEvent, getHostEventPublication, publishEventRecord, changeEventLifecycleRecord, listHostPublications, isEventAliasAvailable } from "../lib/server/event-publications";
 import { resolvePublicEventScope, resolveHostEventScope, OYSTER_ROAST_SCOPE } from "../lib/server/event-scope";
 import { submitEventRsvp, updateEventRsvp } from "../app/e/actions";
 import { createEventGuest, updateEventGuest, deleteEventGuest } from "../app/admin/events/[id]/guests/actions";
@@ -28,6 +28,7 @@ import { getRsvpForAdmin, getRsvpForGuest, getPublicGuestList, getRsvpSummary, l
 import { hostScopeArgs } from "../lib/server/host-event";
 import { hashRsvpEditToken } from "../lib/server/rsvp-edit-token";
 import { createOysterRoastIcs } from "../lib/calendar";
+import { RESERVED_EVENT_ALIASES } from "../lib/event-alias";
 import { draft, snapshot } from "./fixtures/publication";
 
 const socket = process.env.SHINDIG_TEST_PG_SOCKET;
@@ -54,8 +55,9 @@ async function query(parts: TemplateStringsArray, ...values: unknown[]) {
   const statement = parts.reduce((text, part, index) => text + part + (index < values.length ? literal(values[index]) : ""), "");
   return JSON.parse(await sql(`WITH result AS (${statement}) SELECT coalesce(json_agg(result), '[]'::json) FROM result`));
 }
-const ids = [randomUUID(), randomUUID()];
+const ids = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
 const slugs = ids.map((id) => `event-${id}`);
+const aliases = ids.map((id) => `test-${id}`);
 const responseId = randomUUID(), hiddenId = randomUUID(), hostId = randomUUID();
 const token = "b".repeat(43), hiddenToken = "c".repeat(43);
 const fields = { guestName: "Synthetic Visible", attending: true, partySize: 2, displayOnGuestList: true, comment: "Guest note" };
@@ -88,18 +90,26 @@ describe.skipIf(!socket && !embeddedModule)("real local publish → RSVP → hos
     vi.unstubAllEnvs();
   });
   it("publishes two disposable events, then enforces privacy and isolation through real queries", async () => {
-    for (const id of ids) {
+    for (const id of ids.slice(0, 2)) {
       expect(await saveEventDraftRecord(id, 0, { ...draft, title: "Synthetic guest management test" })).toEqual({ id, revision: 1 });
       expect(await saveDraftSettingsRecord(id, 0, { ...snapshot.settings, features: { ...snapshot.settings.features, playlist: false, questions: false, updates: false, polls: false } })).toBe(1);
       expect(await getPublishedEvent(`event-${id}`)).toBeNull();
-      expect(await publishEventRecord(id, { details: 1, artwork: 0, settings: 1, publication: 0 }, null)).toBe(1);
+      if (id === ids[1]) {
+        expect(await isEventAliasAvailable(id, aliases[0])).toBe(false);
+        await expect(publishEventRecord(id, { details: 1, artwork: 0, settings: 1, publication: 0 }, null, aliases[0])).rejects.toThrow("link was just taken");
+        expect(await getPublishedEvent(slugs[1])).toBeNull();
+      }
+      const attempts = id === ids[0] ? 2 : 1;
+      expect(await Promise.all(Array.from({ length: attempts }, () => publishEventRecord(id, { details: 1, artwork: 0, settings: 1, publication: 0 }, null, id === ids[0] ? aliases[0] : null)))).toEqual(Array(attempts).fill(1));
     }
     const a = (await resolvePublicEventScope(slugs[0]))!, b = (await resolvePublicEventScope(slugs[1]))!;
     const event = (await getPublishedEvent(slugs[0]))!;
-    expect(createOysterRoastIcs(new Date(), undefined, event).replaceAll("\r\n ", "")).toContain(`/e/${slugs[0]}/event`);
+    expect(await getPublishedEvent(aliases[0])).toEqual(event);
+    expect((await resolvePublicEventScope(aliases[0]))!.slug).toBe(slugs[0]);
+    expect(createOysterRoastIcs(new Date(), undefined, event).replaceAll("\r\n ", "")).toContain(`/e/${aliases[0]}/event`);
     state.authenticated = false;
     const submit = { ...fields, eventSlug: slugs[0], submissionId: responseId, editToken: token };
-    expect((await submitEventRsvp(slugs[0], submit)).ok).toBe(true);
+    expect((await submitEventRsvp(aliases[0], submit)).ok).toBe(true);
     expect((await submitEventRsvp(slugs[0], submit)).ok).toBe(true);
     expect((await submitEventRsvp(slugs[0], { ...submit, submissionId: hiddenId, editToken: hiddenToken, guestName: "Synthetic Hidden", partySize: 3, displayOnGuestList: false })).ok).toBe(true);
     expect(await getPublicGuestList(a)).toEqual({ totalGuestCount: 5, guests: [{ guestName: fields.guestName, partySize: 2 }] });
@@ -160,6 +170,7 @@ describe.skipIf(!socket && !embeddedModule)("real local publish → RSVP → hos
     expect(await changeEventLifecycleRecord(ids[0], 3, "close-rsvps")).toBe(4);
     expect(await changeEventLifecycleRecord(ids[0], 4, "unpublish")).toBe(5);
     expect(await getPublishedEvent(slugs[0])).toBeNull();
+    expect(await getPublishedEvent(aliases[0])).toBeNull();
     expect(await resolvePublicEventScope(slugs[0])).toBeNull();
     expect((await submitEventRsvp(slugs[0], submit)).ok).toBe(false);
     expect((await updateEventRsvp(slugs[0], { ...fields, editToken: hiddenToken })).ok).toBe(false);
@@ -211,9 +222,11 @@ describe.skipIf(!socket && !embeddedModule)("real local publish → RSVP → hos
     expect(await getHostEventPublication(slugs[0])).toMatchObject({ visibility: "archived", rsvpsOpen: false, revision: 10, snapshot: publishedBefore.snapshot, sourceRevisions: publishedBefore.sourceRevisions, publishedAt: publishedBefore.publishedAt });
     expect((await listHostPublications()).find((p) => p.id === ids[0])).toMatchObject({ visibility: "archived", hasUnpublishedChanges: true });
     expect(await getPublishedEvent(slugs[0])).toBeNull(); expect(await resolvePublicEventScope(slugs[0])).toBeNull();
+    expect(await getPublishedEvent(aliases[0])).toBeNull(); expect(await resolvePublicEventScope(aliases[0])).toBeNull();
     state.authenticated = false;
     expect((await submitEventRsvp(slugs[0], { ...submit, submissionId: randomUUID() })).ok).toBe(false);
     expect((await updateEventRsvp(slugs[0], { ...fields, partySize: 1, editToken: hiddenToken })).ok).toBe(false);
+    expect((await updateEventRsvp(aliases[0], { ...fields, partySize: 1, editToken: hiddenToken })).ok).toBe(false);
     await expect(saveRsvp({ ...fields, id: randomUUID(), eventSlug: slugs[0] }, hashRsvpEditToken("e".repeat(43)), a)).rejects.toThrow();
     expect(await updateRsvpForGuest(hashRsvpEditToken(hiddenToken), { ...fields, partySize: 1 }, a)).toBeNull();
     await expect(resolveHostEventScope(slugs[0])).rejects.toThrow("Host access required");
@@ -233,12 +246,14 @@ describe.skipIf(!socket && !embeddedModule)("real local publish → RSVP → hos
     expect(await changeEventLifecycleRecord(ids[0], 10, "restore")).toBe(11);
     expect(await getHostEventPublication(slugs[0])).toMatchObject({ visibility: "unpublished", rsvpsOpen: false, revision: 11, snapshot: publishedBefore.snapshot, sourceRevisions: publishedBefore.sourceRevisions, publishedAt: publishedBefore.publishedAt });
     expect(await getPublishedEvent(slugs[0])).toBeNull(); expect(await resolvePublicEventScope(slugs[0])).toBeNull();
+    expect(await getPublishedEvent(aliases[0])).toBeNull();
     expect(await retainedData()).toEqual(retainedBefore);
     expect(await publishEventRecord(ids[0], { details: 1, artwork: 1, settings: 2, publication: 11 }, null)).toBe(12);
     expect((await getPublishedEvent(slugs[0]))!.websiteUrl).toBe(event.websiteUrl);
+    expect(await getPublishedEvent(aliases[0])).toEqual(await getPublishedEvent(slugs[0]));
     expect((await getPublishedEvent(slugs[0]))!.rsvpsOpen).toBe(false);
     expect(await changeEventLifecycleRecord(ids[0], 12, "reopen-rsvps")).toBe(13);
-    expect((await updateEventRsvp(slugs[0], { ...fields, partySize: 1, editToken: hiddenToken })).ok).toBe(true);
+    expect((await updateEventRsvp(aliases[0], { ...fields, partySize: 1, editToken: hiddenToken })).ok).toBe(true);
     // A private/unpublished event can also be archived, without touching event A.
     expect(await changeEventLifecycleRecord(ids[1], 1, "unpublish")).toBe(2);
     expect(await changeEventLifecycleRecord(ids[1], 2, "archive")).toBe(3);
@@ -246,6 +261,35 @@ describe.skipIf(!socket && !embeddedModule)("real local publish → RSVP → hos
     expect(await getHostEventPublication(slugs[1])).toMatchObject({ visibility: "unpublished", rsvpsOpen: false });
     expect((await getRsvpSummary(b)).totalResponses).toBe(0);
     expect((await getHostEventPublication(slugs[0]))!.revision).toBe(13);
+    // Published aliases (including NULL for existing events) are immutable.
+    await expect(query`UPDATE event_publications SET public_alias = 'changed-link' WHERE event_id = ${ids[0]}::uuid RETURNING revision`).rejects.toThrow();
+    await expect(query`UPDATE event_publications SET public_alias = 'changed-link' WHERE event_id = ${ids[1]}::uuid RETURNING revision`).rejects.toThrow();
+    expect(await publishEventRecord(ids[0], { details: 1, artwork: 1, settings: 2, publication: 13 }, null, "changed-link")).toBeNull();
+
+    // Two hosts can pass a read-only availability check, but only one can claim.
+    for (const id of ids.slice(2)) {
+      await saveEventDraftRecord(id, 0, { ...draft, title: "Synthetic alias collision" });
+      await saveDraftSettingsRecord(id, 0, snapshot.settings);
+      expect(await isEventAliasAvailable(id, aliases[2])).toBe(true);
+    }
+    const race = await Promise.allSettled(ids.slice(2).map((id) => publishEventRecord(id, { details: 1, artwork: 0, settings: 1, publication: 0 }, null, aliases[2])));
+    expect(race.filter((result) => result.status === "fulfilled" && result.value === 1)).toHaveLength(1);
+    expect(race.filter((result) => result.status === "rejected" && String(result.reason).includes("link was just taken"))).toHaveLength(1);
+    const winner = ids[2 + race.findIndex((result) => result.status === "fulfilled")], loser = ids[2 + race.findIndex((result) => result.status === "rejected")];
+    expect(await getPublishedEvent(`event-${loser}`)).toBeNull();
+    expect(await changeEventLifecycleRecord(winner, 1, "archive")).toBe(2);
+    expect(await isEventAliasAvailable(loser, aliases[2])).toBe(false); // archive never releases a name
+    expect(await getPublishedEvent(aliases[2])).toBeNull();
+    for (const reserved of [...RESERVED_EVENT_ALIASES, "event-forged", "UPPERCASE", "party--time", "a".repeat(61)]) {
+      await expect(query`INSERT INTO event_publications (event_id, slug, snapshot, source_revisions, public_alias)
+        SELECT ${loser}::uuid, ${`event-${loser}`}, snapshot, source_revisions, ${reserved}
+        FROM event_publications WHERE event_id = ${winner}::uuid RETURNING revision`).rejects.toThrow();
+    }
+    if (embedded) await embedded.exec(await readFile("db/migrations/017_event_public_aliases.sql", "utf8"));
+    else await sql(await readFile("db/migrations/017_event_public_aliases.sql", "utf8"));
+    expect((await getHostEventPublication(slugs[0]))!.publicAlias).toBe(aliases[0]);
+    expect((await getHostEventPublication(slugs[1]))!.publicAlias).toBeNull();
+    expect((await getHostEventPublication(`event-${winner}`))!.visibility).toBe("archived");
     expect(await getRsvpSummary(OYSTER_ROAST_SCOPE)).toEqual(legacyBefore);
   }, 30000);
 });

@@ -3,6 +3,7 @@ import { isAdminAuthenticated } from "./admin-session";
 import { resolveHostEventScope, OYSTER_ROAST_SCOPE, type EventScope } from "./event-scope";
 import { revalidatePath } from "next/cache";
 import { eventPaths } from "../event-routes";
+import { getHostEventPublication } from "./event-publications";
 export async function hostScopeArgs(slug?: string): Promise<[] | [EventScope]> {
   if (!(await isAdminAuthenticated())) throw new Error("Host access required.");
   if (slug === undefined) return [];
@@ -10,8 +11,10 @@ export async function hostScopeArgs(slug?: string): Promise<[] | [EventScope]> {
   if (!scope) throw new Error("Event unavailable.");
   return [scope];
 }
-export function refreshHostEvent(slug?: string) {
+export async function refreshHostEvent(slug?: string) {
   if (!slug || !slug.startsWith("event-")) return;
   revalidatePath(eventPaths(slug).hub);
+  const publication = await getHostEventPublication(slug);
+  if (publication?.publicAlias) revalidatePath(eventPaths(publication.publicAlias).hub);
   revalidatePath(`/admin/events/${slug.slice(6)}`, "layout");
 }

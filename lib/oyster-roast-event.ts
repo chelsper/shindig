@@ -69,7 +69,7 @@ type EditableText = "title" | "description" | "venue" | "address" | "cityLabel" 
   "dateLabel" | "shortDateLabel" | "timeLabel" | "startsAtUtc" | "endsAtUtc";
 export type EventConfiguration =
   Record<EditableText, string> & {
-    slug: string; hostTitle: string; timeZone: string;
+    slug: string; publicSlug?: string; hostTitle: string; timeZone: string;
     calendarUid: string; calendarFilename: string; websiteUrl: string;
     features: EventFeatures;
     coordinates: { latitude: number; longitude: number } | null;

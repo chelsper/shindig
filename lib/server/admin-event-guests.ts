@@ -13,5 +13,5 @@ export async function getAdminGuestEvent(id: string) {
   if (!isDraftId(id)) return null;
   const slug = draftEventSlug(id);
   const [publication, scope] = await Promise.all([getHostEventPublication(slug), resolveHostEventScope(slug)]);
-  return publication && scope ? { event: publicationEvent(id, publication.snapshot, publication.rsvpsOpen), scope, publication } : null;
+  return publication && scope ? { event: publicationEvent(id, publication.snapshot, publication.rsvpsOpen, publication.publicAlias), scope, publication } : null;
 }

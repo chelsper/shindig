@@ -8,17 +8,20 @@ import type { EventDraft } from "../../lib/event-drafts";
 import { draftImageUrl, type DraftArtworkRecord } from "../../lib/event-draft-artwork";
 import { DRAFT_HUB_MODULES, type DraftSettingsRecord } from "../../lib/event-draft-settings";
 import { publicationProblems, parseCoordinates, type Coordinates } from "../../lib/event-publication";
-import { draftEventSlug, eventPaths } from "../../lib/event-routes";
-import { SHINDIG_SITE } from "../../lib/site";
+import { draftEventSlug } from "../../lib/event-routes";
+import { suggestEventAlias, validateEventAlias } from "../../lib/event-alias";
 import { eventStatus, type EventLifecycle } from "../../lib/event-lifecycle";
 import { EventLifecycleControls } from "./event-lifecycle-controls";
+import { EventLinkField } from "./event-link-field";
+import { EventSharePanel } from "./event-share-panel";
 
 export function EventPublishReview({ draft, artwork, settings, live, musicConfigured = true }: {
   draft: EventDraft; artwork: DraftArtworkRecord; settings: DraftSettingsRecord;
-  live: (EventLifecycle & { revision: number; publishedAt: string; coordinates: Coordinates | null; hasUnpublishedChanges: boolean }) | null;
+  live: (EventLifecycle & { revision: number; publishedAt: string; coordinates: Coordinates | null; hasUnpublishedChanges: boolean; publicAlias?: string | null; title?: string }) | null;
   musicConfigured?: boolean;
 }) {
-  const base = `/admin/events/${draft.id}`, paths = eventPaths(draftEventSlug(draft.id));
+  const base = `/admin/events/${draft.id}`;
+  const [alias, setAlias] = useState(live ? live.publicAlias ?? "" : suggestEventAlias(draft.title));
   const [latitude, setLatitude] = useState(live?.coordinates ? String(live.coordinates.latitude) : "");
   const [longitude, setLongitude] = useState(live?.coordinates ? String(live.coordinates.longitude) : "");
   const [confirmed, setConfirmed] = useState(false), [message, setMessage] = useState("");
@@ -27,6 +30,8 @@ export function EventPublishReview({ draft, artwork, settings, live, musicConfig
   const coordinates = latitude.trim() && longitude.trim() ? parseCoordinates({ latitude: Number(latitude), longitude: Number(longitude) }) : null;
   const problems = publicationProblems({ details: draft, artwork: artwork.settings, settings: settings.settings, coordinates });
   if (!settings.revision) problems.push("Save your RSVP & Hub choices.");
+  const parsedAlias = validateEventAlias(alias);
+  if (!parsedAlias.ok) problems.push(parsedAlias.message);
   const versions = { details: draft.revision, artwork: artwork.revision, settings: settings.revision, publication: live?.revision ?? 0 };
   const archived = live?.visibility === "archived";
   const button = "inline-flex min-h-11 items-center text-sm font-semibold text-[#355f9e] underline underline-offset-4";
@@ -40,12 +45,8 @@ export function EventPublishReview({ draft, artwork, settings, live, musicConfig
       <div className="mt-3 flex flex-wrap gap-x-5"><Link className={button} href={`${base}/guests`}>Manage saved responses &amp; content →</Link><a className={button} href={`${base}/guests/export`}>Export all RSVPs</a><Link className={button} href="/admin/events?view=archived">Archived events</Link></div>
     </section>}
     {live?.visibility === "unpublished" && !success && <section className="rounded-3xl border border-[#b78228]/25 bg-[#fff4d8] p-5 sm:p-7"><h2 className="font-serif text-2xl">Your gathering is private again</h2><p className="mt-2 text-sm leading-6">Shared links are unavailable. Nothing has been deleted. Review the saved version below before republishing; the same links and guest update links will work again.</p><Link className={button} href={`${base}/guests`}>Manage saved responses &amp; content →</Link></section>}
-    {(live?.visibility === "published" || success) && <section aria-label="Share your event" className="rounded-3xl border border-[#285630]/20 bg-[#eff5e8] p-5 sm:p-7">
-      <h2 className="font-serif text-3xl">Your gathering is live</h2><p className="mt-2 text-sm leading-6">Share either link. {live?.rsvpsOpen === false ? "RSVPs and guest edits are closed; guests can still visit the invitation and Hub." : "Guests can RSVP from the invitation and return to the Hub anytime."}</p>
-      {([['Invitation', paths.invitation], ['Event Hub', paths.hub]] as const).map(([label, path]) => <div key={label} className="mt-4"><p className="text-xs font-bold uppercase tracking-wider">{label}</p><a className={`${button} break-all`} href={path} target="_blank" rel="noreferrer">{new URL(path, SHINDIG_SITE.url).toString()} ↗</a><button type="button" className="ml-3 min-h-11 text-sm underline" onClick={() => { void navigator.clipboard.writeText(new URL(path, SHINDIG_SITE.url).toString()).then(() => setMessage(`${label} link copied.`)).catch(() => setMessage("Select and copy the link above.")); }}>Copy link</button></div>)}
-      <Link className={button} href={`${base}/guests`}>View event responses →</Link>
-      <p className="mt-3 text-xs leading-5">Saved draft edits stay private until you publish changes. Previously shared links remain the same.</p>
-    </section>}
+    {(live?.visibility === "published" || success) && <EventSharePanel id={draft.id} publicSlug={(parsedAlias.ok && parsedAlias.alias) || draftEventSlug(draft.id)} title={success ? draft.title : live?.title ?? draft.title} rsvpsOpen={live?.rsvpsOpen !== false} />}
+    {!live && !success && <EventLinkField id={draft.id} value={alias} disabled={pending} onChange={(value) => { setAlias(value); setConfirmed(false); setMessage(""); }} />}
     <section className="rounded-3xl border border-[#202523]/10 bg-[#fffaf1] p-5 sm:p-7">
       <p className="text-xs font-bold uppercase tracking-wider text-[#355f9e]">{archived ? "Private working copy" : "Saved version to publish"}</p><h2 className="mt-2 break-words font-serif text-3xl">{draft.title}</h2>
       <dl className="mt-5 space-y-4 text-sm leading-6">
@@ -64,7 +65,7 @@ export function EventPublishReview({ draft, artwork, settings, live, musicConfig
       e.preventDefault(); if (busy.current || !confirmed || problems.length || archived) return;
       busy.current = true; setMessage("");
       startTransition(async () => { try {
-        const result = await publishEvent(draft.id, versions, settings.settings.features.weather ? coordinates : null, confirmed);
+        const result = await publishEvent(draft.id, versions, settings.settings.features.weather ? coordinates : null, confirmed, alias);
         if (!result.ok) { setMessage(result.message); return; }
         setSuccess(true); setMessage("Published! Your guest links are ready."); router.refresh();
       } catch { setMessage("Publishing couldn’t be confirmed. Refresh this review before trying again."); }

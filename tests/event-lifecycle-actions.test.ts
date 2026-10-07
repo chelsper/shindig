@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ change: vi.fn(), publish: vi.fn(), refresh: vi.fn() }));
-vi.mock("../lib/server/event-publications", () => ({ changeEventLifecycleRecord: mocks.change, publishEventRecord: mocks.publish }));
+const mocks = vi.hoisted(() => ({ change: vi.fn(), publish: vi.fn(), refresh: vi.fn(), publication: vi.fn() }));
+vi.mock("../lib/server/event-publications", () => ({ changeEventLifecycleRecord: mocks.change, publishEventRecord: mocks.publish, getHostEventPublication: mocks.publication }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.refresh }));
 import { changeEventLifecycle } from "../app/admin/events/[id]/publish/actions";
 import { eventId, eventSlug } from "./fixtures/publication";
@@ -28,5 +28,10 @@ describe("confirmed lifecycle actions", () => {
     mocks.change.mockRejectedValue(new Error("postgresql://secret"));
     const result = await changeEventLifecycle(eventId, 1, "unpublish", true);
     expect(result.ok).toBe(false); expect(JSON.stringify(result)).not.toContain("secret"); expect(mocks.refresh).not.toHaveBeenCalled();
+  });
+  it("invalidates both friendly and original paths after an archive", async () => {
+    mocks.publication.mockResolvedValue({ publicAlias: "garden-supper" });
+    expect((await changeEventLifecycle(eventId, 1, "archive", true)).ok).toBe(true);
+    expect(mocks.refresh.mock.calls).toEqual([[`/e/${eventSlug}`, "layout"], [`/e/${eventSlug}/event`], ["/e/garden-supper", "layout"], ["/e/garden-supper/event"], [`/admin/events/${eventId}`, "layout"], ["/admin/events"]]);
   });
 });

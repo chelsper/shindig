@@ -93,7 +93,8 @@ describe("published guest screens and calendar", () => {
     expect(html).toMatch(/disabled=""[^>]*>Publish event/); expect(html).toContain("Make this version public");
     expect(html).not.toContain(`href="/e/${eventSlug}`);
     const live = renderToStaticMarkup(<EventPublishReview {...props} live={{ revision: 1, publishedAt: "2026-10-06", coordinates: null, visibility: "published", rsvpsOpen: true, hasUnpublishedChanges: false }} />);
-    expect(live).toContain(`href="/e/${eventSlug}/event"`); expect(live).toContain("Publish changes");
+    expect(live).toContain(`href="/e/${eventSlug}"`); expect(live).toContain("Publish changes");
+    expect(live).toContain('aria-label="Choose a link to share"'); expect(live).toContain("Get QR code");
   });
 });
 describe("status labels and saved change detection", () => {

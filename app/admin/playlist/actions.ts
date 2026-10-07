@@ -26,7 +26,7 @@ export async function deleteAdminPlaylistSuggestion(
   }
   try {
     await deletePlaylistSuggestion(id, ...await hostScopeArgs(eventSlug));
-    refreshHostEvent(eventSlug);
+    await refreshHostEvent(eventSlug);
   } catch {
     console.error("Admin playlist deletion failed.");
     return { error: "We couldn’t delete that suggestion. Please try again." };

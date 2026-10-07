@@ -13,12 +13,14 @@ type Operation = "create" | "update" | "delete";
 
 async function mutate(operation: Operation, eventId: string, id: string, form: FormData): Promise<AdminGuestActionState> {
   let slug: string;
+  let publicSlug: string | undefined;
   try {
     const resolved = await getAdminGuestEvent(eventId);
     if (!resolved) return { error: "This event isn’t available. Please return to Your events." };
     if (typeof id !== "string" || !uuid.test(id)) return { error: "Please refresh this page and try again." };
     const { scope } = resolved;
     slug = scope.slug;
+    publicSlug = scope.publicSlug;
     if (operation === "delete") {
       if (form.get("confirm") !== "delete") return { error: "Please confirm that you want to delete this RSVP." };
       if (!(await deleteRsvpForAdmin(id, scope))) return { error: "That RSVP could not be found in this event. Refresh the guest list." };
@@ -42,6 +44,7 @@ async function mutate(operation: Operation, eventId: string, id: string, form: F
   }
   // Guest-data edits are live immediately; publication still controls event setup.
   revalidatePath(`/e/${slug}`, "layout");
+  if (publicSlug) revalidatePath(`/e/${publicSlug}`, "layout");
   revalidatePath(`/admin/events/${eventId}`, "layout");
   redirect(`${eventGuestsPath(eventId)}?saved=${operation}`);
 }

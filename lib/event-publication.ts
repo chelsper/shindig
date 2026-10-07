@@ -42,13 +42,13 @@ export function parsePublicationSnapshot(id: string, input: unknown): Publicatio
 
 // Only public presentation leaves this function. Storage paths, draft revisions,
 // admin data and unpublished edits never become client props.
-export function publicationEvent(id: string, snapshot: PublicationSnapshot, rsvpsOpen = true): EventConfiguration {
+export function publicationEvent(id: string, snapshot: PublicationSnapshot, rsvpsOpen = true, publicAlias: string | null = null): EventConfiguration {
   const { details: d, artwork: art, settings, coordinates } = snapshot;
-  const slug = draftEventSlug(id), paths = eventPaths(slug);
+  const slug = draftEventSlug(id), paths = eventPaths(publicAlias ?? slug);
   const format = (options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-US", { ...options, timeZone: d.timeZone }).format(new Date(d.startsAtUtc!));
   const image = (kind: "invitation" | "header") => `${paths.invitation}/artwork/${kind}`;
   return {
-    slug, title: d.title, hostTitle: d.title, description: d.description, venue: d.venue,
+    slug, publicSlug: publicAlias ?? slug, title: d.title, hostTitle: d.title, description: d.description, venue: d.venue,
     address: d.address, cityLabel: d.cityLabel, coordinates, timeZone: d.timeZone,
     startsAtUtc: d.startsAtUtc!, endsAtUtc: d.endsAtUtc!,
     dateLabel: format({ dateStyle: "full" }), shortDateLabel: format({ weekday: "long", month: "long", day: "numeric" }),

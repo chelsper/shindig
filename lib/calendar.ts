@@ -5,10 +5,10 @@ import {
 import { eventPaths } from "./event-routes";
 
 export function calendarPath(event: OysterRoastEvent = OYSTER_ROAST_EVENT) {
-  return event.slug === OYSTER_ROAST_EVENT.slug ? "/calendar/oyster-roast.ics" : `${eventPaths(event.slug).invitation}/calendar.ics`;
+  return event.slug === OYSTER_ROAST_EVENT.slug ? "/calendar/oyster-roast.ics" : `${eventPaths(event.publicSlug ?? event.slug).invitation}/calendar.ics`;
 }
 export function rsvpUpdatePath(token: string, event: OysterRoastEvent = OYSTER_ROAST_EVENT) {
-  const prefix = event.slug === OYSTER_ROAST_EVENT.slug ? "" : eventPaths(event.slug).invitation;
+  const prefix = event.slug === OYSTER_ROAST_EVENT.slug ? "" : eventPaths(event.publicSlug ?? event.slug).invitation;
   return `${prefix}/rsvp/${encodeURIComponent(token)}`;
 }
 

@@ -22,7 +22,7 @@ export async function createHostUpdate(id: string, input: unknown, eventSlug?: s
   if (!validation.success) return { ok: false, message: validation.message };
   try {
     await insertHostUpdate(id, validation.data, ...await hostScopeArgs(eventSlug));
-    refreshHostEvent(eventSlug);
+    await refreshHostEvent(eventSlug);
   } catch {
     console.error("Host update creation failed.");
     return { ok: false, message: "We couldn’t publish your update. Please try again." };
@@ -38,7 +38,7 @@ export async function editHostUpdate(id: string, input: unknown, eventSlug?: str
   if (!validation.success) return { ok: false, message: validation.message };
   try {
     if (!(await updateHostUpdate(id, validation.data, ...await hostScopeArgs(eventSlug)))) return { ok: false, message: "That update could not be found." };
-    refreshHostEvent(eventSlug);
+    await refreshHostEvent(eventSlug);
   } catch {
     console.error("Host update editing failed.");
     return { ok: false, message: "We couldn’t save your update. Please try again." };
@@ -52,7 +52,7 @@ export async function deleteHostUpdate(id: string, confirmed: boolean, eventSlug
   if (!isContentId(id) || confirmed !== true) return { ok: false, message: "Please confirm which update to delete." };
   try {
     await removeHostUpdate(id, ...await hostScopeArgs(eventSlug));
-    refreshHostEvent(eventSlug);
+    await refreshHostEvent(eventSlug);
   } catch {
     console.error("Host update deletion failed.");
     return { ok: false, message: "We couldn’t delete that update. Please try again." };

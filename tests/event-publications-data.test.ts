@@ -21,8 +21,8 @@ describe("public publication boundary", () => {
   it("never reads mutable drafts or checks host cookies to serve a guest", async () => {
     mocks.sql.mockResolvedValue([publication]);
     const event = await getPublishedEvent(eventSlug); expect(event?.title).toBe("Garden Supper");
-    expect(mocks.sql.mock.lastCall![0].join("?")).toContain("FROM event_publications WHERE slug = ?");
-    expect(mocks.sql.mock.lastCall!.slice(1)).toEqual([eventSlug]);
+    expect(mocks.sql.mock.lastCall![0].join("?")).toContain("FROM event_publications WHERE (slug = ? OR public_alias = ?)");
+    expect(mocks.sql.mock.lastCall!.slice(1)).toEqual([eventSlug, eventSlug]);
     for (const fn of [mocks.auth, mocks.draft, mocks.artwork, mocks.settings]) expect(fn).not.toHaveBeenCalled();
   });
   it("returns nothing for unknown, unpublished, malformed or missing database", async () => {

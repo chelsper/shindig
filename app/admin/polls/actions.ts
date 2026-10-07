@@ -17,7 +17,7 @@ export async function saveHostPoll(key: unknown, input: unknown, create: unknown
   if (!validation.ok) return validation;
   try {
     if (!(await savePoll(key, validation.data, create, ...await hostScopeArgs(eventSlug)))) return { ok: false, message: "This poll changed. Once voting begins, keep the same options and voting rules. Refresh and try again." };
-    refreshHostEvent(eventSlug);
+    await refreshHostEvent(eventSlug);
     refresh();
     return { ok: true, data: null };
   } catch { return { ok: false, message: "We couldn’t save the poll. Please check the options and try again." }; }
@@ -29,7 +29,7 @@ export async function setHostPollStatus(key: unknown, status: unknown, confirmed
   if (status === "DELETE_DRAFT" && confirmed !== true) return { ok: false, message: "Please confirm you want to delete this draft." };
   try {
     if (!(await changePollStatus(key, status as "OPEN" | "CLOSED" | "ARCHIVED" | "DELETE_DRAFT", ...await hostScopeArgs(eventSlug)))) return { ok: false, message: "This poll changed or can’t be deleted. Refresh to see its current status." };
-    refreshHostEvent(eventSlug);
+    await refreshHostEvent(eventSlug);
     refresh();
     return { ok: true, data: null };
   } catch { return { ok: false, message: "We couldn’t update this poll. Please try again." }; }

@@ -86,6 +86,32 @@ describe("published routes", () => {
     expect(response.status).toBe(200); expect(response.headers.get("Cache-Control")).toBe("private, no-store");
     expect(ics).toContain(`/e/${eventSlug}/rsvp/${token}`); expect(ics).toContain(`/e/${eventSlug}/event`); expect(ics).not.toContain("jaspershucks");
   });
+  it("uses the alias for navigation but the stable identity for guest authorization", async () => {
+    const slug = "garden-supper", aliased = { params: Promise.resolve({ slug }) };
+    mocks.pub.mockResolvedValue({ ...publication, publicAlias: slug });
+    mocks.event.mockResolvedValue(publicationEvent(eventId, snapshot, true, slug));
+    const html = renderToStaticMarkup(await Invitation(aliased));
+    expect(html).toContain(`/e/${slug}/event`);
+    const hub = await Hub(aliased);
+    expect(hub.props.event.slug).toBe(eventSlug); expect(hub.props.scope.slug).toBe(eventSlug);
+    mocks.guest.mockResolvedValue(null);
+    await Edit({ params: Promise.resolve({ slug, token }) });
+    expect(mocks.guest.mock.lastCall![1].slug).toBe(eventSlug);
+    const ics = (await (await calendar(request(`/calendar?token=${token}`), aliased)).text()).replace(/\r\n /g, "");
+    expect(ics).toContain(`/e/${slug}/rsvp/${token}`); expect(ics).toContain(`/e/${slug}/event`);
+    expect(ics).toContain(`UID:${event.calendarUid}`);
+  });
+  it("closes every public alias route without a published resolution", async () => {
+    const slug = "garden-supper", aliased = { params: Promise.resolve({ slug }) };
+    mocks.event.mockResolvedValue(null); mocks.pub.mockResolvedValue(null);
+    for (const page of [Invitation, Hub]) await expect(page(aliased)).rejects.toThrow("not-found");
+    await expect(Edit({ params: Promise.resolve({ slug, token }) })).rejects.toThrow("not-found");
+    expect((await calendar(request("/calendar"), aliased)).status).toBe(404);
+    expect((await artwork(request("/image"), { params: Promise.resolve({ slug, kind: "invitation" }) })).status).toBe(404);
+    expect((await music(request(`/api/music/search?q=hello&event=${slug}`))).status).toBe(404);
+    expect((await weather(request(`/api/weather?event=${slug}`))).status).toBe(404);
+    for (const fn of [mocks.guest, mocks.blob, mocks.search, mocks.weather, mocks.draft]) expect(fn).not.toHaveBeenCalled();
+  });
   it("loads an edit token only within its event, and does not show another guest on a miss", async () => {
     mocks.guest.mockResolvedValue(null);
     const html = renderToStaticMarkup(await Edit({ params: Promise.resolve({ slug: eventSlug, token }) }));
@@ -121,5 +147,11 @@ describe("scoped providers and host screens", () => {
   it("refreshes only this event's guest routes and host list after explicit publication", async () => {
     expect((await publishEvent(eventId, versions, null, true)).ok).toBe(true);
     const paths = mocks.revalidate.mock.calls.flat(); expect(paths).toContain(`/e/${eventSlug}`); expect(paths).toContain(`/e/${eventSlug}/event`); expect(paths).not.toContain("/event"); expect(paths).not.toContain("/");
+  });
+  it("does not claim an event stayed private when post-publication refresh fails", async () => {
+    mocks.pub.mockRejectedValue(new Error("Database read failed"));
+    const result = await publishEvent(eventId, versions, null, true, "garden-supper");
+    expect(result.ok).toBe(false); expect(mocks.save).toHaveBeenCalled();
+    if (!result.ok) { expect(result.message).toContain("couldn’t be confirmed"); expect(result.message).toContain("check the current status"); expect(result.message).not.toContain("Nothing was automatically made public"); }
   });
 });

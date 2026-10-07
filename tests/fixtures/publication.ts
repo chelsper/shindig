@@ -11,4 +11,4 @@ export const snapshot: PublicationSnapshot = {
   settings: { rsvp: { maxPartySize: 4, allowComments: false, guestListDefaultVisible: false }, features: { ...DEFAULT_DRAFT_SETTINGS.features, playlist: true, questions: true, updates: true, polls: true } },
 };
 export const versions = { details: 2, artwork: 0, settings: 3, publication: 0 };
-export const publication = { id: eventId, slug: eventSlug, snapshot, revision: 1, publishedAt: "2026-10-06T12:00:00Z", visibility: "published" as const, rsvpsOpen: true, sourceRevisions: versions };
+export const publication = { id: eventId, slug: eventSlug, publicAlias: null, snapshot, revision: 1, publishedAt: "2026-10-06T12:00:00Z", visibility: "published" as const, rsvpsOpen: true, sourceRevisions: versions };

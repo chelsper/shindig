@@ -1,6 +1,77 @@
 # Shindig
 
-## Archive & restore events (Step 6B — current)
+## Friendly event links & QR sharing (Step 7 — current)
+
+Before the **first publication** of a new Shindig event, choose an optional readable
+link in **Your events → Manage & share**, such as `/e/garden-supper`. A title-based
+suggestion is editable; **Check link** checks current availability without reserving
+it. Names are normalized to lowercase, use letters/numbers/single hyphens, and must
+be 3–60 characters. Reserved names and the entire `event-` namespace are unavailable.
+Blank keeps the original ID-based link. First publication reserves the name atomically;
+concurrent claims are rejected with a friendly message, not a duplicate publication.
+
+- Links are fixed after first publication, including for already-published events
+  that have no alias. Changing the title, archiving or restoring never reassigns a
+  name. Existing `/e/event-<UUID>` URLs continue to resolve to the **same event**.
+- After publication, the compact share panel switches between **Invitation** and
+  **Event Hub**. Copy a link, use device sharing when supported, or expand **Get QR
+  code** to preview/download a PNG or SVG for that destination. No messages are sent.
+- QR generation is local to the application server using `qrcode`; no external QR
+  service receives event URLs. The route requires a host session and a currently
+  published event. It encodes only the canonical Shindig invitation/Hub URL, never
+  a guest token or caller-supplied URL. Downloads are private/no-store. Keep the
+  white border intact and test a scan before printing.
+- Public invitation, Hub, calendar, artwork and private RSVP-edit URLs resolve
+  aliases through the same published-only data layer. Data scopes, RSVP tokens,
+  duplicate-submission keys and calendar UIDs retain their permanent event identity.
+  Calendar descriptions/navigation prefer the friendly Hub link. Private edit links
+  remain private. Host content edits refresh both URL forms.
+- Unpublishing/archiving disables both URL forms, their QR destinations and new QR
+  downloads; restoring alone does not make them public. Names remain reserved.
+  Previously downloaded codes/files cannot be recalled. Jasper Shucks is unchanged.
+
+**Before deployment:** apply [`017_event_public_aliases.sql`](db/migrations/017_event_public_aliases.sql)
+after migrations 001–016 in the target Neon database, then deploy. It adds only a
+nullable `public_alias` column, a unique index, format/reserved-name constraints,
+and an immutable-alias trigger to `event_publications`. It is safe to reapply and
+does not rename, publish, archive or otherwise modify existing events/guest data.
+Do not roll back to pre-017 application code after sharing friendly URLs: that code
+cannot resolve them. No new environment variables. Added dependencies: `qrcode`
+and development-only `@types/qrcode`.
+
+Verification covers alias validation/availability/authentication, races and safe
+errors, original-link/RSVP/calendar continuity, archived privacy, QR authorization
+and canonical output, and mobile publishing/sharing. The opt-in PostgreSQL test
+below exercises the actual migration and data layer against isolated fixtures.
+For independent scan verification, install `jsqr` and `sharp` in a temporary
+directory, set `SHINDIG_TEST_QR_TOOLS` to that directory's absolute
+`/private/tmp/.../node_modules` path, and run
+`npm test -- tests/event-qr-decode.test.ts`. It decodes both formats for invitation
+and Hub URLs, including maximum-length aliases and original ID-based links. The
+normal suite skips this test without the temporary tools.
+
+Step 7 verification: lint, typecheck, production webpack build, and all 907 tests
+passed with both optional runtimes enabled; synthetic UI checks covered 320px,
+390px and desktop layouts, publication/name collisions, downloads and failures.
+No production data was used for these tests.
+
+Security follow-up (October 7, 2026): upgraded Next.js and its ESLint configuration
+to 16.3.6, `sharp` to 0.35.5, and `source-map-js` to 1.2.2. These address the
+[Next.js](https://github.com/advisories/GHSA-vcvr-r3jv-pc5j),
+[image-processing](https://github.com/advisories/GHSA-wq5f-xc86-pv6w), and
+[source-map](https://github.com/advisories/GHSA-68fv-2mgg-jv7q) advisories.
+All quality checks above passed again with the patched dependency lockfile;
+`npm audit --omit=dev` reports **zero vulnerabilities**.
+
+The full audit still reports five high-severity dependency entries from one
+[unpatched `braces` advisory](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)
+in the ESLint → fast-glob → micromatch chain. This is lint/build tooling, not a
+guest-facing dependency; none of that chain appears in the server runtime traces.
+Use trusted lint configuration and recheck for an upstream fix before future
+dependency upgrades. Do not run `npm audit fix --force`: its proposed downgrade
+to the Next.js 14 lint configuration is incompatible with this project's setup.
+
+## Archive & restore events (Step 6B — completed)
 
 Open **Your events → Manage & share → Archive event** for a previously published
 Shindig event. Confirm separately before anything changes. Unfinished drafts stay
@@ -120,7 +191,7 @@ Quality checks: `npm run lint`, `npm run typecheck`, `npm test`,
 host actions and SQL against an isolated PostgreSQL runtime, with synthetic events
 only. The normal test command skips this one test unless configured:
 
-- Native: use the disposable `shindig_drafts_test` database with migrations 001–016
+- Native: use the disposable `shindig_drafts_test` database with migrations 001–017
   and set `SHINDIG_TEST_PG_SOCKET` to its `/private/tmp/...` Unix socket directory,
   `SHINDIG_TEST_PSQL` to the `psql` executable, and optionally
   `SHINDIG_TEST_PG_PORT` (default 55441). Its random fixtures are cleaned up.
@@ -133,7 +204,7 @@ With either option, run `npm test -- tests/event-guests-postgres.test.ts` (or th
 whole suite). Browser checks separately exercise the actual components with
 synthetic actions, including confirmation/cancel, failure preservation, pending
 states and mobile layout. These tests do not call production Neon or publish a
-real event. Custom URLs and QR codes remain future milestones.
+real event. Step 7 adds custom URLs and QR codes above.
 
 ## Review, publish & share (Step 4B — completed)
 

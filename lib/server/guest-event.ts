@@ -14,5 +14,5 @@ export function guestScopeArgs(slug: string | undefined, scope: EventScope): [] 
   return slug === undefined ? [] : [scope];
 }
 export function guestHubPath(scope: EventScope) {
-  return scope.slug === OYSTER_ROAST_SCOPE.slug ? "/event" : eventPaths(scope.slug).hub;
+  return scope.slug === OYSTER_ROAST_SCOPE.slug ? "/event" : eventPaths(scope.publicSlug ?? scope.slug).hub;
 }
