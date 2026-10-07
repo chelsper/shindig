@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 vi.mock("server-only", () => ({}));
 const mocks = vi.hoisted(() => ({ pub: vi.fn(), event: vi.fn(), blob: vi.fn(), auth: vi.fn(), guest: vi.fn(), list: vi.fn(), save: vi.fn(), revalidate: vi.fn(), search: vi.fn(), throttle: vi.fn(), weather: vi.fn(), typical: vi.fn(), draft: vi.fn(), artwork: vi.fn(), settings: vi.fn() }));
-vi.mock("../lib/server/event-publications", () => ({ getEventPublication: mocks.pub, getPublishedEvent: mocks.event, publishEventRecord: mocks.save }));
+vi.mock("../lib/server/event-publications", () => ({ getEventPublication: mocks.pub, getHostEventPublication: mocks.pub, getPublishedEvent: mocks.event, publishEventRecord: mocks.save }));
 vi.mock("../lib/server/admin-session", () => ({ isAdminAuthenticated: mocks.auth }));
 vi.mock("../lib/server/event-drafts", () => ({ getEventDraft: mocks.draft }));
 vi.mock("../lib/server/event-draft-artwork", () => ({ getDraftArtwork: mocks.artwork, draftImageStorageToken: () => "private-storage-token" }));
@@ -49,9 +49,19 @@ describe("published routes", () => {
   it("returns unavailable/404 for unpublished routes, never draft fallback even for hosts", async () => {
     mocks.event.mockResolvedValue(null); mocks.pub.mockResolvedValue(null);
     for (const page of [Invitation, Hub]) await expect(page(context)).rejects.toThrow("not-found");
+    await expect(Edit({ params: Promise.resolve({ slug: eventSlug, token }) })).rejects.toThrow("not-found");
+    expect(mocks.guest).not.toHaveBeenCalled();
     expect((await calendar(request("/calendar"), context)).status).toBe(404);
     expect((await artwork(request("/image"), { params: Promise.resolve({ slug: eventSlug, kind: "invitation" }) })).status).toBe(404);
     expect(mocks.draft).not.toHaveBeenCalled(); expect(mocks.blob).not.toHaveBeenCalled();
+  });
+  it("keeps CSV export host-only and available for a previously published private event", async () => {
+    mocks.pub.mockResolvedValue({ ...publication, visibility: "unpublished", rsvpsOpen: false });
+    const result = await exportCsv(request("/export"), adminContext);
+    expect(result.status).toBe(200); expect(result.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(mocks.list.mock.lastCall![1]).toMatchObject({ slug: eventSlug, access: "host" });
+    mocks.auth.mockResolvedValue(false); mocks.list.mockClear();
+    expect((await exportCsv(request("/export"), adminContext)).status).toBe(401); expect(mocks.list).not.toHaveBeenCalled();
   });
   it("fails gracefully without leaking database details or showing a different event", async () => {
     mocks.event.mockRejectedValue(new Error("postgresql://private"));

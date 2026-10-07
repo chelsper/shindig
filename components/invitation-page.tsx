@@ -11,6 +11,7 @@ import { CalendarActions } from "./calendar-actions";
 import { EventHubLink } from "./event-hub-link";
 import { OYSTER_ROAST_EVENT, eventMonthLabel, type OysterRoastEvent } from "../lib/oyster-roast-event";
 import { createRsvpEditToken } from "../lib/rsvp-edit-token";
+import { RsvpsClosed } from "./rsvp/rsvps-closed";
 
 type RsvpChoice = "attending" | "declined" | null;
 
@@ -113,7 +114,7 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!choice || !name.trim() || submittingRef.current) return;
+    if (oysterRoastEvent.rsvpsOpen === false || !choice || !name.trim() || submittingRef.current) return;
 
     const submissionId = submissionIdRef.current ?? crypto.randomUUID();
     const nextEditToken = editTokenRef.current ?? createRsvpEditToken();
@@ -228,7 +229,7 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
             </div>
 
             <div className="rounded-[1.75rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 shadow-[0_18px_50px_rgba(41,56,53,0.10)] backdrop-blur sm:p-7">
-              {submitted ? (
+              {oysterRoastEvent.rsvpsOpen === false ? <RsvpsClosed /> : submitted ? (
                 <div aria-live="polite" className="py-3 text-center sm:py-5">
                   <div className="success-mark mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#dceaf7] text-[#214e91]">
                     <svg aria-hidden="true" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">

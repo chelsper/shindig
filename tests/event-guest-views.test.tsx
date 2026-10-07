@@ -15,13 +15,13 @@ import { EventGuestEditorPage } from "../components/admin/event-guest-editor-pag
 import { EventGuestList } from "../components/admin/event-guest-list";
 import GuestPage from "../app/admin/events/[id]/guests/page";
 import { guestListQuery } from "../lib/admin-guests";
-import { eventId, otherEventId, eventSlug, snapshot } from "./fixtures/publication";
+import { eventId, otherEventId, eventSlug, snapshot, publication } from "./fixtures/publication";
 const event = { id: eventId, title: "Garden Supper", maxPartySize: 4, guestListDefaultVisible: false, guestListEnabled: false, requestId: otherEventId };
 const guest = { id: otherEventId, eventSlug, guestName: "A & B", attending: true, partySize: 3, displayOnGuestList: false, comment: "Private note", createdAt: "2026-11-08T01:00:00.000Z", updatedAt: "2026-11-08T02:00:00.000Z" };
 const summary = { totalPartySize: 5, totalResponses: 3, totalAttending: 2, declined: 1 };
 const scope = { slug: eventSlug, rsvp: snapshot.settings.rsvp, features: snapshot.settings.features };
 beforeEach(() => {
-  vi.clearAllMocks(); mocks.auth.mockResolvedValue(true); mocks.resolve.mockResolvedValue({ event: { title: event.title }, scope }); mocks.guest.mockResolvedValue(guest);
+  vi.clearAllMocks(); mocks.auth.mockResolvedValue(true); mocks.resolve.mockResolvedValue({ event: { title: event.title, timeZone: "America/Los_Angeles", features: snapshot.settings.features }, scope, publication }); mocks.guest.mockResolvedValue(guest);
   mocks.published.mockResolvedValue({ title: event.title, timeZone: "America/Los_Angeles", features: snapshot.settings.features }); mocks.scope.mockResolvedValue(scope); mocks.list.mockResolvedValue([guest]); mocks.summary.mockResolvedValue(summary);
 });
 describe("event guest editor and list", () => {

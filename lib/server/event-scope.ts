@@ -5,7 +5,7 @@ import type { DraftSettings } from "../event-draft-settings";
 import { isAdminAuthenticated } from "./admin-session";
 import { getEventDraft } from "./event-drafts";
 import { getDraftSettings } from "./event-draft-settings";
-import { getEventPublication } from "./event-publications";
+import { getEventPublication, getHostEventPublication } from "./event-publications";
 
 const brand: unique symbol = Symbol("server-resolved-event");
 export type EventScope = Readonly<{
@@ -14,11 +14,12 @@ export type EventScope = Readonly<{
   access: "public" | "host";
   features: Readonly<EventFeatures>;
   rsvp: Readonly<DraftSettings["rsvp"]>;
+  rsvpsOpen: boolean;
 }>;
 const issuedScopes = new WeakSet<EventScope>();
-function issue(slug: string, access: EventScope["access"], settings: DraftSettings): EventScope {
+function issue(slug: string, access: EventScope["access"], settings: DraftSettings, rsvpsOpen = true): EventScope {
   const scope: EventScope = Object.freeze({
-    [brand]: true as const, slug, access,
+    [brand]: true as const, slug, access, rsvpsOpen,
     features: Object.freeze({ ...settings.features }), rsvp: Object.freeze({ ...settings.rsvp }),
   });
   issuedScopes.add(scope);
@@ -52,7 +53,13 @@ export function requireEventFeature(scope: EventScope, feature: keyof EventFeatu
 export async function resolvePublicEventScope(slug: string): Promise<EventScope | null> {
   if (slug === OYSTER_ROAST_EVENT.slug) return OYSTER_ROAST_SCOPE;
   const publication = await getEventPublication(slug);
-  return publication ? issue(publication.slug, "public", publication.snapshot.settings) : null;
+  return publication ? issue(publication.slug, "public", publication.snapshot.settings, publication.rsvpsOpen) : null;
+}
+
+export async function resolveHostEventScope(slug: string): Promise<EventScope | null> {
+  if (!(await isAdminAuthenticated())) throw new Error("Host access required.");
+  const publication = await getHostEventPublication(slug);
+  return publication ? issue(publication.slug, "host", publication.snapshot.settings, publication.rsvpsOpen) : null;
 }
 
 export async function getHostDraftScope(id: string): Promise<EventScope | null> {

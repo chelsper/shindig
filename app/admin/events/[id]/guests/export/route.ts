@@ -1,7 +1,7 @@
 import { isAdminAuthenticated } from "../../../../../../lib/server/admin-session";
 import { isDraftId } from "../../../../../../lib/event-drafts";
 import { draftEventSlug } from "../../../../../../lib/event-routes";
-import { resolvePublicEventScope } from "../../../../../../lib/server/event-scope";
+import { resolveHostEventScope } from "../../../../../../lib/server/event-scope";
 import { listRsvps } from "../../../../../../lib/server/rsvps";
 import { rsvpsToCsv } from "../../../../../../lib/server/rsvp-csv";
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   const { id } = await context.params;
   if (!isDraftId(id)) return new Response("Not found", { status: 404, headers });
   try {
-    const scope = await resolvePublicEventScope(draftEventSlug(id));
+    const scope = await resolveHostEventScope(draftEventSlug(id));
     if (!scope) return new Response("Not found", { status: 404, headers });
     return new Response(rsvpsToCsv(await listRsvps("all", scope)), { headers: { ...headers, "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": 'attachment; filename="event-rsvps.csv"' } });
   } catch { return new Response("Export temporarily unavailable.", { status: 503, headers }); }

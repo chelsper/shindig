@@ -1,7 +1,8 @@
 import "server-only";
 import { isAdminAuthenticated } from "./admin-session";
-import { getPublishedEvent } from "./event-publications";
-import { resolvePublicEventScope } from "./event-scope";
+import { getHostEventPublication } from "./event-publications";
+import { resolveHostEventScope } from "./event-scope";
+import { publicationEvent } from "../event-publication";
 import { isDraftId } from "../event-drafts";
 import { draftEventSlug } from "../event-routes";
 
@@ -11,6 +12,6 @@ export async function getAdminGuestEvent(id: string) {
   if (!(await isAdminAuthenticated())) throw new Error("Host access required.");
   if (!isDraftId(id)) return null;
   const slug = draftEventSlug(id);
-  const [event, scope] = await Promise.all([getPublishedEvent(slug), resolvePublicEventScope(slug)]);
-  return event && scope ? { event, scope } : null;
+  const [publication, scope] = await Promise.all([getHostEventPublication(slug), resolveHostEventScope(slug)]);
+  return publication && scope ? { event: publicationEvent(id, publication.snapshot, publication.rsvpsOpen), scope, publication } : null;
 }

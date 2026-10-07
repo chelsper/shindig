@@ -1,6 +1,51 @@
 # Shindig
 
-## Guest management for published events (Step 5 — current)
+## Event lifecycle controls (Step 6A — current)
+
+Open **Your events → Manage & share** for an event created in Shindig. The review
+now shows **Draft**, **Published**, **Published · RSVPs closed**, or **Unpublished**,
+plus an **Unpublished changes** indicator when saved details, artwork or settings
+differ from the revisions last reviewed. Private working copies remain separate.
+
+- **Close RSVPs** stops both new responses and guest edits. The invitation and
+  Hub stay visible; the private edit link shows the saved attendance read-only.
+  Attending guests can still add the event to their calendar. Hosts can still
+  add/edit/delete responses. **Reopen RSVPs** reverses closure.
+- **Unpublish event** requires a separate confirmation. Public invitation, Hub,
+  private RSVP-update route, artwork, calendar downloads, search/weather access
+  and guest actions become unavailable. The snapshot, artwork, guest data, edit
+  tokens and module content remain stored. Authenticated hosts can still manage
+  responses, export CSV and moderate content through the retained snapshot.
+- **Republish reviewed event** uses the existing explicit review/confirmation of
+  saved details, artwork and settings. It restores the same URLs and private edit
+  links. It does **not** automatically reopen closed RSVPs. Reopening a private
+  event does not publish it or any draft edits.
+- Lifecycle changes and publishing share an optimistic revision check. Stale tabs
+  cannot overwrite a newer host decision. RSVP writes also lock/check the live
+  publication within their SQL statement, preventing a previously open form from
+  saving after closure/unpublication. Errors never become a false success.
+- These controls apply only to new Shindig events. Jasper Shucks' legacy routes,
+  RSVP behavior, presentation and data are unchanged. No automatic date-based
+  transitions, archive/delete-event control, accounts or messages are added.
+- Unpublishing cannot recall information or calendar files already downloaded,
+  screenshots, or content already displayed in a guest's open browser.
+
+**Before deployment:** apply [`015_event_lifecycle.sql`](db/migrations/015_event_lifecycle.sql)
+in the same Neon database as the existing server-only `DATABASE_URL`, after
+migrations 001–014. It adds only `visibility` (`published`/`unpublished`) and
+`rsvps_open` (boolean) to `event_publications`. Existing snapshots default to
+published/open. It is safe to reapply and does not publish drafts, remove data,
+change any guest response, or touch Jasper Shucks. Then deploy the new application.
+Do not use lifecycle controls after rolling back to pre-015 application code:
+older code does not enforce these states. No new packages or environment variables.
+
+Checks: lint, typecheck, full tests, production build and synthetic mobile browser
+verification. The opt-in PostgreSQL workflow below also tests close/reopen,
+unpublish/republish, host access while private, retained tokens/counts, migration
+reapplication, stale scopes, stale publish reviews and rapid repeated controls.
+No production event is changed for testing. Archiving remains a later milestone.
+
+## Guest management for published events (Step 5 — completed)
 
 Open **Your events → Review & publish → View event responses**. The event's
 guest list now supports **Add Guest**, **Edit**, confirmed **Delete**, name search,
@@ -12,7 +57,8 @@ not just the current search. Submitted/updated dates use the event's timezone.
   `/admin/events/[id]/guests/[guestId]/edit`. All navigation stays in that event.
 - Every read/action requires the existing host session. Actions resolve the
   published event again, enforce its party-size limit, and bind every lookup/write
-  to its event slug. Unpublished/missing events cannot fall back to Jasper Shucks.
+  to its event slug. Never-published/missing events cannot fall back to Jasper Shucks.
+  Step 6A also retains host access to previously published events while private.
 - Hosts can edit names, attendance, party size, comments and name visibility.
   Declines always store null party size and hidden names. Host comments and saved
   visibility preferences remain manageable when guest-facing features are off;
@@ -36,7 +82,7 @@ Quality checks: `npm run lint`, `npm run typecheck`, `npm test`,
 host actions and SQL against an isolated PostgreSQL runtime, with synthetic events
 only. The normal test command skips this one test unless configured:
 
-- Native: use the disposable `shindig_drafts_test` database with migrations 001–014
+- Native: use the disposable `shindig_drafts_test` database with migrations 001–015
   and set `SHINDIG_TEST_PG_SOCKET` to its `/private/tmp/...` Unix socket directory,
   `SHINDIG_TEST_PSQL` to the `psql` executable, and optionally
   `SHINDIG_TEST_PG_PORT` (default 55441). Its random fixtures are cleaned up.
@@ -49,8 +95,7 @@ With either option, run `npm test -- tests/event-guests-postgres.test.ts` (or th
 whole suite). Browser checks separately exercise the actual components with
 synthetic actions, including confirmation/cancel, failure preservation, pending
 states and mobile layout. These tests do not call production Neon or publish a
-real event. Closing RSVPs, unpublishing/archiving, custom URLs and QR codes remain
-future milestones.
+real event. Archiving, custom URLs and QR codes remain future milestones.
 
 ## Review, publish & share (Step 4B — completed)
 
@@ -381,6 +426,9 @@ Set `ADMIN_PASSWORD` to a strong, unique password to enable the private host das
    - [`db/migrations/010_create_event_drafts.sql`](db/migrations/010_create_event_drafts.sql)
    - [`db/migrations/011_event_draft_artwork.sql`](db/migrations/011_event_draft_artwork.sql)
    - [`db/migrations/012_event_draft_settings.sql`](db/migrations/012_event_draft_settings.sql)
+   - [`db/migrations/013_event_data_scopes.sql`](db/migrations/013_event_data_scopes.sql)
+   - [`db/migrations/014_event_publications.sql`](db/migrations/014_event_publications.sql)
+   - [`db/migrations/015_event_lifecycle.sql`](db/migrations/015_event_lifecycle.sql)
 3. In the Neon project dashboard, choose **Connect** and copy the pooled Postgres connection string.
 4. Put that connection string in `.env.local`:
 

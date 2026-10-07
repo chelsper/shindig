@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), pub: vi.fn(), config: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn(), revalidate: vi.fn(), redirect: vi.fn() }));
 vi.mock("../lib/server/admin-session", () => ({ isAdminAuthenticated: mocks.auth }));
-vi.mock("../lib/server/event-publications", () => ({ getEventPublication: mocks.pub, getPublishedEvent: mocks.config }));
+vi.mock("../lib/server/event-publications", () => ({ getEventPublication: mocks.pub, getHostEventPublication: mocks.pub, getPublishedEvent: mocks.config }));
 vi.mock("../lib/server/rsvps", () => ({ createRsvpForAdmin: mocks.create, updateRsvpForAdmin: mocks.update, deleteRsvpForAdmin: mocks.remove }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));

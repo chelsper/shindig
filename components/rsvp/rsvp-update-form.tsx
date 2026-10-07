@@ -8,6 +8,7 @@ import { updateEventRsvp } from "../../app/e/actions";
 import { OYSTER_ROAST_EVENT, type OysterRoastEvent } from "../../lib/oyster-roast-event";
 import { CalendarActions } from "../calendar-actions";
 import { EventHubLink } from "../event-hub-link";
+import { RsvpsClosed } from "./rsvps-closed";
 
 type GuestRsvp = {
   guestName: string;
@@ -43,10 +44,10 @@ export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT 
   const [isPending, startTransition] = useTransition();
   const submittingRef = useRef(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function handleSubmit(formEvent: FormEvent<HTMLFormElement>) {
+    formEvent.preventDefault();
 
-    if (!name.trim() || submittingRef.current) return;
+    if (event.rsvpsOpen === false || !name.trim() || submittingRef.current) return;
 
     submittingRef.current = true;
     setErrorMessage(null);
@@ -104,7 +105,7 @@ export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT 
             {event.title}
           </p>
           <h1 className="font-serif mt-3 text-4xl tracking-[-0.04em] sm:text-5xl">
-            Update your RSVP
+            {event.rsvpsOpen === false ? "Your RSVP" : "Update your RSVP"}
           </h1>
           <p className="mt-3 text-sm text-[#202523]/58">
             {event.dateLabel} · {event.timeLabel}
@@ -112,7 +113,16 @@ export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT 
         </section>
 
         <section className="rounded-[1.75rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 shadow-[0_18px_50px_rgba(41,56,53,0.10)] backdrop-blur sm:p-8">
-          {updated ? (
+          {event.rsvpsOpen === false ? (
+            <>
+              <RsvpsClosed />
+              <p className="mt-3 text-center text-sm leading-6">
+                Your saved response: {initialRsvp.attending ? `Attending · ${initialRsvp.partySize} ${initialRsvp.partySize === 1 ? "guest" : "guests"}` : "Can’t Make It"}.
+              </p>
+              {initialRsvp.attending && <CalendarActions editToken={token} event={event} />}
+              <div className="mt-5 text-center"><EventHubLink label="View Event Hub" href={event.eventHub.path} /></div>
+            </>
+          ) : updated ? (
             <div aria-live="polite" className="py-4 text-center sm:py-6">
               <div className="success-mark mx-auto mb-5 flex size-16 items-center justify-center rounded-full bg-[#dceaf7] text-[#214e91]">
                 <svg aria-hidden="true" className="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">

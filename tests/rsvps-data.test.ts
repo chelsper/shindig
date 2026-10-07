@@ -61,6 +61,7 @@ describe("saveRsvp", () => {
     const [queryParts, ...values] = mocks.sql.mock.calls[0];
     expect(queryParts.join("?")).toContain("ON CONFLICT (id) DO NOTHING");
     expect(values).toEqual([
+      rsvp.eventSlug,
       rsvp.id,
       rsvp.eventSlug,
       rsvp.guestName,
@@ -69,6 +70,7 @@ describe("saveRsvp", () => {
       rsvp.displayOnGuestList,
       rsvp.comment,
       editTokenHash,
+      true,
     ]);
   });
 
@@ -148,6 +150,7 @@ describe("guest RSVP access", () => {
     expect(queryParts.join("?")).toContain("updated_at = now()");
     expect(queryParts.join("?")).toContain("edit_token_hash =");
     expect(values).toEqual([
+      "oyster-roast-2026",
       declinedRsvp.guestName,
       false,
       null,
@@ -155,6 +158,7 @@ describe("guest RSVP access", () => {
       null,
       "oyster-roast-2026",
       editTokenHash,
+      true,
     ]);
   });
 

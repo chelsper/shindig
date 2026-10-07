@@ -70,11 +70,12 @@ describe("scoped RSVP rules and token access", () => {
     await expect(rsvps.updateRsvpForGuest(token, { ...input, partySize: 5 }, event)).rejects.toThrow("Invalid RSVP");
     expect(mocks.sql).not.toHaveBeenCalled();
     await rsvps.updateRsvpForGuest(token, input, event);
-    expect(mocks.sql.mock.lastCall!.slice(1)).toEqual([input.guestName, true, 3, true, null, event.slug, token]);
+    expect(mocks.sql.mock.lastCall!.slice(1)).toEqual([event.slug, input.guestName, true, 3, true, null, event.slug, token, false]);
+    expect(mocks.sql.mock.lastCall![0].join("?")).toContain("AND rsvps_open FOR SHARE");
   });
   it("normalizes declined party size and visibility even when forged values are supplied", async () => {
     await rsvps.updateRsvpForGuest(token, { ...input, attending: false, partySize: 19 }, await scope());
-    expect(mocks.sql.mock.lastCall!.slice(1, 6)).toEqual([input.guestName, false, null, false, null]);
+    expect(mocks.sql.mock.lastCall!.slice(2, 7)).toEqual([input.guestName, false, null, false, null]);
   });
   it("binds initial writes and duplicate retry lookups to the same resolved event", async () => {
     const event = await scope();

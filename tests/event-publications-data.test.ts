@@ -7,8 +7,8 @@ vi.mock("../lib/server/admin-session", () => ({ isAdminAuthenticated: mocks.auth
 vi.mock("../lib/server/event-drafts", () => ({ getEventDraft: mocks.draft }));
 vi.mock("../lib/server/event-draft-artwork", () => ({ getDraftArtwork: mocks.artwork, draftImageStorageToken: () => "private-token" }));
 vi.mock("../lib/server/event-draft-settings", () => ({ getDraftSettings: mocks.settings }));
-import { getEventPublication, getPublishedEvent, listHostPublications, publishEventRecord } from "../lib/server/event-publications";
-import { resolvePublicEventScope, assertEventScope } from "../lib/server/event-scope";
+import { getEventPublication, getHostEventPublication, getPublishedEvent, listHostPublications, publishEventRecord, changeEventLifecycleRecord } from "../lib/server/event-publications";
+import { resolvePublicEventScope, resolveHostEventScope, assertEventScope } from "../lib/server/event-scope";
 import { parsePublicationSnapshot } from "../lib/event-publication";
 import { draft, eventId, eventSlug, snapshot, versions, publication } from "./fixtures/publication";
 beforeEach(() => {
@@ -41,6 +41,64 @@ describe("public publication boundary", () => {
     await expect(getPublishedEvent(eventSlug)).rejects.toThrow();
     mocks.sql.mockRejectedValue(new Error("database-down")); await expect(getPublishedEvent(eventSlug)).rejects.toThrow();
   });
+  it("excludes unpublished snapshots from every public resolution but permits authenticated host management", async () => {
+    mocks.sql.mockResolvedValue([{ ...publication, visibility: "unpublished", rsvpsOpen: false }]);
+    expect(await getEventPublication(eventSlug)).toBeNull();
+    expect(await getPublishedEvent(eventSlug)).toBeNull();
+    expect(await resolvePublicEventScope(eventSlug)).toBeNull();
+    expect(mocks.sql.mock.lastCall![0].join("?")).toContain("AND visibility = 'published'");
+    expect(await getHostEventPublication(eventSlug)).toMatchObject({ visibility: "unpublished", rsvpsOpen: false });
+    expect(await resolveHostEventScope(eventSlug)).toMatchObject({ access: "host", slug: eventSlug, rsvpsOpen: false });
+  });
+  it("keeps a closed event public while projecting the closed RSVP state", async () => {
+    mocks.sql.mockResolvedValue([{ ...publication, rsvpsOpen: false }]);
+    expect(await getPublishedEvent(eventSlug)).toMatchObject({ title: "Garden Supper", rsvpsOpen: false });
+    expect(await resolvePublicEventScope(eventSlug)).toMatchObject({ rsvpsOpen: false, access: "public" });
+  });
+  it("requires host authentication for inactive snapshots and scopes", async () => {
+    mocks.auth.mockResolvedValue(false);
+    await expect(getHostEventPublication(eventSlug)).rejects.toThrow("Host access");
+    await expect(resolveHostEventScope(eventSlug)).rejects.toThrow("Host access");
+    expect(mocks.sql).not.toHaveBeenCalled();
+  });
+  it.each([{ visibility: "unknown" }, { rsvpsOpen: "true" }, { sourceRevisions: null }])("fails closed on invalid lifecycle fields %j", async (patch) => {
+    mocks.sql.mockResolvedValue([{ ...publication, ...patch }]);
+    await expect(getEventPublication(eventSlug)).rejects.toThrow("Invalid publication");
+  });
+});
+describe("host lifecycle writes", () => {
+  it("authenticates before any write", async () => {
+    mocks.auth.mockResolvedValue(false);
+    await expect(changeEventLifecycleRecord(eventId, 1, "unpublish")).rejects.toThrow("Host access");
+    expect(mocks.sql).not.toHaveBeenCalled();
+  });
+  it.each([0, -1, 1.5, NaN])("rejects invalid reviewed revision %s", async (revision) => {
+    await expect(changeEventLifecycleRecord(eventId, revision, "close-rsvps")).rejects.toThrow();
+    expect(mocks.sql).not.toHaveBeenCalled();
+  });
+  it("does not accept the legacy event or an arbitrary operation", async () => {
+    await expect(changeEventLifecycleRecord("oyster-roast-2026", 1, "unpublish")).rejects.toThrow();
+    await expect(changeEventLifecycleRecord(eventId, 1, "publish" as never)).rejects.toThrow();
+    expect(mocks.sql).not.toHaveBeenCalled();
+  });
+  it.each(["close-rsvps", "reopen-rsvps", "unpublish"] as const)("sets an explicit %s state with a scoped revision check and no data deletion", async (action) => {
+    mocks.sql.mockResolvedValue([{ revision: 2 }]);
+    expect(await changeEventLifecycleRecord(eventId, 1, action)).toBe(2);
+    const [parts, ...values] = mocks.sql.mock.lastCall!, query = parts.join("?");
+    expect(query).toContain("event_id = ?::uuid AND revision = ?");
+    expect(query).toContain("revision = revision + 1");
+    expect(query).not.toMatch(/DELETE|INSERT|snapshot =|published_at =/);
+    expect(values).toContain(eventId); expect(values).toContain(action);
+  });
+  it("does not report success for stale revisions or missing publications", async () => {
+    expect(await changeEventLifecycleRecord(eventId, 1, "close-rsvps")).toBeNull();
+  });
+  it("shows pending draft changes without treating lifecycle revision changes as new content", async () => {
+    mocks.sql.mockResolvedValue([{ id: eventId, slug: eventSlug, title: "Garden Supper", publishedAt: publication.publishedAt, visibility: "unpublished", rsvpsOpen: false, sourceRevisions: versions, details: 2, artwork: 0, settings: 3 }]);
+    expect(await listHostPublications()).toEqual([expect.objectContaining({ visibility: "unpublished", rsvpsOpen: false, hasUnpublishedChanges: false })]);
+    mocks.sql.mockResolvedValue([{ id: eventId, slug: eventSlug, title: "Garden Supper", publishedAt: publication.publishedAt, sourceRevisions: versions, details: 3, artwork: 0, settings: 3 }]);
+    expect((await listHostPublications())[0].hasUnpublishedChanges).toBe(true);
+  });
 });
 describe("explicit host publishing", () => {
   it("requires host authentication before private reads, artwork checks or writes", async () => {
@@ -64,6 +122,7 @@ describe("explicit host publishing", () => {
     const [strings, ...values] = mocks.sql.mock.lastCall!;
     const query = strings.join("?");
     for (const text of ["e.revision = ?", "s.revision = ?", "coalesce(a.revision, 0) = ?", "coalesce(p.revision, 0) = ?", "ON CONFLICT (event_id)", "WHERE event_publications.revision = ?"]) expect(query).toContain(text);
+    expect(query).toContain("visibility = 'published'"); expect(query).not.toContain("rsvps_open =");
     const stored = JSON.parse(values[1]); expect(stored).toEqual(parsePublicationSnapshot(eventId, snapshot)); expect(stored.details.id).toBeUndefined();
     expect(values).toContain(eventSlug); expect(values).not.toContain("oyster-roast-2026");
   });
@@ -76,6 +135,10 @@ describe("explicit host publishing", () => {
     expect(await publishEventRecord(eventId, versions, null)).toBeNull();
     mocks.sql.mockResolvedValueOnce([]).mockResolvedValueOnce([{ ...publication, snapshot: { ...snapshot, details: { ...draft, title: "Other version" } } }]);
     expect(await publishEventRecord(eventId, versions, null)).toBeNull();
+  });
+  it("does not mistake a lifecycle revision bump for a successful publish retry", async () => {
+    mocks.sql.mockResolvedValueOnce([]).mockResolvedValueOnce([{ ...publication, revision: 2, rsvpsOpen: false }]);
+    expect(await publishEventRecord(eventId, { ...versions, publication: 1 }, null)).toBeNull();
   });
   it("checks only saved private artwork and refuses unavailable/foreign images", async () => {
     const path = `event-drafts/${eventId}/invitation/7ac5edab-22aa-447d-8931-91132a16798a.png`;

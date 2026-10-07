@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 const mocks = vi.hoisted(() => ({ pub: vi.fn(), auth: vi.fn(), song: vi.fn(), question: vi.fn(), applause: vi.fn(), answer: vi.fn(), remove: vi.fn(), update: vi.fn(), poll: vi.fn(), status: vi.fn(), revalidate: vi.fn(), track: vi.fn() }));
-vi.mock("../lib/server/event-publications", () => ({ getEventPublication: mocks.pub }));
+vi.mock("../lib/server/event-publications", () => ({ getEventPublication: mocks.pub, getHostEventPublication: mocks.pub }));
 vi.mock("../lib/server/admin-session", () => ({ isAdminAuthenticated: mocks.auth }));
 vi.mock("../lib/server/playlist", () => ({ createPlaylistSuggestion: mocks.song, deletePlaylistSuggestion: mocks.remove }));
 vi.mock("../lib/server/questions", () => ({ insertGuestQuestion: mocks.question, saveQuestionAnswer: mocks.answer, removeQuestion: mocks.remove }));
@@ -57,6 +57,13 @@ describe("published host moderation", () => {
     expect((await setHostPollStatus(pollKey, "OPEN", false, eventSlug)).ok).toBe(true); expect(mocks.status.mock.lastCall![2].slug).toBe(eventSlug);
     expect((await deleteGuestQuestion(otherEventId, true, eventSlug)).ok).toBe(true); expect(mocks.remove.mock.lastCall![1].slug).toBe(eventSlug);
     expect(await deleteAdminPlaylistSuggestion(otherEventId, { error: null }, deletion, eventSlug)).toEqual({ error: null }); expect(mocks.remove.mock.lastCall![1].slug).toBe(eventSlug);
+  });
+  it("keeps content moderation available to hosts while the event is unpublished", async () => {
+    mocks.pub.mockResolvedValue({ ...publication, visibility: "unpublished", rsvpsOpen: false });
+    expect((await answerGuestQuestion(otherEventId, { answer: "Saved privately", isPublished: false }, eventSlug)).ok).toBe(true);
+    expect(mocks.answer.mock.lastCall![2]).toMatchObject({ slug: eventSlug, access: "host" });
+    expect((await createHostUpdate(otherEventId, { message: "Ready for later." }, eventSlug)).ok).toBe(true);
+    expect(mocks.update.mock.lastCall![2]).toMatchObject({ slug: eventSlug, access: "host" });
   });
   it("requires host authentication before resolving events or mutating any module", async () => {
     mocks.auth.mockResolvedValue(false);

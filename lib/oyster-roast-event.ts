@@ -74,6 +74,7 @@ export type EventConfiguration =
     features: EventFeatures;
     coordinates: { latitude: number; longitude: number } | null;
     rsvp?: { maxPartySize: number; allowComments: boolean; guestListDefaultVisible: boolean };
+    rsvpsOpen?: boolean;
     eventHub: { path: string; headerImage: { url: string; alt: string; focalX: number; focalY: number; zoomPercent: number } };
     invitation: {
       eyebrow: string; timeNote: string; rsvpHeading: string;

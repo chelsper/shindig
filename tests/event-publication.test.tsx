@@ -12,6 +12,7 @@ import { RsvpUpdateForm } from "../components/rsvp/rsvp-update-form";
 import { EventPublishReview } from "../components/admin/event-publish-review";
 import { createOysterRoastIcs, getRsvpUpdateUrl, calendarPath } from "../lib/calendar";
 import { eventId, eventSlug, draft, snapshot } from "./fixtures/publication";
+import { eventStatus, hasUnpublishedChanges } from "../lib/event-lifecycle";
 
 describe("publication validation and public projection", () => {
   it("requires real calendar times, address and valid settings", () => {
@@ -44,6 +45,23 @@ describe("publication validation and public projection", () => {
 });
 describe("published guest screens and calendar", () => {
   const event = publicationEvent(eventId, snapshot);
+  it("shows a closed message instead of the invitation form without removing the Hub link", () => {
+    const html = renderToStaticMarkup(<InvitationPage event={{ ...event, rsvpsOpen: false }} persistenceDisabled={false} />);
+    expect(html).toContain("RSVPs are closed"); expect(html).toContain(`href="/e/${eventSlug}/event"`);
+    expect(html).not.toContain("<form"); expect(html).not.toContain("Submit RSVP");
+  });
+  it.each([true, false])("keeps closed private responses readable with calendar only for attending=%s", (attending) => {
+    const html = renderToStaticMarkup(<RsvpUpdateForm event={{ ...event, rsvpsOpen: false }} token={"a".repeat(43)} initialRsvp={{ guestName: "Guest", attending, partySize: attending ? 2 : null, displayOnGuestList: false, comment: null }} />);
+    expect(html).toContain("RSVPs are closed"); expect(html).toContain("Your saved response"); expect(html).not.toContain("<form");
+    expect(html.includes("Add to Calendar")).toBe(attending); expect(html).toContain(`href="/e/${eventSlug}/event"`);
+  });
+  it("distinguishes unpublished data from a draft and requires review to republish", () => {
+    const html = renderToStaticMarkup(<EventPublishReview draft={draft} artwork={{ settings: snapshot.artwork, revision: 0 }} settings={{ settings: snapshot.settings, revision: 3 }} live={{ revision: 5, publishedAt: "2026-10-06", coordinates: null, visibility: "unpublished", rsvpsOpen: false, hasUnpublishedChanges: true }} />);
+    expect(html).toContain("Unpublished changes"); expect(html).toContain("Your gathering is private again"); expect(html).toContain("Republish reviewed event");
+    expect(html).toContain("RSVPs will remain closed"); expect(html).toContain(`href="/admin/events/${eventId}/guests"`);
+    expect(html).not.toContain(`href="/e/${eventSlug}`); expect(html).not.toContain("Your gathering is live");
+    expect(html).not.toContain("Confirm: Unpublish");
+  });
   it("links directly between invitation and Hub without requiring another RSVP", () => {
     const html = renderToStaticMarkup(<InvitationPage event={event} persistenceDisabled={false} />);
     expect(html).toContain(`href="/e/${eventSlug}/event"`); expect(html).toContain("Garden Supper");
@@ -69,7 +87,20 @@ describe("published guest screens and calendar", () => {
     const html = renderToStaticMarkup(<EventPublishReview {...props} live={null} />);
     expect(html).toMatch(/disabled=""[^>]*>Publish event/); expect(html).toContain("Make this version public");
     expect(html).not.toContain(`href="/e/${eventSlug}`);
-    const live = renderToStaticMarkup(<EventPublishReview {...props} live={{ revision: 1, publishedAt: "2026-10-06", coordinates: null }} />);
+    const live = renderToStaticMarkup(<EventPublishReview {...props} live={{ revision: 1, publishedAt: "2026-10-06", coordinates: null, visibility: "published", rsvpsOpen: true, hasUnpublishedChanges: false }} />);
     expect(live).toContain(`href="/e/${eventSlug}/event"`); expect(live).toContain("Publish changes");
+  });
+});
+describe("status labels and saved change detection", () => {
+  it("keeps visibility and RSVP admission as independent states", () => {
+    expect(eventStatus(null)).toBe("Draft");
+    expect(eventStatus({ visibility: "published", rsvpsOpen: true })).toBe("Published");
+    expect(eventStatus({ visibility: "published", rsvpsOpen: false })).toBe("Published · RSVPs closed");
+    expect(eventStatus({ visibility: "unpublished", rsvpsOpen: true })).toBe("Unpublished");
+  });
+  it("detects saved changes to each independently reviewed part", () => {
+    const saved = { details: 2, artwork: 0, settings: 3 };
+    expect(hasUnpublishedChanges(saved, saved)).toBe(false);
+    for (const key of ["details", "artwork", "settings"] as const) expect(hasUnpublishedChanges({ ...saved, [key]: saved[key] + 1 }, saved)).toBe(true);
   });
 });

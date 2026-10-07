@@ -6,11 +6,13 @@ import { isValidRsvpEditToken } from "../../lib/rsvp-edit-token";
 import { hashRsvpEditToken } from "../../lib/server/rsvp-edit-token";
 import { validateRsvpSubmission, validateRsvpUpdate } from "../../lib/server/rsvp-validation";
 import { saveRsvp, updateRsvpForGuest } from "../../lib/server/rsvps";
+import { RSVP_CLOSED_MESSAGE } from "../../lib/event-lifecycle";
 
 export async function submitEventRsvp(slug: string, input: unknown): Promise<SubmitRsvpResult> {
   try {
     const scope = await resolvePublicEventScope(slug);
     if (!scope) return { ok: false, message: "This event is not available." };
+    if (!scope.rsvpsOpen) return { ok: false, message: RSVP_CLOSED_MESSAGE };
     const parsed = validateRsvpSubmission(input, { slug: scope.slug, rules: { ...scope.rsvp, guestListEnabled: scope.features.guestList } });
     if (!parsed.success) return { ok: false, message: parsed.message };
     const token = (input as Record<string, unknown>).editToken;
@@ -24,6 +26,7 @@ export async function updateEventRsvp(slug: string, input: unknown): Promise<Upd
   try {
     const scope = await resolvePublicEventScope(slug);
     if (!scope) return { ok: false, message: "This event is not available." };
+    if (!scope.rsvpsOpen) return { ok: false, message: RSVP_CLOSED_MESSAGE };
     const token = input && typeof input === "object" ? (input as Record<string, unknown>).editToken : null;
     if (!isValidRsvpEditToken(token)) return { ok: false, message: "This private update link is not available." };
     const parsed = validateRsvpUpdate(input, { ...scope.rsvp, guestListEnabled: scope.features.guestList });

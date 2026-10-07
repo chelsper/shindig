@@ -105,7 +105,13 @@ export async function saveRsvp(rsvp: ValidatedRsvp,
   }
 
   const sql = neon(databaseUrl);
+  // Serialize guest writes with lifecycle changes. Checking only the previously
+  // resolved scope would let a stale/in-flight form save after the host closes.
   const rows = await sql`
+    WITH admission AS MATERIALIZED (
+      SELECT slug FROM event_publications WHERE slug = ${eventSlug}
+        AND visibility = 'published' AND rsvps_open FOR SHARE
+    )
     INSERT INTO rsvps (
       id,
       event_slug,
@@ -116,7 +122,7 @@ export async function saveRsvp(rsvp: ValidatedRsvp,
       comment,
       edit_token_hash
     )
-    VALUES (
+    SELECT
       ${rsvp.id}::uuid,
       ${eventSlug},
       ${rsvp.guestName},
@@ -125,7 +131,7 @@ export async function saveRsvp(rsvp: ValidatedRsvp,
       ${rsvp.displayOnGuestList},
       ${rsvp.comment},
       ${editTokenHash}
-    )
+    WHERE ${eventSlug === OYSTER_ROAST_SCOPE.slug} OR EXISTS (SELECT 1 FROM admission)
     ON CONFLICT (id) DO NOTHING
     RETURNING
       id::text AS id,
@@ -193,6 +199,10 @@ export async function updateRsvpForGuest(editTokenHash: string,
   rsvp = fieldsForEvent(rsvp, scope);
   const sql = neon(getDatabaseUrl());
   const rows = await sql`
+    WITH admission AS MATERIALIZED (
+      SELECT slug FROM event_publications WHERE slug = ${eventSlug}
+        AND visibility = 'published' AND rsvps_open FOR SHARE
+    )
     UPDATE rsvps
     SET
       guest_name = ${rsvp.guestName},
@@ -203,6 +213,7 @@ export async function updateRsvpForGuest(editTokenHash: string,
       updated_at = now()
     WHERE event_slug = ${eventSlug}
       AND edit_token_hash = ${editTokenHash}
+      AND (${eventSlug === OYSTER_ROAST_SCOPE.slug} OR EXISTS (SELECT 1 FROM admission))
     RETURNING
       guest_name AS "guestName",
       attending,

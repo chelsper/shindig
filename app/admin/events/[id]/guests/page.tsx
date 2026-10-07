@@ -8,8 +8,8 @@ import { HostPollsManager } from "../../../../../components/admin/host-polls-man
 import { PlaylistDeleteButton } from "../../../../../components/admin/playlist-delete-button";
 import { TrackDetails } from "../../../../../components/music/track-details";
 import { isAdminAuthenticated } from "../../../../../lib/server/admin-session";
-import { getPublishedEvent } from "../../../../../lib/server/event-publications";
-import { resolvePublicEventScope } from "../../../../../lib/server/event-scope";
+import { getAdminGuestEvent } from "../../../../../lib/server/admin-event-guests";
+import { eventStatus } from "../../../../../lib/event-lifecycle";
 import { isDraftId } from "../../../../../lib/event-drafts";
 import { draftEventSlug } from "../../../../../lib/event-routes";
 import { listRsvps, getRsvpSummary } from "../../../../../lib/server/rsvps";
@@ -32,10 +32,10 @@ export default async function EventGuests({ params, searchParams }: { params: Pr
   const { filter, q } = guestListQuery(search);
   const view = views.find((v) => v === requested) ?? "rsvps";
   let data;
-  try { data = await Promise.all([getPublishedEvent(slug), resolvePublicEventScope(slug)]); }
+  try { data = await getAdminGuestEvent(id); }
   catch { return <ContentShell title="Responses couldn’t load" contextLabel="Your event" description="Please try again shortly." dashboardHref={`/admin/events/${id}/publish`}>{null}</ContentShell>; }
-  const [event, scope] = data;
-  if (!event || !scope) notFound();
+  if (!data) notFound();
+  const { event, scope, publication } = data;
   const failed = <p role="alert">This section couldn’t load. Please refresh and try again.</p>;
   let content;
     if (view === "questions") {
@@ -62,6 +62,7 @@ export default async function EventGuests({ params, searchParams }: { params: Pr
     }
       }
   return <ContentShell title={labels[view]} contextLabel={event.title} description="Only this event’s responses and content. Guest names on private questions stay here." dashboardHref={`/admin/events/${id}/publish`}>
+    <p className="mb-5 text-sm text-[#202523]/65">{eventStatus(publication)} · Host management remains available.</p>
     <nav className="mb-6 flex flex-wrap gap-2" aria-label="Manage this event">{views.map((v) => <Link key={v} href={`/admin/events/${id}/guests?view=${v}`} aria-current={v === view ? "page" : undefined} className={`inline-flex min-h-11 items-center rounded-full border border-[#355f9e]/25 px-4 text-sm ${v === view ? "bg-[#e9f2f8]" : ""}`}>{labels[v]}</Link>)}</nav>
     {view !== "rsvps" && !event.features[view] && <p className="mb-5 rounded-xl bg-[#fff4d8] p-4 text-sm">This feature is currently hidden on the public Hub. Existing content remains manageable here.</p>}
     <HostEventProvider slug={slug} timeZone={event.timeZone}>{content}</HostEventProvider>

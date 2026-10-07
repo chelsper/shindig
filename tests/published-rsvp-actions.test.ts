@@ -12,6 +12,11 @@ beforeEach(() => {
   mocks.save.mockImplementation(async (rsvp) => ({ status: "created", rsvp })); mocks.update.mockImplementation(async (_hash, rsvp) => rsvp);
 });
 describe("published event RSVP actions", () => {
+  it("blocks new responses and guest edits when the host closes RSVPs", async () => {
+    mocks.publication.mockResolvedValue({ ...publication, rsvpsOpen: false });
+    for (const action of [submitEventRsvp, updateEventRsvp]) expect(await action(eventSlug, input)).toMatchObject({ ok: false, message: expect.stringContaining("closed RSVPs") });
+    expect(mocks.save).not.toHaveBeenCalled(); expect(mocks.update).not.toHaveBeenCalled();
+  });
   it("saves to the server-resolved event with its rules, trimming names and stripping disabled comments", async () => {
     const result = await submitEventRsvp(eventSlug, input);
     expect(result).toMatchObject({ ok: true, persisted: true, rsvp: { guestName: "Guest", partySize: 3, comment: null } });

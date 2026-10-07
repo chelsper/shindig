@@ -10,10 +10,12 @@ import { DRAFT_HUB_MODULES, type DraftSettingsRecord } from "../../lib/event-dra
 import { publicationProblems, parseCoordinates, type Coordinates } from "../../lib/event-publication";
 import { draftEventSlug, eventPaths } from "../../lib/event-routes";
 import { SHINDIG_SITE } from "../../lib/site";
+import { eventStatus, type EventLifecycle } from "../../lib/event-lifecycle";
+import { EventLifecycleControls } from "./event-lifecycle-controls";
 
 export function EventPublishReview({ draft, artwork, settings, live, musicConfigured = true }: {
   draft: EventDraft; artwork: DraftArtworkRecord; settings: DraftSettingsRecord;
-  live: { revision: number; publishedAt: string; coordinates: Coordinates | null } | null;
+  live: (EventLifecycle & { revision: number; publishedAt: string; coordinates: Coordinates | null; hasUnpublishedChanges: boolean }) | null;
   musicConfigured?: boolean;
 }) {
   const base = `/admin/events/${draft.id}`, paths = eventPaths(draftEventSlug(draft.id));
@@ -29,8 +31,11 @@ export function EventPublishReview({ draft, artwork, settings, live, musicConfig
   const button = "inline-flex min-h-11 items-center text-sm font-semibold text-[#355f9e] underline underline-offset-4";
   return <div className="space-y-6 pb-10">
     <nav className="flex flex-wrap gap-x-5" aria-label="Event setup"><Link className={button} href="/admin/events">All events</Link><Link className={button} href={base}>Details</Link><Link className={button} href={`${base}/artwork`}>Artwork</Link><Link className={button} href={`${base}/settings`}>RSVP &amp; Hub</Link><Link className={button} href={`${base}/preview`}>Private preview</Link></nav>
-    {(live || success) && <section aria-label="Share your event" className="rounded-3xl border border-[#285630]/20 bg-[#eff5e8] p-5 sm:p-7">
-      <h2 className="font-serif text-3xl">Your gathering is live</h2><p className="mt-2 text-sm leading-6">Share either link. Guests can RSVP from the invitation and return to the Hub anytime.</p>
+    <div role="status" className="text-sm leading-6 text-[#202523]/70"><span className="font-semibold">{eventStatus(live)}</span>{live && <span> · {live.hasUnpublishedChanges ? "Unpublished changes — review the saved version below." : "Saved draft matches the last published version."}</span>}</div>
+    {live && <EventLifecycleControls key={live.revision} id={draft.id} live={live} />}
+    {live?.visibility === "unpublished" && !success && <section className="rounded-3xl border border-[#b78228]/25 bg-[#fff4d8] p-5 sm:p-7"><h2 className="font-serif text-2xl">Your gathering is private again</h2><p className="mt-2 text-sm leading-6">Shared links are unavailable. Nothing has been deleted. Review the saved version below before republishing; the same links and guest update links will work again.</p><Link className={button} href={`${base}/guests`}>Manage saved responses &amp; content →</Link></section>}
+    {(live?.visibility === "published" || success) && <section aria-label="Share your event" className="rounded-3xl border border-[#285630]/20 bg-[#eff5e8] p-5 sm:p-7">
+      <h2 className="font-serif text-3xl">Your gathering is live</h2><p className="mt-2 text-sm leading-6">Share either link. {live?.rsvpsOpen === false ? "RSVPs and guest edits are closed; guests can still visit the invitation and Hub." : "Guests can RSVP from the invitation and return to the Hub anytime."}</p>
       {([['Invitation', paths.invitation], ['Event Hub', paths.hub]] as const).map(([label, path]) => <div key={label} className="mt-4"><p className="text-xs font-bold uppercase tracking-wider">{label}</p><a className={`${button} break-all`} href={path} target="_blank" rel="noreferrer">{new URL(path, SHINDIG_SITE.url).toString()} ↗</a><button type="button" className="ml-3 min-h-11 text-sm underline" onClick={() => { void navigator.clipboard.writeText(new URL(path, SHINDIG_SITE.url).toString()).then(() => setMessage(`${label} link copied.`)).catch(() => setMessage("Select and copy the link above.")); }}>Copy link</button></div>)}
       <Link className={button} href={`${base}/guests`}>View event responses →</Link>
       <p className="mt-3 text-xs leading-5">Saved draft edits stay private until you publish changes. Previously shared links remain the same.</p>
@@ -62,7 +67,8 @@ export function EventPublishReview({ draft, artwork, settings, live, musicConfig
       <h2 className="font-serif text-2xl">Ready to invite your people?</h2>
       {problems.length > 0 && <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-[#843528]">{problems.map((problem) => <li key={problem}>{problem}</li>)}</ul>}
       <label className="mt-4 flex min-h-12 items-start gap-3 text-sm leading-6"><input type="checkbox" className="mt-1 size-5 shrink-0 accent-[#355f9e]" checked={confirmed} disabled={pending} onChange={(e) => setConfirmed(e.target.checked)} /><span>I reviewed the saved details, artwork and settings. Make this version public to anyone with the link.</span></label>
-      <button className="primary-button mt-4 w-full" disabled={!confirmed || problems.length > 0 || pending} type="submit">{pending ? "Publishing…" : live ? "Publish changes" : "Publish event"}</button>
+      {live?.rsvpsOpen === false && <p className="mt-3 text-sm leading-6">RSVPs will remain closed after publishing. Use Reopen RSVPs above when you’re ready.</p>}
+      <button className="primary-button mt-4 w-full" disabled={!confirmed || problems.length > 0 || pending} type="submit">{pending ? "Publishing…" : live?.visibility === "unpublished" ? "Republish reviewed event" : live ? "Publish changes" : "Publish event"}</button>
       <p className="mt-3 text-xs leading-5 text-[#202523]/60">No invitations or messages will be sent. Jasper Shucks will not change.</p>
     </form>}
     {message && <p role="status" className="rounded-2xl bg-[#e9f2f8] p-4 text-sm leading-6">{message}</p>}

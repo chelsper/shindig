@@ -42,7 +42,7 @@ export function parsePublicationSnapshot(id: string, input: unknown): Publicatio
 
 // Only public presentation leaves this function. Storage paths, draft revisions,
 // admin data and unpublished edits never become client props.
-export function publicationEvent(id: string, snapshot: PublicationSnapshot): EventConfiguration {
+export function publicationEvent(id: string, snapshot: PublicationSnapshot, rsvpsOpen = true): EventConfiguration {
   const { details: d, artwork: art, settings, coordinates } = snapshot;
   const slug = draftEventSlug(id), paths = eventPaths(slug);
   const format = (options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-US", { ...options, timeZone: d.timeZone }).format(new Date(d.startsAtUtc!));
@@ -55,7 +55,7 @@ export function publicationEvent(id: string, snapshot: PublicationSnapshot): Eve
     timeLabel: format({ hour: "numeric", minute: "2-digit", timeZoneName: "short" }),
     websiteUrl: new URL(paths.invitation, SHINDIG_SITE.url).toString(),
     calendarUid: `${slug}@haveashindig.com`, calendarFilename: "shindig-event.ics",
-    features: settings.features, rsvp: settings.rsvp,
+    features: settings.features, rsvp: settings.rsvp, rsvpsOpen,
     invitation: { eyebrow: d.hostName ? `Hosted by ${d.hostName}` : "You’re invited", timeNote: "", rsvpHeading: "Will you join us?",
       imageUrl: art.invitation.path ? image("invitation") : "", imageAlt: art.invitation.alt, imageWidth: 1429, imageHeight: 2000 },
     eventHub: { path: paths.hub, headerImage: {

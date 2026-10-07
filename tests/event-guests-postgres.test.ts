@@ -14,11 +14,12 @@ vi.mock("next/navigation", () => ({ redirect: (url: string) => { throw new Error
 vi.mock("@neondatabase/serverless", () => ({ neon: () => query }));
 import { saveEventDraftRecord } from "../lib/server/event-drafts";
 import { saveDraftSettingsRecord } from "../lib/server/event-draft-settings";
-import { getPublishedEvent, publishEventRecord } from "../lib/server/event-publications";
-import { resolvePublicEventScope, OYSTER_ROAST_SCOPE } from "../lib/server/event-scope";
+import { getPublishedEvent, getHostEventPublication, publishEventRecord, changeEventLifecycleRecord, listHostPublications } from "../lib/server/event-publications";
+import { resolvePublicEventScope, resolveHostEventScope, OYSTER_ROAST_SCOPE } from "../lib/server/event-scope";
 import { submitEventRsvp, updateEventRsvp } from "../app/e/actions";
 import { createEventGuest, updateEventGuest, deleteEventGuest } from "../app/admin/events/[id]/guests/actions";
-import { getRsvpForAdmin, getRsvpForGuest, getPublicGuestList, getRsvpSummary, listRsvps } from "../lib/server/rsvps";
+import { getRsvpForAdmin, getRsvpForGuest, getPublicGuestList, getRsvpSummary, listRsvps, saveRsvp, updateRsvpForGuest } from "../lib/server/rsvps";
+import { hostScopeArgs } from "../lib/server/host-event";
 import { hashRsvpEditToken } from "../lib/server/rsvp-edit-token";
 import { createOysterRoastIcs } from "../lib/calendar";
 import { draft, snapshot } from "./fixtures/publication";
@@ -131,5 +132,52 @@ describe.skipIf(!socket && !embeddedModule)("real local publish → RSVP → hos
     // Saved draft changes cannot silently change the active guest rules.
     await saveDraftSettingsRecord(ids[0], 1, { ...snapshot.settings, rsvp: { ...snapshot.settings.rsvp, maxPartySize: 1 } });
     expect((await resolvePublicEventScope(slugs[0]))!.rsvp.maxPartySize).toBe(4);
+    expect((await listHostPublications()).find((p) => p.id === ids[0])?.hasUnpublishedChanges).toBe(true);
+
+    // Migration is idempotent and does not change an event's current controls.
+    expect(await changeEventLifecycleRecord(ids[0], 1, "close-rsvps")).toBe(2);
+    if (embedded) await embedded.exec(await readFile("db/migrations/015_event_lifecycle.sql", "utf8"));
+    expect((await getPublishedEvent(slugs[0]))!.rsvpsOpen).toBe(false);
+    expect((await getPublishedEvent(slugs[1]))!.rsvpsOpen).toBe(true);
+    const closedBefore = await listRsvps("all", a);
+    state.authenticated = false;
+    expect((await submitEventRsvp(slugs[0], { ...submit, submissionId: randomUUID() })).ok).toBe(false);
+    expect((await updateEventRsvp(slugs[0], { ...fields, editToken: hiddenToken })).ok).toBe(false);
+    // A scope captured before closure cannot bypass the locked SQL admission.
+    await expect(saveRsvp({ ...fields, id: randomUUID(), eventSlug: slugs[0] }, hashRsvpEditToken("d".repeat(43)), a)).rejects.toThrow();
+    expect(await updateRsvpForGuest(hashRsvpEditToken(hiddenToken), { ...fields, guestName: "Must not save" }, a)).toBeNull();
+    expect(await listRsvps("all", a)).toEqual(closedBefore);
+    state.authenticated = true;
+    await expect(updateEventGuest(ids[0], hiddenId, initial, form({ guestName: "Hidden host edit", displayOnGuestList: "" }))).rejects.toThrow("saved=update");
+    expect(await changeEventLifecycleRecord(ids[0], 2, "reopen-rsvps")).toBe(3);
+    expect((await updateEventRsvp(slugs[0], { ...fields, editToken: hiddenToken })).ok).toBe(true);
+    expect(await changeEventLifecycleRecord(ids[0], 3, "close-rsvps")).toBe(4);
+    expect(await changeEventLifecycleRecord(ids[0], 4, "unpublish")).toBe(5);
+    expect(await getPublishedEvent(slugs[0])).toBeNull();
+    expect(await resolvePublicEventScope(slugs[0])).toBeNull();
+    expect((await submitEventRsvp(slugs[0], submit)).ok).toBe(false);
+    expect((await updateEventRsvp(slugs[0], { ...fields, editToken: hiddenToken })).ok).toBe(false);
+    // Host management still resolves the retained snapshot, never mutable rules.
+    const privateScope = (await resolveHostEventScope(slugs[0]))!;
+    expect(privateScope.access).toBe("host"); expect(privateScope.rsvp.maxPartySize).toBe(4);
+    expect((await hostScopeArgs(slugs[0]))[0]?.slug).toBe(slugs[0]);
+    expect(await getRsvpSummary(privateScope)).toEqual(await getRsvpSummary(a));
+    await expect(createEventGuest(ids[0], randomUUID(), initial, form({ guestName: "Added while private" }))).rejects.toThrow("saved=create");
+    const hiddenPublication = (await getHostEventPublication(slugs[0]))!;
+    expect(hiddenPublication.visibility).toBe("unpublished"); expect(hiddenPublication.rsvpsOpen).toBe(false);
+    // Stale publish/reopen tabs cannot undo a newer unpublish decision.
+    expect(await changeEventLifecycleRecord(ids[0], 3, "reopen-rsvps")).toBeNull();
+    expect(await publishEventRecord(ids[0], { details: 1, artwork: 0, settings: 2, publication: 4 }, null)).toBeNull();
+    expect(await getPublishedEvent(slugs[0])).toBeNull();
+    expect(await publishEventRecord(ids[0], { details: 1, artwork: 0, settings: 2, publication: 5 }, null)).toBe(6);
+    expect((await getPublishedEvent(slugs[0]))!.websiteUrl).toBe(event.websiteUrl);
+    expect((await getPublishedEvent(slugs[0]))!.rsvpsOpen).toBe(false);
+    expect((await listHostPublications()).find((p) => p.id === ids[0])?.hasUnpublishedChanges).toBe(false);
+    expect((await getRsvpSummary(a)).totalResponses).toBe(3);
+    expect(await changeEventLifecycleRecord(ids[0], 6, "reopen-rsvps")).toBe(7);
+    expect((await updateEventRsvp(slugs[0], { ...fields, partySize: 1, editToken: hiddenToken })).ok).toBe(true);
+    const clicks = await Promise.all([changeEventLifecycleRecord(ids[0], 7, "close-rsvps"), changeEventLifecycleRecord(ids[0], 7, "close-rsvps")]);
+    expect(clicks.filter((value) => value === 8)).toHaveLength(1); expect(clicks.filter((value) => value === null)).toHaveLength(1);
+    expect(await getRsvpSummary(OYSTER_ROAST_SCOPE)).toEqual(legacyBefore);
   }, 30000);
 });
