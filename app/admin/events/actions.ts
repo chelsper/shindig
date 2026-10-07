@@ -18,7 +18,7 @@ export async function saveEventDraft(input: unknown): Promise<SaveDraftResult> {
     const saved = await saveEventDraftRecord(row.id, row.revision, result.fields);
     if (!saved) return { ok: false, conflict: true, message: "This draft has changed or is no longer available. Reopen the saved draft before making more changes." };
     revalidatePath("/admin/events");
-    revalidatePath(`/admin/events/${saved.id}`);
+    revalidatePath(`/admin/events/${saved.id}`, "layout");
     return { ok: true, ...saved };
   } catch {
     console.error("Event draft save could not be confirmed.");

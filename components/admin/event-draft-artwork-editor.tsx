@@ -5,6 +5,7 @@ import type { EventDraft } from "../../lib/event-drafts";
 import { DRAFT_IMAGE_LIMIT, DRAFT_IMAGE_TYPES, isDraftImagePath, type DraftArtwork, type DraftArtworkRecord, type DraftImageKind } from "../../lib/event-draft-artwork";
 import { saveDraftArtwork } from "../../app/admin/events/[id]/artwork/actions";
 import { EventDraftPreview } from "./event-draft-preview";
+import { EventSetupNavigation } from "./event-setup-navigation";
 
 const panel = "rounded-[1.5rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 sm:p-6";
 const button = "inline-flex min-h-11 items-center justify-center rounded-full border border-[#355f9e]/25 bg-[#e9f2f8]/65 px-4 text-xs font-bold text-[#214e91] disabled:opacity-40";
@@ -66,8 +67,8 @@ export function EventDraftArtworkEditor({ draft, initial, uploadConfigured }: { 
   return <main className="relative min-h-screen bg-[#f7f0e3] px-4 py-6 text-[#202523] sm:px-6 sm:py-9">
     <div aria-hidden="true" className="page-texture" />
     <div className="relative mx-auto max-w-5xl">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#202523]/12 pb-5"><Link href="/admin/events" className="font-serif text-2xl" onClick={leave}>Shindig</Link><Link href={`/admin/events/${draft.id}`} className={button} onClick={leave}>Back to event basics</Link></header>
-      <section className="py-7"><p className="text-xs font-bold uppercase tracking-[0.2em] text-[#355f9e]">Event setup · Private draft</p><h1 className="mt-2 font-serif text-4xl sm:text-5xl">Set the scene</h1><p className="mt-3 break-words text-sm leading-6 text-[#202523]/65">Artwork for {draft.title}. Give the invitation its own look, then frame a header for the Event Hub.</p><nav aria-label="Draft setup" className="mt-4 flex flex-wrap gap-2"><Link href={`/admin/events/${draft.id}`} onClick={leave} className={button}>Event basics</Link><span aria-current="page" className={`${button} border-[#355f9e]`}>Invitation &amp; artwork</span><Link href={`/admin/events/${draft.id}/settings`} onClick={leave} className={button}>RSVP &amp; Hub settings →</Link><Link href={`/admin/events/${draft.id}/preview`} onClick={leave} className={button}>Full-page preview →</Link><Link href={`/admin/events/${draft.id}/publish`} onClick={leave} className={button}>Review &amp; publish →</Link></nav></section>
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#202523]/12 pb-5"><Link href="/admin/events" className="font-serif text-2xl" onClick={leave}>Shindig</Link><Link href={`/admin/events/${draft.id}/setup`} className={button} onClick={leave}>Back to overview</Link></header>
+      <section className="py-7"><p className="text-xs font-bold uppercase tracking-[0.2em] text-[#355f9e]">Event setup · Private draft</p><h1 className="mt-2 font-serif text-4xl sm:text-5xl">Set the scene</h1><p className="mt-3 break-words text-sm leading-6 text-[#202523]/65">Artwork for {draft.title}. Give the invitation its own look, then frame a header for the Event Hub.</p><EventSetupNavigation id={draft.id} current="artwork" onNavigate={leave} /></section>
       <div className="grid min-w-0 gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,390px)]">
         <form onSubmit={save} className="min-w-0">
           <fieldset disabled={Boolean(busy)} className="min-w-0 space-y-5">

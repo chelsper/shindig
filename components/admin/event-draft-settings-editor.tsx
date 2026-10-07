@@ -7,11 +7,13 @@ import { DRAFT_HUB_MODULES, draftReadiness, type DraftSettings, type DraftSettin
 import { saveDraftSettings } from "../../app/admin/events/[id]/settings/actions";
 import { EventDraftPreview } from "./event-draft-preview";
 import { DraftHubPreview, DraftRsvpPreview } from "./event-draft-experience-preview";
+import { EventSetupNavigation } from "./event-setup-navigation";
+import type { Coordinates } from "../../lib/event-publication";
 
 const panel = "rounded-[1.5rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 sm:p-6";
 const button = "inline-flex min-h-11 items-center justify-center rounded-full border border-[#355f9e]/25 bg-[#e9f2f8]/65 px-4 text-xs font-bold text-[#214e91] focus-visible:outline-2 focus-visible:outline-offset-4 disabled:opacity-40";
 
-export function EventDraftSettingsEditor({ draft, artwork, initial }: { draft: EventDraft; artwork: DraftArtwork; initial: DraftSettingsRecord }) {
+export function EventDraftSettingsEditor({ draft, artwork, initial, coordinates = null }: { draft: EventDraft; artwork: DraftArtwork; initial: DraftSettingsRecord; coordinates?: Coordinates | null }) {
   const [settings, setSettings] = useState(initial.settings);
   const [revision, setRevision] = useState(initial.revision);
   const [dirty, setDirty] = useState(false);
@@ -22,7 +24,7 @@ export function EventDraftSettingsEditor({ draft, artwork, initial }: { draft: E
   const [view, setView] = useState<"invitation" | "hub">("invitation");
   const busy = useRef(false);
   const base = `/admin/events/${draft.id}`;
-  const readiness = draftReadiness(draft, artwork, settings, revision > 0 && !dirty);
+  const readiness = draftReadiness(draft, artwork, settings, revision > 0 && !dirty, coordinates);
   const remaining = readiness.filter((item) => item.required && !item.complete).length;
   useEffect(() => {
     if (!dirty && !pending) return;
@@ -55,7 +57,7 @@ export function EventDraftSettingsEditor({ draft, artwork, initial }: { draft: E
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#355f9e]">Event setup · Private draft</p>
         <h1 className="mt-2 font-serif text-4xl tracking-[-0.035em] sm:text-5xl">Make it your kind of gathering</h1>
         <p className="mt-3 max-w-2xl break-words text-sm leading-6 text-[#202523]/65">RSVP &amp; Hub settings for {draft.title}. Keep it simple, or give your guests a few little ways to join in.</p>
-        <nav aria-label="Draft setup" className="mt-4 flex flex-wrap gap-2"><Link href={base} onClick={leave} className={button}>Event basics</Link><Link href={`${base}/artwork`} onClick={leave} className={button}>Invitation &amp; artwork</Link><span aria-current="page" className={`${button} border-[#355f9e]`}>RSVP &amp; Hub</span><Link href={`${base}/preview`} onClick={leave} className={button}>Full-page preview →</Link><Link href={`${base}/publish`} onClick={leave} className={button}>Review &amp; publish →</Link></nav>
+        <EventSetupNavigation id={draft.id} current="settings" onNavigate={leave} />
       </section>
       <div className="grid min-w-0 gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,390px)]">
         <div className="min-w-0 space-y-5">
@@ -74,7 +76,7 @@ export function EventDraftSettingsEditor({ draft, artwork, initial }: { draft: E
                 <h2 id="hub-settings-heading" className="font-serif text-2xl">A little more Shindig</h2>
                 <p className="mt-2 text-sm leading-6 text-[#202523]/60">Choose what belongs on your Event Hub. Turn everything off for just the event details.</p>
                 <div className="mt-3 divide-y divide-[#202523]/10">{DRAFT_HUB_MODULES.map((module) => <label key={module.id} className="flex min-h-20 cursor-pointer items-center gap-4 py-4"><input type="checkbox" className="size-5 shrink-0 accent-[#355f9e]" checked={settings.features[module.id]} onChange={(event) => { change({ ...settings, features: { ...settings.features, [module.id]: event.target.checked } }); setView("hub"); }} /><span className="min-w-0"><span className="block text-sm font-semibold">{module.label}</span><span className="mt-1 block text-xs leading-5 text-[#202523]/60">{module.description}</span></span></label>)}</div>
-                <p className="mt-2 text-xs leading-5 text-[#202523]/55">These choices are for this draft only. Content and provider setup are checked before a future launch. Photos and Potluck aren’t available yet.</p>
+                <p className="mt-2 text-xs leading-5 text-[#202523]/55">These choices stay private until you publish. Review provider setup before publishing. Photos and Potluck aren’t available yet.</p>
               </section>
             </fieldset>
             <section className={`${panel} mt-5`} aria-label="Save private settings">
@@ -88,7 +90,8 @@ export function EventDraftSettingsEditor({ draft, artwork, initial }: { draft: E
           <section className={panel} aria-labelledby="readiness-heading">
             <p className="text-[0.65rem] font-bold uppercase tracking-widest text-[#355f9e]">Before it goes out</p><h2 id="readiness-heading" className="mt-2 font-serif text-2xl">Getting ready to gather</h2>
             <p className="mt-2 text-sm leading-6 text-[#202523]/60">{remaining ? `${remaining} ${remaining === 1 ? "detail needs" : "details need"} attention before review.` : "Your essentials are ready for the next review step."} Based on saved basics and artwork, plus the choices shown here.</p>
-            <ul className="mt-3 divide-y divide-[#202523]/10">{readiness.map((item) => <li key={item.id} className="flex min-h-14 items-center gap-3 py-3 text-sm"><span aria-hidden="true" className={item.complete ? "text-[#285630]" : "text-[#355f9e]"}>{item.complete ? "✓" : "○"}</span><span className="min-w-0 flex-1">{item.href && !item.complete && item.id !== "settings" ? <Link href={item.href} onClick={leave} className="underline underline-offset-4">{item.label}</Link> : item.label}<span className="mt-1 block text-xs text-[#202523]/55">{item.complete ? "Complete" : item.required ? "Still to do" : "Recommended"}</span></span></li>)}</ul>
+            <ul className="mt-3 divide-y divide-[#202523]/10">{readiness.map((item) => <li key={item.id} className="flex min-h-14 items-center gap-3 py-3 text-sm"><span aria-hidden="true" className={item.complete ? "text-[#285630]" : "text-[#355f9e]"}>{item.complete ? "✓" : "○"}</span><span className="min-w-0 flex-1">{item.href && !item.complete && item.id !== "settings" ? <Link href={item.href} onClick={leave} className="underline underline-offset-4">{item.label}</Link> : item.label}<span className="mt-1 block text-xs text-[#202523]/55">{item.complete ? "Ready" : item.required ? "Needs attention" : "Optional"}</span></span></li>)}</ul>
+            <Link href={`${base}/setup`} onClick={leave} className={`${button} mt-4`}>View setup overview →</Link>
             <p className="mt-4 rounded-xl bg-[#e9f2f8]/60 p-3 text-xs leading-5 text-[#355f9e]">These draft choices stay private. Use Review & publish to apply them to guest pages; saving here never changes a live event.</p>
           </section>
         </div>

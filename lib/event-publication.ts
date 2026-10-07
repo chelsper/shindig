@@ -4,6 +4,8 @@ import { validateDraftSettings, type DraftSettings } from "./event-draft-setting
 import { draftEventSlug, eventPaths } from "./event-routes";
 import { SHINDIG_SITE } from "./site";
 import type { EventConfiguration } from "./oyster-roast-event";
+import { publicationProblems } from "./event-readiness";
+export { publicationProblems } from "./event-readiness";
 
 export type Coordinates = { latitude: number; longitude: number };
 export type PublicationSnapshot = {
@@ -11,15 +13,6 @@ export type PublicationSnapshot = {
   coordinates: Coordinates | null;
 };
 export type PublicationVersions = { details: number; artwork: number; settings: number; publication: number };
-
-export function publicationProblems(snapshot: PublicationSnapshot) {
-  const problems: string[] = [];
-  if (!snapshot.details.startsAtUtc) problems.push("Add the event start date and time.");
-  if (!snapshot.details.endsAtUtc) problems.push("Add an end time for accurate calendar entries.");
-  if (!snapshot.details.address.trim()) problems.push("Add the event address.");
-  if (snapshot.settings.features.weather && !snapshot.coordinates) problems.push("Confirm the event’s latitude and longitude, or turn Weather off.");
-  return problems;
-}
 
 export function parseCoordinates(input: unknown): Coordinates | null {
   if (!input || typeof input !== "object") return null;

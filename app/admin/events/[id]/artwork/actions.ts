@@ -15,7 +15,8 @@ export async function saveDraftArtwork(input: unknown): Promise<{ ok: true; revi
   try {
     const revision = await saveDraftArtworkRecord(row.id, row.revision, parsed.settings);
     if (revision === null) return { ok: false, conflict: true, message: "This draft’s artwork changed. Reopen the editor before saving again." };
-    revalidatePath(`/admin/events/${row.id}/artwork`);
+    revalidatePath("/admin/events");
+    revalidatePath(`/admin/events/${row.id}`, "layout");
     return { ok: true, revision };
   } catch {
     console.error("Draft artwork save could not be confirmed.");

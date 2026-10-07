@@ -5,6 +5,7 @@ import type { DraftSettingsRecord } from "../../lib/event-draft-settings";
 import { draftEventSlug, eventPaths } from "../../lib/event-routes";
 import { EventDraftPreview } from "./event-draft-preview";
 import { DraftHubPreview, DraftRsvpPreview } from "./event-draft-experience-preview";
+import { EventSetupNavigation } from "./event-setup-navigation";
 
 const button = "inline-flex min-h-11 items-center justify-center rounded-full border border-[#202523]/20 px-4 py-2 text-xs font-semibold text-[#355f9e]";
 
@@ -22,13 +23,10 @@ export function EventDraftFullPreview({ draft, artwork, record, view }: {
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#355f9e]">Host-only draft preview · Not published automatically</p>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-[#202523]/70">Your saved event, at full size. Switch between the invitation and Hub to review the experience. Responses and other guest actions are disabled here.</p>
         {record.revision === 0 && <p className="mt-2 text-sm text-[#765319]">RSVP &amp; Hub choices are still suggested defaults. Save them in settings before your final review.</p>}
+        <EventSetupNavigation id={id} current="preview" />
         <nav aria-label="Preview screens" className="mt-4 flex flex-wrap gap-2">
           <Link className={`${button} ${view === "invitation" ? "bg-white" : ""}`} aria-current={view === "invitation" ? "page" : undefined} href={`${base}/preview`}>Invitation</Link>
           <Link className={`${button} ${view === "hub" ? "bg-white" : ""}`} aria-current={view === "hub" ? "page" : undefined} href={`${base}/preview?view=hub`}>Event Hub</Link>
-          <Link className={button} href={base}>Edit event</Link>
-          <Link className={button} href={`${base}/artwork`}>Artwork</Link>
-          <Link className={button} href={`${base}/settings`}>RSVP &amp; Hub settings</Link>
-          <Link className={button} href={`${base}/publish`}>Review &amp; publish</Link>
           <Link className={button} href="/admin/events">All events</Link>
         </nav>
       </header>

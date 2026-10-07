@@ -15,7 +15,8 @@ export async function saveDraftSettings(input: unknown): Promise<{ ok: true; rev
   try {
     const revision = await saveDraftSettingsRecord(row.id, row.revision, parsed.settings);
     if (revision === null) return { ok: false, conflict: true, message: "These settings changed or the draft is no longer available. Reopen the saved settings before editing again." };
-    revalidatePath(`/admin/events/${row.id}/settings`);
+    revalidatePath("/admin/events");
+    revalidatePath(`/admin/events/${row.id}`, "layout");
     return { ok: true, revision };
   } catch {
     console.error("Draft settings save could not be confirmed.");

@@ -92,10 +92,10 @@ describe("host-only artwork actions, page and image routes", () => {
     mocks.put.mockRejectedValue(new Error("secret-token")); const upload = await POST(await uploadRequest(), context);
     expect(upload.status).toBe(503); expect(await upload.text()).not.toContain("secret-token");
   });
-  it("saves validated settings and revalidates only the private artwork page", async () => {
+  it("saves validated artwork and refreshes the private setup flow and event list", async () => {
     expect(await saveDraftArtwork({ id, revision: 0, settings: EMPTY_DRAFT_ARTWORK })).toEqual({ ok: true, revision: 1 });
     expect(mocks.save).toHaveBeenCalledWith(id, 0, EMPTY_DRAFT_ARTWORK);
-    expect(mocks.revalidate.mock.calls).toEqual([[`/admin/events/${id}/artwork`]]);
+    expect(mocks.revalidate.mock.calls).toEqual([["/admin/events"], [`/admin/events/${id}`, "layout"]]);
   });
   it.each([null, {}, { id, revision: "0", settings: EMPTY_DRAFT_ARTWORK }, { id, revision: 0, settings: {} }])("rejects malformed actions %j", async (input) => {
     expect((await saveDraftArtwork(input)).ok).toBe(false); expect(mocks.save).not.toHaveBeenCalled();

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useTransition, type FormEvent } from "reac
 import { saveEventDraft } from "../../app/admin/events/actions";
 import { DRAFT_LIMITS, EMPTY_EVENT_DRAFT, type EventDraft } from "../../lib/event-drafts";
 import { eventLocalInput } from "../../lib/event-date-time";
+import { EventSetupNavigation } from "./event-setup-navigation";
 
 const panel = "rounded-[1.5rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 sm:p-7";
 const secondary = "inline-flex min-h-11 items-center justify-center rounded-full border border-[#355f9e]/25 bg-[#e9f2f8]/65 px-4 text-xs font-bold text-[#214e91] focus-visible:outline-2 focus-visible:outline-offset-4";
@@ -31,7 +32,7 @@ export function EventDraftEditor({ id, initialDraft, timeZones, justSaved = fals
     setFields((current) => ({ ...current, [key]: value }));
     setDirty(true); setSaved(false); setError(null);
   }
-  function allowLeave() { return !dirty || window.confirm("Leave without saving your draft changes?"); }
+  function allowLeave() { return !busy.current && (!dirty || window.confirm("Leave without saving your draft changes?")); }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy.current || conflict) return;
@@ -41,7 +42,7 @@ export function EventDraftEditor({ id, initialDraft, timeZones, justSaved = fals
         const result = await saveEventDraft({ id, revision, fields });
         if (!result.ok) { setError(result.message); setConflict(Boolean(result.conflict)); return; }
         setRevision(result.revision); setDirty(false); setSaved(true);
-        if (revision === 0) router.replace(`/admin/events/${result.id}?saved=1`);
+        if (revision === 0) router.replace(`/admin/events/${result.id}/setup?saved=1`);
       } catch { setError("We couldn’t confirm the save. Your changes are still here. Please try again."); }
       finally { busy.current = false; }
     });
@@ -61,7 +62,7 @@ export function EventDraftEditor({ id, initialDraft, timeZones, justSaved = fals
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#355f9e]">Host Dashboard · Private draft</p>
         <h1 className="mt-2 font-serif text-4xl tracking-[-0.04em] sm:text-5xl">{initialDraft ? "A Shindig in the making" : "Let’s make a Shindig"}</h1>
         <p className="mt-3 max-w-xl text-sm leading-6 text-[#202523]/65">Start with a name. The rest can come together later. Saving here won’t publish an invitation or change the Oyster Roast.</p>
-        {initialDraft && <nav aria-label="Draft setup" className="mt-4 flex flex-wrap gap-2"><span aria-current="page" className={`${secondary} border-[#355f9e]`}>Event basics</span><Link className={secondary} href={`/admin/events/${id}/artwork`} onClick={(event) => { if (!allowLeave()) event.preventDefault(); }}>Invitation & artwork →</Link><Link className={secondary} href={`/admin/events/${id}/settings`} onClick={(event) => { if (!allowLeave()) event.preventDefault(); }}>RSVP &amp; Hub settings →</Link><Link className={secondary} href={`/admin/events/${id}/preview`} onClick={(event) => { if (!allowLeave()) event.preventDefault(); }}>Full-page preview →</Link><Link className={secondary} href={`/admin/events/${id}/publish`} onClick={(event) => { if (!allowLeave()) event.preventDefault(); }}>Review &amp; publish →</Link></nav>}
+        {initialDraft && <EventSetupNavigation id={id} current="details" onNavigate={(event) => { if (!allowLeave()) event.preventDefault(); }} />}
       </section>
       <form onSubmit={submit}>
         <fieldset disabled={pending} className="min-w-0 space-y-5">

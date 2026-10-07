@@ -40,6 +40,13 @@ beforeEach(() => {
   mocks.list.mockResolvedValue([]); mocks.search.mockResolvedValue({ tracks: [], attribution: {} }); mocks.save.mockResolvedValue(1);
 });
 describe("published routes", () => {
+  it("clears weather coordinates in publish review when the draft address has changed", async () => {
+    const coordinates = { latitude: 30, longitude: -81 };
+    mocks.pub.mockResolvedValue({ ...publication, snapshot: { ...snapshot, coordinates } });
+    expect((await PublishPage(adminContext)).props.children.props.live.coordinates).toEqual(coordinates);
+    mocks.draft.mockResolvedValue({ ...draft, address: "A different address" });
+    expect((await PublishPage(adminContext)).props.children.props.live.coordinates).toBeNull();
+  });
   it("renders only the resolved event and preserves the two legacy aliases", async () => {
     expect(renderToStaticMarkup(await Invitation(context))).toContain("Garden Supper");
     const hub = await Hub(context); expect(hub.props.event.slug).toBe(eventSlug); expect(hub.props.scope.slug).toBe(eventSlug);

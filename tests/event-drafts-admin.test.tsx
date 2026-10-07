@@ -37,7 +37,7 @@ describe("private event draft actions and pages", () => {
   it("saves normalized event-local data and only refreshes private draft routes", async () => {
     expect(await saveEventDraft({ id, revision: 0, fields })).toEqual({ ok: true, id, revision: 1 });
     expect(mocks.save).toHaveBeenCalledWith(id, 0, { ...EMPTY_EVENT_DRAFT, title: "Birthday", startsAtUtc: "2026-11-07T22:00:00.000Z" });
-    expect(mocks.revalidate.mock.calls).toEqual([["/admin/events"], [`/admin/events/${id}`]]);
+    expect(mocks.revalidate.mock.calls).toEqual([["/admin/events"], [`/admin/events/${id}`, "layout"]]);
   });
   it.each([null, {}, { id: "bad", revision: 0, fields }, { id, revision: -1, fields }, { id, revision: "0", fields }, { id, revision: 0, fields: { ...fields, title: " " } }, { id, revision: 0, fields: { ...fields, timeZone: "unknown" } }, { id, revision: 0, fields: { ...fields, startsAtLocal: "2026-03-08T02:30" } }])("rejects malformed writes before storage", async (input) => {
     expect((await saveEventDraft(input)).ok).toBe(false); expect(mocks.save).not.toHaveBeenCalled();
@@ -57,7 +57,7 @@ describe("private event draft actions and pages", () => {
   it("lists private drafts separately from the existing live event", async () => {
     mocks.list.mockResolvedValue([draft]);
     const html = renderToStaticMarkup(await EventsPage({}));
-    for (const text of ["Live event", "Manage Oyster Roast", "Private draft", "Private party", "Date to be decided", 'href="/admin/events/new"', `href="/admin/events/${id}"`]) expect(html).toContain(text);
+    for (const text of ["Live event", "Manage Oyster Roast", "Private draft", "Private party", "Date to be decided", 'href="/admin/events/new"', `href="/admin/events/${id}/setup"`]) expect(html).toContain(text);
     expect(html).not.toMatch(/Publish event|Share link|Submit RSVP/);
   });
   it("removes archived events and their working copies from the active list", async () => {
@@ -66,13 +66,13 @@ describe("private event draft actions and pages", () => {
     const html = renderToStaticMarkup(await EventsPage({}));
     expect(html).toContain("Manage Oyster Roast"); expect(html).toContain("Archived (1)");
     expect(html).not.toContain("Archived gathering"); expect(html).not.toContain("Private party");
-    expect(html).not.toContain(`href="/admin/events/${id}"`);
+    expect(html).not.toContain(`href="/admin/events/${id}/setup"`);
   });
   it("shows only archived events in the separate view with retained host navigation", async () => {
     mocks.list.mockResolvedValue([draft]);
     mocks.publications.mockResolvedValue([{ id, title: "Archived gathering", visibility: "archived", rsvpsOpen: false, hasUnpublishedChanges: true }, { id: "7ac5edab-22aa-447d-8931-91132a16798a", title: "Still active", visibility: "published", rsvpsOpen: true, hasUnpublishedChanges: false }]);
     const html = renderToStaticMarkup(await EventsPage({ searchParams: Promise.resolve({ view: "archived" }) }));
-    for (const text of ["Archived gathering", "View &amp; restore", "All saved data retained", `href="/admin/events/${id}/publish"`]) expect(html).toContain(text);
+    for (const text of ["Archived gathering", "View &amp; restore", "All saved data retained", `href="/admin/events/${id}/setup"`]) expect(html).toContain(text);
     expect(html).toMatch(/<a[^>]*aria-current="page"[^>]*href="\/admin\/events\?view=archived"/);
     for (const text of ["Manage Oyster Roast", "Still active", "Private party", "In the making"]) expect(html).not.toContain(text);
   });

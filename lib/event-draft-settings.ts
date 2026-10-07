@@ -1,6 +1,8 @@
 import type { EventFeatures } from "./oyster-roast-event";
 import type { EventDraft } from "./event-drafts";
 import type { DraftArtwork } from "./event-draft-artwork";
+import { publicationIssues } from "./event-readiness";
+import type { Coordinates } from "./event-publication";
 
 // Only implemented modules are selectable. These are draft choices, not overrides
 // of the canonical live Oyster Roast configuration.
@@ -38,15 +40,16 @@ export function validateDraftSettings(input: unknown): { ok: true; settings: Dra
   } };
 }
 
-export function draftReadiness(draft: EventDraft, artwork: DraftArtwork, settings: DraftSettings, settingsSaved: boolean) {
+export function draftReadiness(draft: EventDraft, artwork: DraftArtwork, settings: DraftSettings, settingsSaved: boolean, coordinates: Coordinates | null = null) {
   const base = `/admin/events/${draft.id}`;
+  const missing = new Set(publicationIssues({ details: draft, artwork, settings, coordinates }).map(({ id }) => id));
   return [
     { id: "name", label: "Event name", complete: Boolean(draft.title.trim()), required: true, href: base },
-    { id: "date", label: "Start date, time & timezone", complete: Boolean(draft.startsAtUtc), required: true, href: base },
-    { id: "location", label: "Event address", complete: Boolean(draft.address.trim()), required: true, href: base },
+    { id: "date", label: "Start date, time & timezone", complete: !missing.has("date"), required: true, href: `${base}#draft-date-heading` },
+    { id: "location", label: "Event address", complete: !missing.has("location"), required: true, href: `${base}#draft-place-heading` },
     { id: "settings", label: "RSVP & Hub choices saved", complete: settingsSaved, required: true, href: `${base}/settings` },
     { id: "artwork", label: "Invitation artwork", complete: Boolean(artwork.invitation.path), required: false, href: `${base}/artwork` },
-    { id: "end", label: "End time for calendar entries", complete: Boolean(draft.endsAtUtc), required: true, href: base },
-    ...(settings.features.weather ? [{ id: "weather", label: "Confirm coordinates during publishing setup", complete: false, required: true, href: `${base}/publish` }] : []),
+    { id: "end", label: "End time for calendar entries", complete: !missing.has("end"), required: true, href: `${base}#draft-date-heading` },
+    ...(settings.features.weather ? [{ id: "weather", label: "Weather location confirmed", complete: !missing.has("weather"), required: true, href: `${base}/publish#weather-location` }] : []),
   ];
 }

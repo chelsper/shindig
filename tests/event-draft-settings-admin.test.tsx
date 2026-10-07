@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-const mocks = vi.hoisted(() => ({ auth: vi.fn(), draft: vi.fn(), artwork: vi.fn(), get: vi.fn(), save: vi.fn(), revalidate: vi.fn(), redirect: vi.fn(), notFound: vi.fn() }));
+const mocks = vi.hoisted(() => ({ auth: vi.fn(), draft: vi.fn(), artwork: vi.fn(), get: vi.fn(), save: vi.fn(), publication: vi.fn(), revalidate: vi.fn(), redirect: vi.fn(), notFound: vi.fn() }));
+vi.mock("../lib/server/event-publications", () => ({ getHostEventPublication: mocks.publication }));
 vi.mock("../lib/server/admin-session", () => ({ isAdminAuthenticated: mocks.auth }));
 vi.mock("../lib/server/event-drafts", () => ({ getEventDraft: mocks.draft }));
 vi.mock("../lib/server/event-draft-artwork", () => ({ getDraftArtwork: mocks.artwork }));
@@ -19,6 +20,7 @@ const context = { params: Promise.resolve({ id }) };
 const input = { id, revision: 0, settings: DEFAULT_DRAFT_SETTINGS };
 beforeEach(() => {
   vi.resetAllMocks(); mocks.auth.mockResolvedValue(true); mocks.draft.mockResolvedValue(draft); mocks.artwork.mockResolvedValue({ settings: EMPTY_DRAFT_ARTWORK, revision: 0 }); mocks.get.mockResolvedValue({ settings: DEFAULT_DRAFT_SETTINGS, revision: 0 }); mocks.save.mockResolvedValue(1);
+  mocks.publication.mockResolvedValue(null);
   mocks.redirect.mockImplementation(() => { throw new Error("redirect"); }); mocks.notFound.mockImplementation(() => { throw new Error("not found"); });
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -29,12 +31,12 @@ describe("private draft settings page and server action", () => {
     mocks.auth.mockResolvedValue(false);
     expect(await saveDraftSettings(input)).toMatchObject({ ok: false, message: expect.stringContaining("session") });
     await expect(SettingsPage(context)).rejects.toThrow("redirect"); expect(mocks.redirect).toHaveBeenCalledWith("/admin");
-    for (const fn of [mocks.get, mocks.draft, mocks.artwork, mocks.save]) expect(fn).not.toHaveBeenCalled();
+    for (const fn of [mocks.get, mocks.draft, mocks.artwork, mocks.save, mocks.publication]) expect(fn).not.toHaveBeenCalled();
   });
-  it("saves validated choices and refreshes only this private draft page", async () => {
+  it("saves validated choices and refreshes the private setup flow and event list", async () => {
     expect(await saveDraftSettings(input)).toEqual({ ok: true, revision: 1 });
     expect(mocks.save).toHaveBeenCalledWith(id, 0, DEFAULT_DRAFT_SETTINGS);
-    expect(mocks.revalidate.mock.calls).toEqual([[`/admin/events/${id}/settings`]]);
+    expect(mocks.revalidate.mock.calls).toEqual([["/admin/events"], [`/admin/events/${id}`, "layout"]]);
   });
   it.each([null, [], {}, { ...input, id: "bad" }, { ...input, revision: -1 }, { ...input, revision: "0" }, { ...input, settings: {} }, { ...input, settings: { ...DEFAULT_DRAFT_SETTINGS, features: { ...DEFAULT_DRAFT_SETTINGS.features, photos: true } } }])("rejects malformed submissions before storage: %j", async (value) => {
     expect((await saveDraftSettings(value)).ok).toBe(false); expect(mocks.save).not.toHaveBeenCalled();
@@ -64,7 +66,20 @@ describe("private draft settings page and server action", () => {
     mocks.draft.mockResolvedValue(null); await expect(SettingsPage(context)).rejects.toThrow("not found");
     mocks.get.mockRejectedValue(new Error("private database secret"));
     const html = renderToStaticMarkup(await SettingsPage(context));
-    expect(html).toContain("migration 012"); expect(html).not.toContain("private database secret");
+    expect(html).toContain("migrations through 017"); expect(html).not.toContain("private database secret");
+  });
+  it("does not report weather as incomplete when its saved location is confirmed", async () => {
+    const coordinates = { latitude: 30, longitude: -81 };
+    mocks.publication.mockResolvedValue({ snapshot: { details: draft, coordinates } });
+    expect((await SettingsPage(context)).props.coordinates).toEqual(coordinates);
+    mocks.draft.mockResolvedValue({ ...draft, address: "New event address" });
+    expect((await SettingsPage(context)).props.coordinates).toBeNull();
+  });
+  it("shows unavailable instead of an invented checklist if publication status cannot load", async () => {
+    mocks.publication.mockRejectedValue(new Error("private database secret"));
+    const html = renderToStaticMarkup(await SettingsPage(context));
+    expect(html).toContain("Settings couldn’t load");
+    expect(html).not.toMatch(/private database secret|Getting ready to gather|Save draft settings/);
   });
   it("escapes event text in settings and guest previews", () => {
     const html = renderToStaticMarkup(<EventDraftSettingsEditor draft={{ ...draft, title: "<script>unsafe</script>" }} artwork={EMPTY_DRAFT_ARTWORK} initial={{ settings: DEFAULT_DRAFT_SETTINGS, revision: 0 }} />);

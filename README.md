@@ -1,9 +1,42 @@
 # Shindig
 
-## Friendly event links & QR sharing (Step 7 — current)
+## Guided event setup (Step 8 — current)
+
+Open **Your events → select an event** to reach its private setup overview at
+`/admin/events/[id]/setup`. New events go there after their first successful save.
+Existing editor routes remain available. The guide connects **Details**, optional
+**Artwork**, **RSVP & Hub**, **Preview & publish**, and **Share** without introducing
+a new event type or changing the Jasper Shucks guest experience.
+
+- Ready / Optional / Needs attention labels reflect saved draft data. Missing start,
+  end and address details link directly to the relevant editor section. Suggested
+  RSVP defaults must be saved; text-only invitations remain valid.
+- The overview, settings checklist and final publication parser share required-field
+  checks. Weather coordinates are reused only for the same published address;
+  changing that address clears the prefill and requires confirmation in review.
+- The overview distinguishes a private draft, unpublished changes, a matching live
+  version, an unpublished event and an archive. It cannot publish or restore an
+  event. Publication still requires the existing explicit confirmation and final
+  server-side checks, including link availability and saved artwork availability.
+- Sharing opens the existing invitation/Hub link and QR panel only for published
+  events. Archived events retain host tools and the restore path, with no public
+  share actions. Saving never changes guest pages or sends invitations.
+- Editors share wrapping, mobile-friendly navigation and retain unsaved-change
+  guards. Saves invalidate only the event list and that event’s private setup tree.
+  Overview reads require an admin session; failures show unavailable, not a false
+  ready state. No new database migration, package or environment variable.
+
+Step 8 verification: lint, typecheck, all 939 tests (including optional isolated
+PostgreSQL and QR-decoding checks), and the production webpack build passed.
+Synthetic browser checks covered 320px / 390px layouts with no horizontal overflow,
+desktop navigation, private first-save routing, saved checklist progress, unsaved
+change cancellation, and disabled publishing while required details are missing.
+No production records were changed or events published during verification.
+
+## Friendly event links & QR sharing (Step 7 — completed)
 
 Before the **first publication** of a new Shindig event, choose an optional readable
-link in **Your events → Manage & share**, such as `/e/garden-supper`. A title-based
+link in **Your events → select an event → Publish & share**, such as `/e/garden-supper`. A title-based
 suggestion is editable; **Check link** checks current availability without reserving
 it. Names are normalized to lowercase, use letters/numbers/single hyphens, and must
 be 3–60 characters. Reserved names and the entire `event-` namespace are unavailable.
