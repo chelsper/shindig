@@ -1,6 +1,64 @@
 # Shindig
 
-## Guided event setup (Step 8 — current)
+## Duplicate Event (Step 9 — current)
+
+Open **Your events → select an event → Duplicate Event** at the bottom of its
+setup overview. The existing Oyster Roast has a Duplicate Event link directly
+on Your events. Name the copy and confirm before anything is created.
+
+- Copies the latest **saved** details (including unpublished edits), RSVP rules,
+  enabled Hub modules, and independent private copies of the invitation/header
+  artwork and crop. Published, unpublished, archived and draft sources are supported.
+  The legacy Oyster Roast copy uses standard Shindig invitation/RSVP labels, not
+  its event-specific wording. The source and Jasper Shucks guest pages are unchanged.
+- Clears both dates and weather-coordinate confirmation. Generates a new event
+  identity; no publication, public alias, calendar identity, RSVP, guest edit token,
+  playlist suggestion, applause, question/answer, host update, poll or vote is copied.
+  Unsaved RSVP defaults still require an explicit save. Review printed artwork and
+  descriptions for old names/dates, finish setup, then explicitly review/publish.
+  Only publication makes a guest link available. No invitations are sent.
+- Every page/action/data operation requires the existing host session. The browser
+  submits only the source ID, review fingerprint, new name and confirmation key;
+  settings and artwork come from validated server reads. Stale reviews are rejected.
+- A request receipt binds each copy attempt to its source/version/name. The event,
+  artwork/settings rows and completed receipt are committed atomically. Repeated
+  clicks or retrying a lost response return the same copy, never overwrite it.
+  Keep the form open and use **Retry the same copy** after a failure; its name locks
+  to preserve that identity. Check Your events before starting a separate request.
+- Artwork bytes are bounded, format-checked and copied into the new event's private
+  Blob namespace, never reused by reference or overwritten/deleted. Pending receipts
+  and unused private image copies may remain after interrupted attempts; they are
+  retained for safe retries, not automatically deleted. Public source images are
+  restricted to the existing Oyster Roast Blob prefixes or bundled original artwork.
+
+**Before deployment:** apply [`018_event_duplication.sql`](db/migrations/018_event_duplication.sql)
+after migrations 001–017 in the target Neon database. It adds only the constrained
+`event_duplication_requests` receipt table and is safe to reapply. It does not copy,
+publish, seed or change existing events/guest records. Then deploy the application.
+No new dependencies or environment variables. Existing server-only `DATABASE_URL`,
+`ADMIN_PASSWORD` and admin session configuration remain required;
+`EVENT_DRAFT_BLOB_READ_WRITE_TOKEN` must point to the existing **private** Blob store
+to copy artwork (text-only copies do not need it). Original bundled artwork is
+explicitly included in the server build trace.
+
+Tests cover validation/authentication, source version checks, independent artwork,
+private storage boundaries, rollback, simultaneous submissions, lost-response
+recovery, source preservation, and no guest/publication carry-over. The optional
+`tests/event-duplication-postgres.test.ts` executes all migrations and actual data
+queries in fresh in-memory PostgreSQL using `SHINDIG_TEST_PGLITE` from a disposable
+`/private/tmp/.../node_modules/@electric-sql/pglite/dist/index.js` installation.
+It never connects to Neon. Migration 018 was applied to the Shindig production
+database on October 8, 2026; columns, constraints and indexes were verified, with
+existing event/guest counts unchanged and no duplication requests created.
+
+Step 9 verification: lint, typecheck, all 1,016 tests (including the isolated
+PostgreSQL and QR checks), and the production webpack build passed. Synthetic
+browser checks covered 320px / 390px and desktop layouts, one request on rapid
+double-click, disabled submitting controls, failure without false success, safe
+same-request retry, and routing to the new draft's date/setup checklist. No
+production events, artwork or guest records were changed during verification.
+
+## Guided event setup (Step 8 — completed)
 
 Open **Your events → select an event** to reach its private setup overview at
 `/admin/events/[id]/setup`. New events go there after their first successful save.

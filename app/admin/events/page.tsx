@@ -7,6 +7,7 @@ import { listEventDrafts } from "../../../lib/server/event-drafts";
 import { OYSTER_ROAST_EVENT } from "../../../lib/oyster-roast-event";
 import { listHostPublications } from "../../../lib/server/event-publications";
 import { EventPublicationList } from "../../../components/admin/event-publication-list";
+import { duplicateEventPath } from "../../../lib/event-duplication";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Your Events | Shindig", robots: { index: false, follow: false }, referrer: "no-referrer" };
@@ -35,6 +36,7 @@ export default async function AdminEventsPage({ searchParams }: { searchParams?:
       <p className="mt-2 text-sm leading-6 text-[#202523]/65">Your existing invitation, Event Hub, and guest responses stay exactly where they are.</p>
       <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
         <Link className="inline-flex min-h-11 items-center text-sm font-semibold text-[#355f9e] underline underline-offset-4" href="/admin">Manage Oyster Roast →</Link>
+        <Link className="inline-flex min-h-11 items-center text-sm font-semibold text-[#355f9e] underline underline-offset-4" href={duplicateEventPath(OYSTER_ROAST_EVENT.slug)}>Duplicate Event →</Link>
         <a className="inline-flex min-h-11 items-center text-sm text-[#355f9e] underline underline-offset-4" href={OYSTER_ROAST_EVENT.websiteUrl} target="_blank" rel="noreferrer">View invitation ↗</a>
       </div>
     </section>}

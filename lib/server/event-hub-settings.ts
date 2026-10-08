@@ -17,7 +17,7 @@ function getDatabaseUrl() {
   return databaseUrl;
 }
 
-export async function getEventHubHeaderSettings(): Promise<EventHubHeaderSettings> {
+export async function getEventHubHeaderSettings(strict = false): Promise<EventHubHeaderSettings> {
   const sql = neon(getDatabaseUrl());
   const rows = await sql`
     SELECT
@@ -35,6 +35,7 @@ export async function getEventHubHeaderSettings(): Promise<EventHubHeaderSetting
   if (!savedSettings) return DEFAULT_EVENT_HUB_HEADER;
 
   const validation = validateEventHubHeaderSettings(savedSettings);
+  if (!validation.success && strict) throw new Error("Invalid saved header settings.");
   return validation.success ? validation.data : DEFAULT_EVENT_HUB_HEADER;
 }
 

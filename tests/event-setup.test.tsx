@@ -70,7 +70,7 @@ describe("private setup navigation and publication states", () => {
   it.each([null, { visibility: "unpublished", rsvpsOpen: false, hasUnpublishedChanges: true }, { visibility: "archived", rsvpsOpen: false, hasUnpublishedChanges: true }] satisfies (SetupPublication | null)[])("never offers public links or QR downloads for private events: %j", (live) => {
     const html = renderToStaticMarkup(<EventSetupOverview {...props} live={live} />);
     const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map((match) => match[1]);
-    expect(hrefs.every((href) => href.startsWith(base))).toBe(true);
+    expect(hrefs.every((href) => href.startsWith(base) || href === `/admin/events/duplicate/${id}`)).toBe(true);
     expect(html).not.toContain("#share-event"); expect(html).not.toContain("Get links &amp; QR codes");
     expect(html).not.toContain("<form"); expect(html).not.toContain("<img");
   });

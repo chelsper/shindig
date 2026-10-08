@@ -6,11 +6,12 @@ import type { Coordinates } from "../../lib/event-publication";
 import { publicationIssues } from "../../lib/event-readiness";
 import { eventStatus, type EventLifecycle } from "../../lib/event-lifecycle";
 import { EventSetupNavigation } from "./event-setup-navigation";
+import { duplicateEventPath } from "../../lib/event-duplication";
 
 export type SetupPublication = EventLifecycle & { hasUnpublishedChanges: boolean };
-export function EventSetupOverview({ draft, artwork, settings, coordinates, live, justSaved = false }: {
+export function EventSetupOverview({ draft, artwork, settings, coordinates, live, justSaved = false, justCopied = false }: {
   draft: EventDraft; artwork: DraftArtworkRecord; settings: DraftSettingsRecord;
-  coordinates: Coordinates | null; live: SetupPublication | null; justSaved?: boolean;
+  coordinates: Coordinates | null; live: SetupPublication | null; justSaved?: boolean; justCopied?: boolean;
 }) {
   const base = `/admin/events/${draft.id}`;
   const issues = publicationIssues({ details: draft, artwork: artwork.settings, settings: settings.settings, coordinates });
@@ -33,6 +34,7 @@ export function EventSetupOverview({ draft, artwork, settings, coordinates, live
   return <div className="space-y-6 pb-10">
     <EventSetupNavigation id={draft.id} current="setup" />
     {justSaved && <p role="status" className="rounded-2xl bg-[#e4eee1] p-4 text-sm leading-6 text-[#285630]">Draft saved privately. Let’s bring the rest together.</p>}
+    {justCopied && <p role="status" className="rounded-2xl bg-[#e4eee1] p-4 text-sm leading-6 text-[#285630]">Your new private copy is ready. Set fresh dates and review the artwork and wording before publishing. The original event and all its guests are unchanged.</p>}
     <section aria-label="Publication status" className="rounded-3xl border border-[#355f9e]/20 bg-[#e9f2f8]/65 p-5 sm:p-7">
       <p className="text-xs font-bold uppercase tracking-wider text-[#355f9e]">{eventStatus(live)}</p>
       <h2 className="mt-2 break-words font-serif text-3xl">{draft.title}</h2>
@@ -52,5 +54,6 @@ export function EventSetupOverview({ draft, artwork, settings, coordinates, live
         <div className="mt-2 flex flex-wrap gap-x-5"><Link className={link} href={step.href}>{step.action} →</Link>{index === 3 && <Link className={link} href={`${base}/publish`}>{archived ? "Restore event" : "Review & publish"} →</Link>}</div>
       </li>)}
     </ol>
+    <section className="px-1" aria-label="Reuse this setup"><h2 className="font-serif text-2xl">Another gathering like this?</h2><p className="mt-2 text-sm leading-6 text-[#202523]/65">Reuse the saved setup in a new private draft, with fresh dates and no guest activity.</p><Link className={link} href={duplicateEventPath(draft.id)}>Duplicate Event →</Link></section>
   </div>;
 }

@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   agentRules: false,
+  outputFileTracingIncludes: {
+    "/admin/events/duplicate/*": ["./public/oyster-roast-invitation.png"],
+  },
   images: {
     remotePatterns: [
       {

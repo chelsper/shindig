@@ -48,6 +48,12 @@ describe("authenticated event setup route", () => {
     expect(renderToStaticMarkup(await Page({ ...props, searchParams: Promise.resolve({ saved: "1" }) }))).toContain("Draft saved privately");
     expect(renderToStaticMarkup(await Page({ ...props, searchParams: Promise.resolve({ saved: ["1"] }) }))).not.toContain("Draft saved privately");
   });
+  it("shows copied confirmation only for an unpublished new draft and exact return parameter", async () => {
+    expect(renderToStaticMarkup(await Page({ ...props, searchParams: Promise.resolve({ copied: "1" }) }))).toContain("Your new private copy is ready");
+    expect(renderToStaticMarkup(await Page({ ...props, searchParams: Promise.resolve({ copied: ["1"] }) }))).not.toContain("Your new private copy is ready");
+    mocks.publication.mockResolvedValue(publication);
+    expect(renderToStaticMarkup(await Page({ ...props, searchParams: Promise.resolve({ copied: "1" }) }))).not.toContain("Your new private copy is ready");
+  });
   it("calculates whether edits differ from the publication using stored revisions", async () => {
     mocks.publication.mockResolvedValue(publication);
     expect(renderToStaticMarkup(await Page(props))).toContain("matches the live version");
