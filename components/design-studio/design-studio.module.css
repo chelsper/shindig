@@ -1,0 +1,123 @@
+.studio { min-height: 100vh; background: #f7f3eb; color: #282d29; }
+.container { max-width: 1232px; margin: 0 auto; padding: 0 40px; }
+.header { display: flex; align-items: center; gap: 24px; min-height: 100px; border-bottom: 1px solid #d8d4ca; }
+.wordmark { font-family: "Iowan Old Style", Baskerville, "Times New Roman", serif; font-size: 34px; letter-spacing: -1.6px; text-decoration: none; }
+.wordmark span { color: #536c60; }
+.prototypeLabel { padding-left: 24px; border-left: 1px solid #d8d4ca; color: #63665c; font-size: 12px; }
+.backLink { display: inline-flex; min-height: 44px; align-items: center; gap: 12px; margin-left: auto; font-size: 12px; text-decoration: none; }
+.intro { padding: 38px 0 36px; }
+.eyebrow { margin: 0; font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #57675b; }
+.intro h1 { margin: 9px 0 12px; font-family: "Iowan Old Style", Baskerville, "Times New Roman", serif; font-size: clamp(46px, 5.5vw, 66px); font-weight: 400; line-height: 1.05; letter-spacing: -.045em; }
+.intro h1 em { font-weight: 400; color: #536c60; }
+.intro > p:last-child { margin: 0; font-size: 15px; color: #63665c; }
+.workspace { display: grid; grid-template-columns: 326px minmax(0, 1fr); align-items: start; gap: 56px; }
+.controls { min-width: 0; }
+.styleFieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+.styleFieldset legend { padding: 0; font-size: 18px; font-weight: 600; }
+.help { margin: 8px 0 20px; color: #63665c; font-size: 12px; line-height: 1.6; }
+.styleOptions { display: grid; gap: 12px; }
+.styleOption { position: relative; display: flex; min-width: 0; gap: 16px; align-items: center; cursor: pointer; border: 1px solid #d4d0c6; border-radius: 14px; padding: 12px; background: #fffdf7; }
+.styleOption input { position: absolute; right: 14px; top: 16px; width: 18px; height: 18px; margin: 0; accent-color: #375345; cursor: pointer; }
+.selectedOption { border-color: #375345; box-shadow: 0 0 0 1px #375345; }
+.styleOption:has(input:focus-visible) { outline: 3px solid #355f9e; outline-offset: 4px; }
+.styleThumbnail { display: flex; width: 85px; height: 99px; flex: 0 0 85px; flex-direction: column; align-items: center; justify-content: center; border: 1px solid var(--design-rule); border-radius: 3px; background: var(--design-background); color: var(--design-ink); }
+.thumbnailNumber { margin-bottom: 8px; color: var(--design-accent); font-size: 7px; letter-spacing: .14em; }
+.thumbnailTitle { font-family: var(--design-heading-font); font-style: var(--design-heading-style); font-size: 17px; line-height: 1.05; text-align: center; }
+.thumbnailRule { width: 19px; height: 1px; background: var(--design-accent); margin-top: 10px; }
+.optionCopy { display: grid; gap: 7px; padding-top: 5px; }
+.optionName { padding-right: 25px; font-size: 14px; font-weight: 650; }
+.optionDescription { max-width: 160px; color: #63665c; font-size: 11px; line-height: 1.55; }
+.swatches { display: flex; gap: 4px; margin-top: 2px; }
+.swatches > span { width: 12px; height: 12px; border-radius: 50%; border: 1px solid #7777; }
+.designDetails { margin-top: 28px; padding-top: 22px; border-top: 1px solid #d8d4ca; }
+.designDetails dl { margin: 17px 0 8px; font-size: 12px; line-height: 1.6; }
+.designDetails dl > div { display: flex; justify-content: space-between; gap: 16px; margin-top: 7px; }
+.designDetails dt { color: #63665c; }
+.designDetails dd { margin: 0; text-align: right; }
+.resetButton { min-height: 44px; display: inline-flex; gap: 9px; align-items: center; border: 0; background: transparent; padding: 0; color: #375345; font-size: 12px; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+.resetButton:disabled { color: #777a72; cursor: default; text-decoration: none; }
+.localNotice { max-width: 300px; margin: 16px 0 0; color: #63665c; font-size: 11px; line-height: 1.75; }
+.previewSection { min-width: 0; }
+.previewHeading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 18px; margin-bottom: 16px; }
+.previewHeading h2 { margin: 0; font-size: 13px; font-weight: 600; }
+.previewHeading > span { color: #63665c; font-size: 11px; }
+.previewStage { display: flex; align-items: center; justify-content: center; padding: 34px; overflow: hidden; background-color: #eae7de; background-image: radial-gradient(#bcb6a94d .6px, transparent .6px); background-size: 9px 9px; border: 1px solid #ded9cf; border-radius: 16px; }
+.stageCaption { margin: 14px 0 0; font-size: 11px; text-align: center; color: #63665c; }
+.footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; margin-top: 48px; padding: 23px 0; border-top: 1px solid #d8d4ca; font-size: 10px; color: #63665c; }
+.studio a:focus-visible, .resetButton:focus-visible { outline: 3px solid #355f9e; outline-offset: 5px; border-radius: 4px; }
+
+/* All preset styles are scoped to this sample. They never recolor the live site. */
+.invitation { flex: 0 1 450px; min-width: 0; padding: 12px; color: var(--design-ink); background: var(--design-background); border: 1px solid var(--design-rule); border-radius: 4px; box-shadow: 0 16px 32px #282d291a, 0 2px 4px #282d2912; }
+.invitationBorder { padding: 20px 26px 18px; border: 1px solid var(--design-rule); background: var(--design-surface); }
+.invitationTopline { display: flex; justify-content: space-between; gap: 8px; color: var(--design-muted); font-size: 8px; letter-spacing: .1em; text-transform: uppercase; }
+.ornament { display: flex; align-items: center; justify-content: center; gap: 20px; margin: 25px 0 17px; color: var(--design-accent); }
+.ornamentLine { width: 44px; height: 1px; background: var(--design-rule); }
+.invitationEyebrow { margin: 0; color: var(--design-accent); font-size: 9px; font-weight: 600; letter-spacing: .22em; text-transform: uppercase; text-align: center; }
+.invitationTitle { margin: 17px 0 12px; font-family: var(--design-heading-font); font-style: var(--design-heading-style); font-size: clamp(38px, 4.2vw, 55px); font-weight: 400; letter-spacing: -.045em; line-height: 1.05; text-align: center; }
+.invitationTitle em { font-weight: 400; }
+.hostLine { margin: 0; color: var(--design-muted); font-size: 12px; text-align: center; }
+.eventDetails { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 25px 0 22px; padding: 16px 0; border-block: 1px solid var(--design-rule); }
+.eventDetails > div + div { padding-left: 15px; border-left: 1px solid var(--design-rule); }
+.eventDetails p { margin: 0; font-size: 11px; line-height: 1.7; }
+.eventDetails .detailLabel { margin-bottom: 6px; color: var(--design-accent); font-size: 8px; font-weight: 650; text-transform: uppercase; letter-spacing: .16em; }
+.detailSecondary { color: var(--design-muted); }
+.invitationDescription { max-width: 300px; margin: 0 auto; color: var(--design-muted); font-size: 12px; line-height: 1.8; text-align: center; }
+.invitationAside { margin: 12px 0 0; font-family: var(--design-heading-font); font-style: italic; font-size: 15px; text-align: center; }
+.sampleRsvp { margin: 23px 0 18px; padding: 18px 16px 14px; border-radius: 10px; background: var(--design-background); text-align: center; }
+.sampleRsvp > p { margin: 0 0 13px; font-family: var(--design-heading-font); font-size: 23px; }
+.previewButton { display: flex; min-height: 46px; align-items: center; justify-content: center; gap: 16px; border-radius: 999px; background: var(--design-button); color: var(--design-buttonText); font-size: 10px; letter-spacing: .13em; font-weight: 600; text-transform: uppercase; }
+.previewDisclaimer { display: block; margin-top: 10px; color: var(--design-muted); font-size: 9px; line-height: 1.5; }
+.invitationWordmark { margin: 0; font-family: "Iowan Old Style", Baskerville, "Times New Roman", serif; color: var(--design-muted); font-size: 17px; text-align: center; letter-spacing: -.03em; }
+.invitationWordmark span { color: var(--design-accent); }
+.invitation[data-design="coastal"] { background-image: repeating-linear-gradient(90deg, transparent 0 14px, var(--design-decoration) 14px 28px); }
+.invitation[data-design="coastal"] .invitationBorder { border-radius: 8px; }
+.invitation[data-design="coastal"] .ornamentLine { height: 5px; border-block: 1px solid var(--design-accent); background: transparent; }
+.invitation[data-design="after-dark"] .ornament { transform: rotate(22.5deg); }
+.invitation[data-design="after-dark"] .ornamentLine { width: 32px; }
+
+@media (max-width: 960px) and (min-width: 761px) {
+  .container { padding-inline: 28px; }
+  .workspace { grid-template-columns: 276px minmax(0, 1fr); gap: 28px; }
+  .styleOption { gap: 12px; }
+  .styleThumbnail { width: 65px; flex-basis: 65px; }
+  .previewStage { padding: 20px; }
+  .invitationBorder { padding-inline: 18px; }
+}
+@media (max-width: 760px) {
+  .container { padding-inline: 20px; }
+  .header { min-height: 78px; gap: 12px; }
+  .wordmark { font-size: 30px; }
+  .prototypeLabel { display: none; }
+  .backLink { font-size: 11px; }
+  .intro { padding: 29px 0 27px; }
+  .intro > p:last-child { font-size: 13px; }
+  .workspace { display: flex; flex-direction: column; gap: 26px; }
+  .controls { display: contents; }
+  .styleFieldset { width: 100%; }
+  .styleFieldset legend { font-size: 16px; }
+  .help { margin: 6px 0 14px; }
+  .styleOptions { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+  .styleOption { display: flex; flex-direction: column; padding: 10px 5px 12px; gap: 8px; }
+  .styleOption input { position: static; width: 16px; height: 16px; }
+  .styleThumbnail { width: 100%; max-width: 80px; height: 85px; flex-basis: auto; order: -1; }
+  .optionCopy { display: contents; }
+  .optionName { padding: 0; font-size: 11px; text-align: center; }
+  .optionDescription, .swatches { display: none; }
+  .designDetails { order: 3; width: 100%; margin-top: 0; }
+  .localNotice { order: 4; max-width: none; margin-top: -14px; }
+  .previewSection { width: 100%; }
+  .previewHeading { margin-bottom: 12px; }
+  .previewStage { padding: 18px 12px; border-radius: 12px; }
+  .invitation { padding: 8px; }
+  .invitationBorder { padding: 18px 20px; }
+  .invitationTitle { font-size: clamp(35px, 10vw, 49px); }
+  .footer { margin-top: 30px; font-size: 9px; }
+}
+@media (max-width: 360px) {
+  .container { padding-inline: 16px; }
+  .previewStage { padding: 12px 7px; }
+  .invitationBorder { padding-inline: 13px; }
+  .eventDetails { gap: 10px; }
+  .eventDetails > div + div { padding-left: 10px; }
+  .invitationTopline { font-size: 7px; }
+}

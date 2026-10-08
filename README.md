@@ -1,5 +1,36 @@
 # Shindig
 
+## Design Studio — public preview
+
+Open `/design` to compare **Classic**, **Coastal** and
+**After Dark** on a fictional dinner-party invitation. Native radio controls
+update the preview, palette and typography immediately; **Reset to Classic**
+returns to the default. Only local React state is used. Reloading or leaving
+resets the selection. There is no save, publish, real RSVP, upload or data request.
+
+The route requires no Google setup, admin password or database. It is available
+in production as a noindex, fictional design preview. No navigation,
+artwork, global styles or saved appearance of Jasper Shucks or any other real
+event has changed. This is design work for review, not yet a saved event setting.
+
+`lib/event-design.ts` is the single preset/token definition; the picker and
+sample invitation share it. Colors are scoped through a CSS module and custom
+properties. Tests check all normal-text and button foreground/background pairs
+against WCAG AA's 4.5:1 contrast minimum, safe defaults, noninteractive sample
+content, and production availability without credentials. No packages or migration were added.
+Full invitation/Hub preview switching, image-framing changes and saved design
+settings remain separate future work.
+
+Browser checks covered style switching, keyboard selection, reset/reload, and
+320px, 390px and 768px layouts without horizontal overflow. The deployment is
+isolated from the pending host-account rollout and requires no new environment
+variables or database changes.
+
+The isolated release passed lint, typecheck, 1,075 tests and a webpack production
+build (one existing native PostgreSQL concurrency test skipped). It retains the
+tested Next.js 16.3.8 patch; the production dependency audit reports no known
+vulnerabilities. Host-account dependencies and migration 020 are not included.
+
 ## RSVP deadlines & event capacity (Step 10 — current)
 
 For new-style Shindig events, open **Your events → event → RSVP & Hub →
