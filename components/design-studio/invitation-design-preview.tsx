@@ -1,12 +1,14 @@
 import { eventDesignVariables, getEventDesign, type EventDesignId } from "../../lib/event-design";
+import { DESIGN_PREVIEW_EVENT as event } from "../../lib/design-preview";
 import styles from "./design-studio.module.css";
 
 // A deliberately fictional sample. Never import a real event, guest, RSVP
-// action or host data into this account-free, development-only prototype.
+// action or host data into this account-free public prototype.
 export function InvitationDesignPreview({ designId }: { designId: EventDesignId }) {
   const design = getEventDesign(designId);
   return <article className={styles.invitation} style={eventDesignVariables(design)} data-design={design.id} aria-label={`${design.name} sample invitation — visual preview only`}>
     <div className={styles.invitationBorder}>
+      <div className={styles.invitationIdentity}>
       <div className={styles.invitationTopline}><span>A reason to gather</span><span aria-hidden="true">No. 01</span></div>
       <div className={styles.ornament} aria-hidden="true">
         <span className={styles.ornamentLine} />
@@ -18,20 +20,23 @@ export function InvitationDesignPreview({ designId }: { designId: EventDesignId 
         <span className={styles.ornamentLine} />
       </div>
       <p className={styles.invitationEyebrow}>You’re invited</p>
-      <h2 className={styles.invitationTitle}>A little<br /><em>dinner party.</em></h2>
-      <p className={styles.hostLine}>with Sam &amp; Alex</p>
-      <div className={styles.eventDetails}>
-        <div><p className={styles.detailLabel}>When</p><p>Saturday, November 14</p><p className={styles.detailSecondary}>2026 · 6:00 PM</p></div>
-        <div><p className={styles.detailLabel}>Where</p><p>The garden table</p><p className={styles.detailSecondary}>At our place</p></div>
+      <h2 className={styles.invitationTitle}>{event.titleLead}<br /><em>{event.titleAccent}</em></h2>
+      <p className={styles.hostLine}>with {event.hosts}</p>
       </div>
-      <p className={styles.invitationDescription}>Something delicious, a glass of something good, and your favorite people around the table.</p>
-      <p className={styles.invitationAside}>Come as you are. Stay for one more.</p>
+      <div className={styles.invitationContent}>
+      <div className={styles.eventDetails}>
+        <div><p className={styles.detailLabel}>When</p><p>{event.date}</p><p className={styles.detailSecondary}>{event.year} · {event.time}</p></div>
+        <div><p className={styles.detailLabel}>Where</p><p>{event.venue}</p><p className={styles.detailSecondary}>{event.location}</p></div>
+      </div>
+      <p className={styles.invitationDescription}>{event.description}</p>
+      <p className={styles.invitationAside}>{event.aside}</p>
       <div className={styles.sampleRsvp}>
         <p>Save you a seat?</p>
         <span className={styles.previewButton}>Kindly reply <span aria-hidden="true">↗</span></span>
         <span className={styles.previewDisclaimer}>Sample invitation · RSVP is not active</span>
       </div>
       <p className={styles.invitationWordmark}>a Shindig<span aria-hidden="true">.</span></p>
+      </div>
     </div>
   </article>;
 }

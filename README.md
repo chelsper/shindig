@@ -3,9 +3,11 @@
 ## Design Studio — public preview
 
 Open `/design` to compare **Classic**, **Coastal** and
-**After Dark** on a fictional dinner-party invitation. Native radio controls
-update the preview, palette and typography immediately; **Reset to Classic**
-returns to the default. Only local React state is used. Reloading or leaving
+**After Dark** on a fictional dinner party. Native radio controls switch between
+**Invitation / Event Hub** and **Phone / Desktop**, retaining the chosen style.
+The preview, palette and typography update immediately; **Reset to Classic**
+resets the style without changing the chosen view or size. Only local React state
+is used. Reloading or leaving
 resets the selection. There is no save, publish, real RSVP, upload or data request.
 
 The route requires no Google setup, admin password or database. It is available
@@ -13,23 +15,46 @@ in production as a noindex, fictional design preview. No navigation,
 artwork, global styles or saved appearance of Jasper Shucks or any other real
 event has changed. This is design work for review, not yet a saved event setting.
 
-`lib/event-design.ts` is the single preset/token definition; the picker and
-sample invitation share it. Colors are scoped through a CSS module and custom
+`lib/event-design.ts` is the single preset/token definition; the picker, sample
+invitation and sample Hub share it. `lib/design-preview.ts` contains the one
+fictional sample event, named preview sizes and fitting calculation. Colors are
+scoped through a CSS module and custom
 properties. Tests check all normal-text and button foreground/background pairs
 against WCAG AA's 4.5:1 contrast minimum, safe defaults, noninteractive sample
 content, and production availability without credentials. No packages or migration were added.
-Full invitation/Hub preview switching, image-framing changes and saved design
-settings remain separate future work.
+Phone uses a 390px canvas; Desktop uses a 960px canvas with a wider, two-column
+layout. A resize observer fits the entire canvas to the available space and
+recalculates its height as content changes. CSS container queries respond to the
+canvas width, not the browser width, so Desktop stays a desktop composition even
+when viewed on a phone. Captions explicitly identify the scaled preview.
+
+`DesignPreview` composes the independent invitation/Hub components inside
+`PreviewFrame`. The Hub includes only a fictional guest list and host note.
+Sample RSVP, calendar and directions controls are visual only; nothing submits,
+downloads or navigates. No live Hub components or data layers are imported.
+Image-framing changes and saved design settings remain separate future work.
 
 Browser checks covered style switching, keyboard selection, reset/reload, and
 320px, 390px and 768px layouts without horizontal overflow. The deployment is
 isolated from the pending host-account rollout and requires no new environment
 variables or database changes.
 
-The isolated release passed lint, typecheck, 1,075 tests and a webpack production
+The initial isolated release passed lint, typecheck, 1,075 tests and a webpack production
 build (one existing native PostgreSQL concurrency test skipped). It retains the
 tested Next.js 16.3.8 patch; the production dependency audit reports no known
 vulnerabilities. Host-account dependencies and migration 020 are not included.
+
+**Step 2: Invitation/Hub and device previews.** The full working tree passed lint,
+typecheck, 1,141 tests and a webpack production build (the existing native
+PostgreSQL concurrency test remains skipped). New tests cover all twelve
+style/view/size combinations, fitting calculations, sample-only content and
+contrast. Browser checks covered keyboard selection, retained styles, reset,
+reload, 320px/390px/768px layouts, and no horizontal overflow or console errors.
+Keep the unfinished host-account rollout out of any Design Studio deployment.
+
+The isolated Step 2 release passed lint, typecheck, 1,095 tests and a webpack
+production build, with the same one native concurrency test skipped. The release
+contains only Design Studio components, its fictional fixture, tests and docs.
 
 ## RSVP deadlines & event capacity (Step 10 — current)
 

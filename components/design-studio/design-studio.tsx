@@ -3,11 +3,14 @@
 import Link from "next/link";
 import { useState } from "react";
 import { DEFAULT_EVENT_DESIGN, EVENT_DESIGNS, eventDesignVariables, getEventDesign, type EventDesignId } from "../../lib/event-design";
-import { InvitationDesignPreview } from "./invitation-design-preview";
+import type { DesignPreviewDevice, DesignPreviewPage } from "../../lib/design-preview";
+import { DesignPreview } from "./design-preview";
 import styles from "./design-studio.module.css";
 
 export function DesignStudio() {
   const [selected, setSelected] = useState<EventDesignId>(DEFAULT_EVENT_DESIGN);
+  const [page, setPage] = useState<DesignPreviewPage>("invitation");
+  const [device, setDevice] = useState<DesignPreviewDevice>("phone");
   const design = getEventDesign(selected);
   return <main className={styles.studio}>
     <div className={styles.container}>
@@ -50,12 +53,28 @@ export function DesignStudio() {
           <p className={styles.localNotice}>Just trying things on. Your choice stays in this preview and resets when you leave or reload. Nothing is saved or published.</p>
         </aside>
         <section className={styles.previewSection} aria-labelledby="preview-title">
-          <div className={styles.previewHeading}><h2 id="preview-title">A guest’s-eye view</h2><span aria-live="polite" aria-atomic="true">{design.name} · Preview only</span></div>
-          <div className={styles.previewStage}><InvitationDesignPreview designId={selected} /></div>
-          <p className={styles.stageCaption}>A fictional dinner party, dressed for the occasion.</p>
+          <div className={styles.previewHeading}><h2 id="preview-title">A guest’s-eye view</h2><span aria-live="polite" aria-atomic="true">{design.name} · {page === "invitation" ? "Invitation" : "Event Hub"} · {device === "phone" ? "Phone" : "Desktop"}</span></div>
+          <div className={styles.previewToolbar}>
+            <fieldset className={styles.previewOptions}><legend>Preview page</legend><div>
+              {([ ["invitation", "Invitation"], ["hub", "Event Hub"] ] as const).map(([value, label]) => <label key={value}>
+                <input type="radio" name="preview-page" value={value} checked={page === value} onChange={() => setPage(value)} aria-controls="design-preview-content" />
+                <span>{label}</span>
+              </label>)}
+            </div></fieldset>
+            <fieldset className={styles.previewOptions}><legend>Preview size</legend><div>
+              {([ ["phone", "Phone"], ["desktop", "Desktop"] ] as const).map(([value, label]) => <label key={value}>
+                <input type="radio" name="preview-device" value={value} checked={device === value} onChange={() => setDevice(value)} aria-controls="design-preview-content" />
+                <span>{label}</span>
+              </label>)}
+            </div></fieldset>
+          </div>
+          <div id="design-preview-content" className={styles.previewStage}>
+            <DesignPreview designId={selected} page={page} device={device} />
+          </div>
+          <p className={styles.stageCaption}>{device === "phone" ? "390 px phone" : "960 px desktop"} layout · scaled to fit. A fictional dinner party; sample actions are inactive.</p>
         </section>
       </div>
-      <footer className={styles.footer}><span>Shindig · Made for getting together</span><span>Design Studio / First look</span></footer>
+      <footer className={styles.footer}><span>Shindig · Made for getting together</span><span>Design Studio / Preview only</span></footer>
     </div>
   </main>;
 }
