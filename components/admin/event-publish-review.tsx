@@ -15,6 +15,7 @@ import { EventLifecycleControls } from "./event-lifecycle-controls";
 import { EventLinkField } from "./event-link-field";
 import { EventSharePanel } from "./event-share-panel";
 import { EventSetupNavigation } from "./event-setup-navigation";
+import { rsvpDeadlineLabel } from "../../lib/rsvp-policy";
 
 export function EventPublishReview({ draft, artwork, settings, live, musicConfigured = true }: {
   draft: EventDraft; artwork: DraftArtworkRecord; settings: DraftSettingsRecord;
@@ -56,6 +57,7 @@ export function EventPublishReview({ draft, artwork, settings, live, musicConfig
         <div><dt className="font-semibold">Where</dt><dd>{draft.venue} · {draft.address || "Address missing"}</dd></div>
         <div><dt className="font-semibold">Artwork</dt><dd>{artwork.settings.invitation.path ? "Saved invitation artwork" : "Text-only invitation"}; {artwork.settings.header.path ? "separate Hub header" : "Hub uses invitation artwork when available"}.</dd></div>
         <div><dt className="font-semibold">RSVP</dt><dd>Up to {settings.settings.rsvp.maxPartySize} per response · Comments {settings.settings.rsvp.allowComments ? "on" : "off"} · Guest names {settings.settings.rsvp.guestListDefaultVisible ? "visible" : "hidden"} by default (guests choose).</dd></div>
+        <div><dt className="font-semibold">Reply deadline &amp; capacity</dt><dd>{settings.settings.rsvp.deadlineAtUtc ? `Guest replies and edits close ${rsvpDeadlineLabel(settings.settings.rsvp.deadlineAtUtc, draft.timeZone)}. If that time has already passed, guest replies will be closed as soon as you publish.` : "No RSVP deadline."}</dd><dd>{settings.settings.rsvp.capacity == null ? "No total attendance limit." : `${settings.settings.rsvp.capacity} guests maximum, including hidden guests and host-added responses. Publishing cannot reduce capacity below current attendance.`}</dd><dd><Link className={button} href={`${base}/settings#rsvp-limits`}>Adjust draft limits →</Link></dd></div>
         <div><dt className="font-semibold">Event Hub</dt><dd>{DRAFT_HUB_MODULES.filter((m) => settings.settings.features[m.id]).map((m) => m.label).join(" · ") || "Event details only"}</dd></div>
       </dl>
       {artwork.settings.invitation.path && <Image className="mt-4 h-auto max-h-64 w-auto rounded-xl" src={draftImageUrl(draft.id, artwork.settings.invitation.path)} alt={artwork.settings.invitation.alt} width={180} height={240} unoptimized />}

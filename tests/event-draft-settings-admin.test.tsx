@@ -27,6 +27,14 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("private draft settings page and server action", () => {
+  it("renders optional controls off by default and populated in the event timezone", () => {
+    const props = { draft: { ...draft, timeZone: "America/New_York" }, artwork: EMPTY_DRAFT_ARTWORK };
+    let html = renderToStaticMarkup(<EventDraftSettingsEditor {...props} initial={{ settings: DEFAULT_DRAFT_SETTINGS, revision: 1 }} />);
+    expect(html).toContain("Set an RSVP deadline"); expect(html).toContain("Limit total event attendance");
+    expect(html).not.toContain('type="datetime-local"'); expect(html).not.toContain('inputMode="numeric"');
+    html = renderToStaticMarkup(<EventDraftSettingsEditor {...props} initial={{ settings: { ...DEFAULT_DRAFT_SETTINGS, rsvp: { ...DEFAULT_DRAFT_SETTINGS.rsvp, capacity: 32, deadlineAtUtc: "2026-11-01T22:00:00.000Z" } }, revision: 1 }} />);
+    expect(html).toContain('value="2026-11-01T17:00"'); expect(html).toContain('value="32"'); expect(html).toContain("including hidden guests");
+  });
   it("checks the session before reading, rendering, or saving any settings", async () => {
     mocks.auth.mockResolvedValue(false);
     expect(await saveDraftSettings(input)).toMatchObject({ ok: false, message: expect.stringContaining("session") });
@@ -66,7 +74,7 @@ describe("private draft settings page and server action", () => {
     mocks.draft.mockResolvedValue(null); await expect(SettingsPage(context)).rejects.toThrow("not found");
     mocks.get.mockRejectedValue(new Error("private database secret"));
     const html = renderToStaticMarkup(await SettingsPage(context));
-    expect(html).toContain("migrations through 017"); expect(html).not.toContain("private database secret");
+    expect(html).toContain("migrations through 019"); expect(html).not.toContain("private database secret");
   });
   it("does not report weather as incomplete when its saved location is confirmed", async () => {
     const coordinates = { latitude: 30, longitude: -81 };

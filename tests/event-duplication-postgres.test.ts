@@ -79,7 +79,7 @@ describe.skipIf(!embeddedModule)("real PostgreSQL private event duplication", ()
     expect(queries.join(" ")).not.toMatch(/\b(rsvps|playlist_suggestions|event_questions|event_updates|polls|event_publications)\b/);
     const copy = await getEventDraft(input.requestId);
     expect(copy).toMatchObject({ ...snapshot.details, id: input.requestId, revision: 1, title: input.title, description: "Latest private description", startsAtUtc: null, endsAtUtc: null, createdAt: expect.any(String), updatedAt: expect.any(String) });
-    expect((await getDraftSettings(input.requestId))!.settings).toEqual(snapshot.settings);
+    expect((await getDraftSettings(input.requestId))!.settings).toEqual({ ...snapshot.settings, rsvp: { ...snapshot.settings.rsvp, deadlineAtUtc: null, capacity: null } });
     const art = (await getDraftArtwork(input.requestId))!.settings;
     expect(art.invitation.path).toContain(`event-drafts/${input.requestId}/`); expect(art.invitation.path).not.toBe(sourceArt.invitation.path); expect(art.header.focalX).toBe(32);
     expect(await count("event_data_scopes", "event_id", input.requestId)).toBe(1);
@@ -139,6 +139,13 @@ describe.skipIf(!embeddedModule)("real PostgreSQL private event duplication", ()
   it("keeps unsaved RSVP defaults unsaved for explicit review", async () => {
     const input = await request(await createSource(false)); await duplicateEventRecord(input);
     expect(await getDraftSettings(input.requestId)).toEqual({ settings: DEFAULT_DRAFT_SETTINGS, revision: 0 });
+  });
+  it("keeps capacity but clears the deadline with the copied event dates", async () => {
+    const source = await createSource();
+    await saveDraftSettingsRecord(source, 1, { ...snapshot.settings, rsvp: { ...snapshot.settings.rsvp, deadlineAtUtc: "2026-11-01T22:00:00.000Z", capacity: 32 } });
+    const input = await request(source); await duplicateEventRecord(input);
+    expect((await getDraftSettings(input.requestId))!.settings.rsvp).toMatchObject({ deadlineAtUtc: null, capacity: 32 });
+    expect((await getDraftSettings(source))!.settings.rsvp.deadlineAtUtc).toBe("2026-11-01T22:00:00.000Z");
   });
   it("copies legacy setup without mutating it, and hashes edited invitation/header settings", async () => {
     const old = await getDuplicationSource("oyster-roast-2026");

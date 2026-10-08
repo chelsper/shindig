@@ -2,14 +2,17 @@
 import { useState } from "react";
 import { DRAFT_HUB_MODULES, type DraftSettings } from "../../lib/event-draft-settings";
 import { HubNavigation } from "../event-hub/hub-navigation";
+import { RsvpDeadlineNote } from "../rsvp/rsvp-deadline-note";
 
 // Deliberately not the live modules/form: draft previews must never call the
 // Oyster Roast's public actions, data services, or guest-interaction cookie API.
-export function DraftRsvpPreview({ settings }: { settings: DraftSettings }) {
+export function DraftRsvpPreview({ settings, timeZone }: { settings: DraftSettings; timeZone?: string }) {
   const [attending, setAttending] = useState(true);
   return <section className="rounded-2xl border border-[#202523]/10 bg-[#fffaf1] p-4" aria-label="RSVP preview">
     <p className="text-[0.6rem] font-bold uppercase tracking-widest text-[#355f9e]">Kindly reply · Preview only</p>
     <h4 className="mt-2 font-serif text-2xl">Will you join us?</h4>
+    {timeZone && <RsvpDeadlineNote deadline={settings.rsvp.deadlineAtUtc} timeZone={timeZone} />}
+    {settings.rsvp.capacity != null && <p className="mt-2 text-xs leading-5 text-[#202523]/60">Preview: {settings.rsvp.capacity} total guest capacity. Live availability is checked when guests reply.</p>}
     <div className="mt-4 flex gap-2" role="group" aria-label="Preview RSVP response">
       {[true, false].map((value) => <button key={String(value)} type="button" aria-pressed={attending === value} onClick={() => setAttending(value)} className={`min-h-11 min-w-0 flex-1 rounded-xl border px-2 text-xs font-semibold ${attending === value ? "border-[#355f9e] bg-[#e9f2f8] text-[#214e91]" : "border-[#202523]/15"}`}>{value ? "Attending" : "Can’t Make It"}</button>)}
     </div>

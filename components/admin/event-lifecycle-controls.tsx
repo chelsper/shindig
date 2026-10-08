@@ -6,7 +6,7 @@ import { availableLifecycleActions, eventStatus, type EventLifecycle, type Lifec
 
 const descriptions: Record<LifecycleAction, { label: string; message: string; success: string }> = {
   "close-rsvps": { label: "Close RSVPs", message: "Stop new RSVPs and guest edits. The invitation and Event Hub stay available while published, and you can still manage responses here.", success: "RSVPs are closed. Existing responses are safe." },
-  "reopen-rsvps": { label: "Reopen RSVPs", message: "Allow new RSVPs and guest edits again when this event is published. This does not publish a hidden event or any draft changes.", success: "RSVPs are open. An unpublished event remains hidden until you republish it." },
+  "reopen-rsvps": { label: "Reopen RSVPs", message: "Allow new RSVPs and guest edits again when this event is published, subject to its published deadline and capacity. This does not publish a hidden event or any draft changes.", success: "The manual RSVP switch is open. Published deadlines and capacity still apply. An unpublished event remains hidden until you republish it." },
   unpublish: { label: "Unpublish event", message: "Hide the invitation, Event Hub, calendar downloads and guest actions from shared links. Your guests, content and artwork are retained. Republish after reviewing below to restore the same links. Calendar files already downloaded cannot be recalled.", success: "Event unpublished. Guest links are unavailable; all your data is retained." },
   archive: { label: "Archive event", message: "Move this gathering to Archived, close RSVPs and guest edits, and hide all public pages and guest actions. Keep every response, private edit link, piece of artwork and Hub contribution. You can still manage saved content and export RSVPs. Nothing is deleted; downloaded calendars and previously viewed content cannot be recalled.", success: "Event archived. All saved data is retained and guest access is closed." },
   restore: { label: "Restore event", message: "Return this gathering to your active events as Unpublished with RSVPs closed. Nothing becomes public and no messages are sent. Review and republish separately when ready; reopening RSVPs is also a separate choice.", success: "Event restored privately. RSVPs remain closed until you explicitly reopen them." },
@@ -26,6 +26,7 @@ export function EventLifecycleControls({ id, live }: { id: string; live: EventLi
     <div className="mt-4 flex flex-wrap gap-3">
       {availableLifecycleActions(live).map((nextAction) => <button key={nextAction} className={button} type="button" disabled={!!action || pending || done} onClick={() => { setAction(nextAction); setMessage(""); }}>{descriptions[nextAction].label}</button>)}
     </div>
+    <p className="mt-3 text-xs leading-5 text-[#202523]/60">The manual switch does not override a published RSVP deadline or capacity. Change limits in RSVP &amp; Hub, then review and publish.</p>
     {action && <div className="mt-5 rounded-2xl border border-[#b78228]/25 bg-[#fff4d8] p-4">
       <p className="text-sm leading-6">{descriptions[action].message}</p>
       <div className="mt-4 flex flex-wrap gap-3">

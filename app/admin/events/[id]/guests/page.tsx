@@ -19,6 +19,7 @@ import { listPollsForAdmin } from "../../../../../lib/server/polls";
 import { listPlaylistSuggestionsForAdmin } from "../../../../../lib/server/playlist";
 import { guestListQuery } from "../../../../../lib/admin-guests";
 import { EventGuestList } from "../../../../../components/admin/event-guest-list";
+import { rsvpDeadlineLabel } from "../../../../../lib/rsvp-policy";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Event responses | Shindig", robots: { index: false, follow: false }, referrer: "no-referrer" as const };
 const views = ["rsvps", "questions", "updates", "playlist", "polls"] as const;
@@ -58,7 +59,7 @@ export default async function EventGuests({ params, searchParams }: { params: Pr
       if (!result) content = failed;
       else {
       const [responses, summary] = result;
-      content = <EventGuestList id={id} timeZone={event.timeZone} responses={responses} summary={summary} filter={filter} q={q} saved={search.saved} />;
+      content = <>{(event.rsvp?.capacity != null || event.rsvp?.deadlineAtUtc) && <section className="mb-5 rounded-2xl bg-[#e9f2f8]/60 p-4 text-sm leading-6" aria-label="Published RSVP limits"><p className="font-semibold">Published RSVP limits</p>{event.rsvp.capacity != null && <p>{summary.totalPartySize} of {event.rsvp.capacity} guest places filled, including hidden guests.</p>}{event.rsvp.deadlineAtUtc && <p>Guest replies and edits close {rsvpDeadlineLabel(event.rsvp.deadlineAtUtc, event.timeZone)}.</p>}<p>Host corrections remain available after closing. Attendance increases must fit the capacity.</p><Link className="inline-flex min-h-11 items-center text-[#355f9e] underline underline-offset-4" href={`/admin/events/${id}/settings#rsvp-limits`}>Adjust limits in the draft, then publish →</Link></section>}<EventGuestList id={id} timeZone={event.timeZone} responses={responses} summary={summary} filter={filter} q={q} saved={search.saved} /></>;
     }
       }
   return <ContentShell title={labels[view]} contextLabel={event.title} description="Only this event’s responses and content. Guest names on private questions stay here." dashboardHref={`/admin/events/${id}/publish`}>

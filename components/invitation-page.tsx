@@ -12,6 +12,7 @@ import { EventHubLink } from "./event-hub-link";
 import { OYSTER_ROAST_EVENT, eventMonthLabel, type OysterRoastEvent } from "../lib/oyster-roast-event";
 import { createRsvpEditToken } from "../lib/rsvp-edit-token";
 import { RsvpsClosed } from "./rsvp/rsvps-closed";
+import { RsvpDeadlineNote } from "./rsvp/rsvp-deadline-note";
 
 type RsvpChoice = "attending" | "declined" | null;
 
@@ -62,6 +63,7 @@ type InvitationPageProps = {
 export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = OYSTER_ROAST_EVENT }: InvitationPageProps) {
   const legacy = oysterRoastEvent.slug === OYSTER_ROAST_EVENT.slug;
   const rules = oysterRoastEvent.rsvp ?? { maxPartySize: 20, allowComments: true, guestListDefaultVisible: true };
+  const repliesClosed = oysterRoastEvent.rsvpsOpen === false || oysterRoastEvent.rsvpAvailability === "deadline";
   const [choice, setChoice] = useState<RsvpChoice>(null);
   const [name, setName] = useState("");
   const [partySize, setPartySize] = useState("1");
@@ -114,7 +116,7 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (oysterRoastEvent.rsvpsOpen === false || !choice || !name.trim() || submittingRef.current) return;
+    if (repliesClosed || !choice || !name.trim() || submittingRef.current) return;
 
     const submissionId = submissionIdRef.current ?? crypto.randomUUID();
     const nextEditToken = editTokenRef.current ?? createRsvpEditToken();
@@ -229,7 +231,7 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
             </div>
 
             <div className="rounded-[1.75rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 shadow-[0_18px_50px_rgba(41,56,53,0.10)] backdrop-blur sm:p-7">
-              {oysterRoastEvent.rsvpsOpen === false ? <RsvpsClosed /> : submitted ? (
+              {repliesClosed ? <RsvpsClosed deadlinePassed={oysterRoastEvent.rsvpAvailability === "deadline"} /> : submitted ? (
                 <div aria-live="polite" className="py-3 text-center sm:py-5">
                   <div className="success-mark mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#dceaf7] text-[#214e91]">
                     <svg aria-hidden="true" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -294,10 +296,12 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#355f9e]">Kindly reply</p>
                       <h2 className="mt-1.5 font-serif text-3xl tracking-[-0.03em]">{oysterRoastEvent.invitation.rsvpHeading}</h2>
+                      <RsvpDeadlineNote deadline={rules.deadlineAtUtc} timeZone={oysterRoastEvent.timeZone} />
                     </div>
                     <span aria-hidden="true" className="text-2xl">◌</span>
                   </div>
 
+                  {oysterRoastEvent.rsvpAvailability === "full" && <p className="mb-4 rounded-xl bg-[#e9f2f8] p-4 text-sm leading-6">This gathering is currently full. You can still send a decline. Attending replies can be accepted again if space opens up.</p>}
                   <fieldset disabled={isPending}>
                     <legend className="sr-only">RSVP response</legend>
                     <div className="grid grid-cols-2 gap-2.5">

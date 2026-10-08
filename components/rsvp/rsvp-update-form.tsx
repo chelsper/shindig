@@ -9,6 +9,7 @@ import { OYSTER_ROAST_EVENT, type OysterRoastEvent } from "../../lib/oyster-roas
 import { CalendarActions } from "../calendar-actions";
 import { EventHubLink } from "../event-hub-link";
 import { RsvpsClosed } from "./rsvps-closed";
+import { RsvpDeadlineNote } from "./rsvp-deadline-note";
 
 type GuestRsvp = {
   guestName: string;
@@ -30,6 +31,7 @@ export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT 
   const eventSlug = event.slug;
   const legacy = eventSlug === OYSTER_ROAST_EVENT.slug;
   const rules = event.rsvp ?? { maxPartySize: 20, allowComments: true, guestListDefaultVisible: true };
+  const repliesClosed = event.rsvpsOpen === false || event.rsvpAvailability === "deadline";
   const [choice, setChoice] = useState<RsvpChoice>(
     initialRsvp.attending ? "attending" : "declined",
   );
@@ -47,7 +49,7 @@ export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT 
   function handleSubmit(formEvent: FormEvent<HTMLFormElement>) {
     formEvent.preventDefault();
 
-    if (event.rsvpsOpen === false || !name.trim() || submittingRef.current) return;
+    if (repliesClosed || !name.trim() || submittingRef.current) return;
 
     submittingRef.current = true;
     setErrorMessage(null);
@@ -105,7 +107,7 @@ export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT 
             {event.title}
           </p>
           <h1 className="font-serif mt-3 text-4xl tracking-[-0.04em] sm:text-5xl">
-            {event.rsvpsOpen === false ? "Your RSVP" : "Update your RSVP"}
+            {repliesClosed ? "Your RSVP" : "Update your RSVP"}
           </h1>
           <p className="mt-3 text-sm text-[#202523]/58">
             {event.dateLabel} · {event.timeLabel}
@@ -113,9 +115,9 @@ export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT 
         </section>
 
         <section className="rounded-[1.75rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 shadow-[0_18px_50px_rgba(41,56,53,0.10)] backdrop-blur sm:p-8">
-          {event.rsvpsOpen === false ? (
+          {repliesClosed ? (
             <>
-              <RsvpsClosed />
+              <RsvpsClosed deadlinePassed={event.rsvpAvailability === "deadline"} />
               <p className="mt-3 text-center text-sm leading-6">
                 Your saved response: {initialRsvp.attending ? `Attending · ${initialRsvp.partySize} ${initialRsvp.partySize === 1 ? "guest" : "guests"}` : "Can’t Make It"}.
               </p>
@@ -170,7 +172,9 @@ export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT 
               <div className="mb-5">
                 <p className="text-xs font-semibold tracking-[0.22em] text-[#355f9e] uppercase">Your response</p>
                 <h2 className="font-serif mt-1.5 text-3xl tracking-[-0.03em]">Will you join us?</h2>
+                <RsvpDeadlineNote deadline={rules.deadlineAtUtc} timeZone={event.timeZone} />
               </div>
+              {event.rsvpAvailability === "full" && <p className="mb-4 rounded-xl bg-[#e9f2f8] p-4 text-sm leading-6">This gathering is currently full. You can keep or reduce your saved party, or let the host know you can’t make it. Adding people needs available space.</p>}
 
               <fieldset disabled={isPending}>
                 <legend className="sr-only">RSVP response</legend>

@@ -161,7 +161,7 @@ describe.skipIf(!socket && !embeddedModule)("real local publish → RSVP → hos
     expect((await updateEventRsvp(slugs[0], { ...fields, editToken: hiddenToken })).ok).toBe(false);
     // A scope captured before closure cannot bypass the locked SQL admission.
     await expect(saveRsvp({ ...fields, id: randomUUID(), eventSlug: slugs[0] }, hashRsvpEditToken("d".repeat(43)), a)).rejects.toThrow();
-    expect(await updateRsvpForGuest(hashRsvpEditToken(hiddenToken), { ...fields, guestName: "Must not save" }, a)).toBeNull();
+    await expect(updateRsvpForGuest(hashRsvpEditToken(hiddenToken), { ...fields, guestName: "Must not save" }, a)).rejects.toThrow("closed RSVPs");
     expect(await listRsvps("all", a)).toEqual(closedBefore);
     state.authenticated = true;
     await expect(updateEventGuest(ids[0], hiddenId, initial, form({ guestName: "Hidden host edit", displayOnGuestList: "" }))).rejects.toThrow("saved=update");

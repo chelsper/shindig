@@ -21,7 +21,7 @@ export default async function DraftSettingsPage({ params }: { params: Promise<{ 
   let data;
   try { data = await Promise.all([getEventDraft(id), getDraftArtwork(id), getDraftSettings(id), getHostEventPublication(draftEventSlug(id))]); }
   catch {
-    return <ContentShell title="Settings couldn’t load" contextLabel="Private draft" dashboardHref="/admin/events" description="Please try again shortly. For first-time setup, check migrations through 017 are installed. Your live event hasn’t changed."><Link className="inline-flex min-h-11 items-center text-sm text-[#355f9e] underline" href={`/admin/events/${id}/setup`}>Back to overview</Link></ContentShell>;
+    return <ContentShell title="Settings couldn’t load" contextLabel="Private draft" dashboardHref="/admin/events" description="Please try again shortly. For first-time setup, check migrations through 019 are installed. Your live event hasn’t changed."><Link className="inline-flex min-h-11 items-center text-sm text-[#355f9e] underline" href={`/admin/events/${id}/setup`}>Back to overview</Link></ContentShell>;
   }
   const [draft, artwork, initial, publication] = data;
   if (!draft || !artwork || !initial) notFound();

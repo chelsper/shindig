@@ -5,6 +5,7 @@ import { EventAliasError } from "../../../../../lib/event-alias";
 import { draftEventSlug, eventPaths } from "../../../../../lib/event-routes";
 import type { PublicationVersions } from "../../../../../lib/event-publication";
 import { isLifecycleAction, type LifecycleAction } from "../../../../../lib/event-lifecycle";
+import { RsvpAdmissionError } from "../../../../../lib/rsvp-policy";
 
 async function refreshEvent(id: string) {
   const paths = eventPaths(draftEventSlug(id));
@@ -44,7 +45,7 @@ export async function publishEvent(id: string, versions: PublicationVersions, co
     await refreshEvent(id);
     return { ok: true as const };
   } catch (error) {
-    if (error instanceof EventAliasError) return { ok: false as const, message: error.message };
+    if (error instanceof EventAliasError || error instanceof RsvpAdmissionError) return { ok: false as const, message: error.message };
     return { ok: false as const, message: "Publishing couldn’t be confirmed. Refresh this review to check the current status before trying again. No invitations or messages were sent." };
   }
 }

@@ -3,6 +3,7 @@ import type { EventDraft } from "./event-drafts";
 import type { DraftArtwork } from "./event-draft-artwork";
 import { publicationIssues } from "./event-readiness";
 import type { Coordinates } from "./event-publication";
+import { MAX_EVENT_CAPACITY, validRsvpDeadline, type RsvpLimits } from "./rsvp-policy";
 
 // Only implemented modules are selectable. These are draft choices, not overrides
 // of the canonical live Oyster Roast configuration.
@@ -16,12 +17,12 @@ export const DRAFT_HUB_MODULES = [
 ] as const satisfies ReadonlyArray<{ id: keyof EventFeatures; label: string; guestLabel: string; icon: string; description: string; preview: string }>;
 
 export type DraftSettings = {
-  rsvp: { maxPartySize: number; allowComments: boolean; guestListDefaultVisible: boolean };
+  rsvp: { maxPartySize: number; allowComments: boolean; guestListDefaultVisible: boolean } & RsvpLimits;
   features: EventFeatures;
 };
 export type DraftSettingsRecord = { settings: DraftSettings; revision: number };
 export const DEFAULT_DRAFT_SETTINGS: DraftSettings = {
-  rsvp: { maxPartySize: 20, allowComments: true, guestListDefaultVisible: true },
+  rsvp: { maxPartySize: 20, allowComments: true, guestListDefaultVisible: true, deadlineAtUtc: null, capacity: null },
   features: { guestList: true, playlist: false, weather: false, questions: false, updates: false, polls: false, photos: false, potluck: false },
 };
 const isObject = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -30,12 +31,14 @@ const hasOnlyKeys = (row: Record<string, unknown>, keys: string[]) => Object.key
 export function validateDraftSettings(input: unknown): { ok: true; settings: DraftSettings } | { ok: false; message: string } {
   if (!isObject(input) || !hasOnlyKeys(input, ["rsvp", "features"]) || !isObject(input.rsvp) || !isObject(input.features)) return { ok: false, message: "Please check the RSVP and Event Hub settings." };
   const rsvp = input.rsvp, features = input.features;
-  if (!hasOnlyKeys(rsvp, ["maxPartySize", "allowComments", "guestListDefaultVisible"]) || typeof rsvp.maxPartySize !== "number" || !Number.isInteger(rsvp.maxPartySize) || rsvp.maxPartySize < 1 || rsvp.maxPartySize > 20) return { ok: false, message: "Choose a maximum party size from 1 to 20, including the person replying." };
+  if (!Object.keys(rsvp).every((key) => ["maxPartySize", "allowComments", "guestListDefaultVisible", "deadlineAtUtc", "capacity"].includes(key)) || typeof rsvp.maxPartySize !== "number" || !Number.isInteger(rsvp.maxPartySize) || rsvp.maxPartySize < 1 || rsvp.maxPartySize > 20) return { ok: false, message: "Choose a maximum party size from 1 to 20, including the person replying." };
   if (typeof rsvp.allowComments !== "boolean" || typeof rsvp.guestListDefaultVisible !== "boolean") return { ok: false, message: "Please check the comment and guest-list options." };
+  if (rsvp.deadlineAtUtc != null && !validRsvpDeadline(rsvp.deadlineAtUtc)) return { ok: false, message: "Choose a valid RSVP deadline in the event’s timezone." };
+  if (rsvp.capacity != null && (typeof rsvp.capacity !== "number" || !Number.isInteger(rsvp.capacity) || rsvp.capacity < 1 || rsvp.capacity > MAX_EVENT_CAPACITY)) return { ok: false, message: `Choose an event capacity from 1 to ${MAX_EVENT_CAPACITY}, or leave it off.` };
   const keys = [...DRAFT_HUB_MODULES.map(({ id }) => id), "photos", "potluck"];
   if (!hasOnlyKeys(features, keys) || !keys.every((key) => typeof features[key] === "boolean") || features.photos !== false || features.potluck !== false) return { ok: false, message: "Choose only the available Event Hub features. Photos and Potluck aren’t available yet." };
   return { ok: true, settings: {
-    rsvp: { maxPartySize: rsvp.maxPartySize, allowComments: rsvp.allowComments, guestListDefaultVisible: rsvp.guestListDefaultVisible },
+    rsvp: { maxPartySize: rsvp.maxPartySize, allowComments: rsvp.allowComments, guestListDefaultVisible: rsvp.guestListDefaultVisible, deadlineAtUtc: rsvp.deadlineAtUtc as string | null | undefined ?? null, capacity: rsvp.capacity as number | null | undefined ?? null },
     features: { guestList: features.guestList as boolean, playlist: features.playlist as boolean, weather: features.weather as boolean, questions: features.questions as boolean, updates: features.updates as boolean, polls: features.polls as boolean, photos: false, potluck: false },
   } };
 }
@@ -50,6 +53,7 @@ export function draftReadiness(draft: EventDraft, artwork: DraftArtwork, setting
     { id: "settings", label: "RSVP & Hub choices saved", complete: settingsSaved, required: true, href: `${base}/settings` },
     { id: "artwork", label: "Invitation artwork", complete: Boolean(artwork.invitation.path), required: false, href: `${base}/artwork` },
     { id: "end", label: "End time for calendar entries", complete: !missing.has("end"), required: true, href: `${base}#draft-date-heading` },
+    ...(missing.has("deadline") ? [{ id: "deadline", label: "RSVP deadline must be at or before the event starts", complete: false, required: true, href: `${base}/settings#rsvp-limits` }] : []),
     ...(settings.features.weather ? [{ id: "weather", label: "Weather location confirmed", complete: !missing.has("weather"), required: true, href: `${base}/publish#weather-location` }] : []),
   ];
 }

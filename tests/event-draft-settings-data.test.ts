@@ -43,7 +43,7 @@ describe("private draft settings data layer", () => {
     const [query, ...values] = mocks.sql.mock.calls[0];
     expect(query.join("?")).toContain("status = 'draft'"); expect(query.join("?")).toContain("ON CONFLICT (event_id) DO NOTHING");
     expect(query.join("?")).not.toMatch(/rsvps|invitation_settings|event_hub_settings|event_draft_artwork/);
-    expect(values).toEqual([20, true, true, JSON.stringify(DEFAULT_DRAFT_SETTINGS.features), id]);
+    expect(values).toEqual([20, true, true, JSON.stringify(DEFAULT_DRAFT_SETTINGS.features), null, null, id]);
     expect(await saveDraftSettingsRecord(id, 0, DEFAULT_DRAFT_SETTINGS)).toBeNull();
   });
   it("updates timestamps with optimistic concurrency and draft scoping", async () => {

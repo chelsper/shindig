@@ -8,6 +8,7 @@ import type {
   ValidatedRsvpUpdate,
 } from "./rsvp-validation";
 import { validateRsvpUpdate } from "./rsvp-validation";
+import { writeEventRsvp } from "./rsvp-admission";
 
 function fieldsForEvent(input: ValidatedRsvpUpdate, scope: EventScope, host = false): ValidatedRsvpUpdate {
   // Guest-facing switches must not erase host comments or saved visibility
@@ -104,6 +105,12 @@ export async function saveRsvp(rsvp: ValidatedRsvp,
     return { status: "disabled" };
   }
 
+  if (eventSlug !== OYSTER_ROAST_SCOPE.slug) {
+    const result = await writeEventRsvp(scope, "guest-create", rsvp.id, editTokenHash, rsvp);
+    if (!result.rsvp || (result.status !== "created" && result.status !== "duplicate")) throw new Error("RSVP could not be saved.");
+    return { status: result.status, rsvp: result.rsvp };
+  }
+
   const sql = neon(databaseUrl);
   // Serialize guest writes with lifecycle changes. Checking only the previously
   // resolved scope would let a stale/in-flight form save after the host closes.
@@ -197,6 +204,12 @@ export async function updateRsvpForGuest(editTokenHash: string,
   rsvp: ValidatedRsvpUpdate, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<GuestRsvp | null> {
   const eventSlug = eventScopeSlug(scope);
   rsvp = fieldsForEvent(rsvp, scope);
+  if (eventSlug !== OYSTER_ROAST_SCOPE.slug) {
+    const result = await writeEventRsvp(scope, "guest-update", null, editTokenHash, rsvp);
+    if (!result.rsvp) return null;
+    const { guestName, attending, partySize, displayOnGuestList, comment } = result.rsvp;
+    return { guestName, attending, partySize, displayOnGuestList, comment };
+  }
   const sql = neon(getDatabaseUrl());
   const rows = await sql`
     WITH admission AS MATERIALIZED (
@@ -301,6 +314,11 @@ export async function createRsvpForAdmin(id: string,
   rsvp: ValidatedRsvpUpdate, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<void> {
   const eventSlug = eventScopeSlug(scope);
   rsvp = fieldsForEvent(rsvp, scope, true);
+  if (eventSlug !== OYSTER_ROAST_SCOPE.slug) {
+    const result = await writeEventRsvp(scope, "host-create", id, null, rsvp);
+    if (result.status !== "created" && result.status !== "duplicate") throw new Error("RSVP could not be created.");
+    return;
+  }
   const sql = neon(getDatabaseUrl());
   const rows = await sql`
     INSERT INTO rsvps (
@@ -341,6 +359,7 @@ export async function updateRsvpForAdmin(id: string,
   rsvp: ValidatedRsvpUpdate, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<boolean> {
   const eventSlug = eventScopeSlug(scope);
   rsvp = fieldsForEvent(rsvp, scope, true);
+  if (eventSlug !== OYSTER_ROAST_SCOPE.slug) return (await writeEventRsvp(scope, "host-update", id, null, rsvp)).status === "updated";
   const sql = neon(getDatabaseUrl());
   const rows = await sql`
     UPDATE rsvps
@@ -361,6 +380,7 @@ export async function updateRsvpForAdmin(id: string,
 
 export async function deleteRsvpForAdmin(id: string, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<boolean> {
   const eventSlug = eventScopeSlug(scope);
+  if (eventSlug !== OYSTER_ROAST_SCOPE.slug) return (await writeEventRsvp(scope, "host-delete", id, null)).status === "deleted";
   const sql = neon(getDatabaseUrl());
   const rows = await sql`
     DELETE FROM rsvps

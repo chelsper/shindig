@@ -20,13 +20,14 @@ export function EventSetupOverview({ draft, artwork, settings, coordinates, live
     ...(!settings.revision ? [{ message: "Save your RSVP & Hub choices.", href: `${base}/settings` }] : []),
   ];
   const archived = live?.visibility === "archived", published = live?.visibility === "published";
-  const detailsReady = !issues.some(({ id }) => id !== "weather");
+  const detailsReady = !issues.some(({ id }) => id !== "weather" && id !== "deadline");
+  const rsvpReady = settings.revision > 0 && !issues.some(({ id }) => id === "deadline");
   const hasArtwork = Boolean(artwork.settings.invitation.path || artwork.settings.header.path);
   const modules = DRAFT_HUB_MODULES.filter(({ id }) => settings.settings.features[id]).map(({ label }) => label);
   const steps = [
     { title: "Details", status: detailsReady ? "Ready" : "Needs attention", description: "The name, dates, location and little details that make it yours.", href: base, action: "Edit details" },
     { title: "Artwork", status: hasArtwork ? "Ready" : "Optional", description: hasArtwork ? "Your saved artwork is in place. Preview the invitation and Hub framing before publishing." : "Add invitation artwork and a Hub header, or keep a text-only invitation. Images aren’t required.", href: `${base}/artwork`, action: hasArtwork ? "Review artwork" : "Choose artwork" },
-    { title: "RSVP & Hub", status: settings.revision ? "Ready" : "Needs attention", description: settings.revision ? `Up to ${settings.settings.rsvp.maxPartySize} per RSVP. ${modules.length ? `Hub: ${modules.join(" · ")}.` : "Your Hub shows event details only."}` : "Review and save your RSVP rules and optional Hub features. Suggested defaults haven’t been confirmed yet.", href: `${base}/settings`, action: "Choose the experience" },
+    { title: "RSVP & Hub", status: rsvpReady ? "Ready" : "Needs attention", description: settings.revision ? `Up to ${settings.settings.rsvp.maxPartySize} per RSVP.${settings.settings.rsvp.deadlineAtUtc ? " Reply deadline set." : ""}${settings.settings.rsvp.capacity != null ? ` ${settings.settings.rsvp.capacity} total guest capacity.` : ""} ${modules.length ? `Hub: ${modules.join(" · ")}.` : "Your Hub shows event details only."}` : "Review and save your RSVP rules and optional Hub features. Suggested defaults haven’t been confirmed yet.", href: `${base}/settings`, action: "Choose the experience" },
     { title: "Preview & publish", status: archived ? "Archived" : missing.length ? "Needs attention" : "Ready", description: archived ? "Restore this event privately before reviewing it for publication." : "Preview both guest pages, then explicitly approve the saved version. Final link and artwork checks happen when you publish.", href: `${base}/preview`, action: "Preview guest pages" },
     { title: "Share", status: published ? "Ready" : "After publishing", description: published ? "Your invitation, Event Hub links and downloadable QR codes are ready. They show the live version, not private edits." : "Invitation and Event Hub links, plus QR codes, become available after you publish. No invitations are sent automatically.", href: `${base}/publish${published ? "#share-event" : ""}`, action: published ? "Get links & QR codes" : archived ? "Restore & review" : "Review & publish" },
   ];

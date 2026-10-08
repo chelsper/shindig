@@ -7,6 +7,7 @@ import { createRsvpForAdmin, updateRsvpForAdmin, deleteRsvpForAdmin } from "../.
 import { validateRsvpUpdate } from "../../../../../lib/server/rsvp-validation";
 import { eventGuestsPath } from "../../../../../lib/admin-guests";
 import type { AdminGuestActionState } from "../../../actions";
+import { RsvpAdmissionError } from "../../../../../lib/rsvp-policy";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 type Operation = "create" | "update" | "delete";
@@ -39,7 +40,8 @@ async function mutate(operation: Operation, eventId: string, id: string, form: F
       if (operation === "create") await createRsvpForAdmin(id, validation.data, scope);
       else if (!(await updateRsvpForAdmin(id, validation.data, scope))) return { error: "That RSVP could not be found in this event. Refresh the guest list." };
     }
-  } catch {
+  } catch (error) {
+    if (error instanceof RsvpAdmissionError) return { error: error.message };
     return { error: "We couldn’t save that change. Please check your host session and try again." };
   }
   // Guest-data edits are live immediately; publication still controls event setup.

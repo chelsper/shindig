@@ -40,6 +40,23 @@ beforeEach(() => {
   mocks.list.mockResolvedValue([]); mocks.search.mockResolvedValue({ tracks: [], attribution: {} }); mocks.save.mockResolvedValue(1);
 });
 describe("published routes", () => {
+  it("shows a passed deadline without a guest form, while preserving Hub navigation and saved replies", async () => {
+    mocks.event.mockResolvedValue({ ...event, rsvpAvailability: "deadline" });
+    mocks.guest.mockResolvedValue({ guestName: "Saved household", attending: true, partySize: 3, displayOnGuestList: false, comment: null });
+    const invitation = renderToStaticMarkup(await Invitation(context));
+    expect(invitation).toContain("reply-by date has passed"); expect(invitation).not.toContain("<form");
+    expect(invitation).toContain(`/e/${eventSlug}/event`);
+    const edit = renderToStaticMarkup(await Edit({ params: Promise.resolve({ slug: eventSlug, token }) }));
+    expect(edit).toContain("Attending · 3 guests"); expect(edit).not.toContain("<form"); expect(edit).toContain("Add to Calendar");
+  });
+  it("keeps decline and private reduction forms available when full, with event-local deadline copy", async () => {
+    mocks.event.mockResolvedValue({ ...event, rsvpAvailability: "full", rsvp: { ...snapshot.settings.rsvp, capacity: 3, deadlineAtUtc: "2026-11-07T23:00:00.000Z" } });
+    mocks.guest.mockResolvedValue({ guestName: "Saved household", attending: true, partySize: 3, displayOnGuestList: false, comment: null });
+    const invitation = renderToStaticMarkup(await Invitation(context));
+    expect(invitation).toContain("currently full"); expect(invitation).toContain("Can’t Make It"); expect(invitation).toContain("3:00 PM PST");
+    const edit = renderToStaticMarkup(await Edit({ params: Promise.resolve({ slug: eventSlug, token }) }));
+    expect(edit).toContain("keep or reduce your saved party"); expect(edit).toContain("<form"); expect(edit).toContain("Can’t Make It");
+  });
   it("clears weather coordinates in publish review when the draft address has changed", async () => {
     const coordinates = { latitude: 30, longitude: -81 };
     mocks.pub.mockResolvedValue({ ...publication, snapshot: { ...snapshot, coordinates } });

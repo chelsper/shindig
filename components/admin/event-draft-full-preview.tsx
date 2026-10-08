@@ -32,7 +32,7 @@ export function EventDraftFullPreview({ draft, artwork, record, view }: {
       </header>
       <EventDraftPreview draft={draft} artwork={artwork} view={view} fullPage>
         {view === "invitation" ? <>
-          <DraftRsvpPreview settings={record.settings} />
+          <DraftRsvpPreview settings={record.settings} timeZone={draft.timeZone} />
           <Link className={`${button} w-full`} href={`${base}/preview?view=hub`}>View Event Hub preview →</Link>
         </> : <>
           <div className="flex flex-wrap gap-2" aria-label="Event actions preview">

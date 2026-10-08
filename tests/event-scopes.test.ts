@@ -25,7 +25,7 @@ beforeEach(() => {
   vi.resetAllMocks(); vi.stubEnv("DATABASE_URL", "postgresql://test@example.test/test");
   mocks.auth.mockResolvedValue(true); mocks.draft.mockImplementation(async (id) => ({ id }));
   mocks.settings.mockResolvedValue({ settings: { rsvp: { maxPartySize: 4, allowComments: false, guestListDefaultVisible: true }, features: { ...DEFAULT_DRAFT_SETTINGS.features, playlist: true, questions: true, polls: true, updates: true } }, revision: 1 });
-  mocks.neon.mockReturnValue(mocks.sql); mocks.sql.mockResolvedValue([]);
+  mocks.neon.mockReturnValue(mocks.sql); mocks.sql.mockImplementation(async (parts) => parts.join("").includes("shindig_write_event_rsvp") ? [{ result: { status: "missing" } }] : []);
 });
 async function scope(id = first) { const value = await getHostDraftScope(id); expect(value).not.toBeNull(); return value!; }
 
@@ -70,20 +70,20 @@ describe("scoped RSVP rules and token access", () => {
     await expect(rsvps.updateRsvpForGuest(token, { ...input, partySize: 5 }, event)).rejects.toThrow("Invalid RSVP");
     expect(mocks.sql).not.toHaveBeenCalled();
     await rsvps.updateRsvpForGuest(token, input, event);
-    expect(mocks.sql.mock.lastCall!.slice(1)).toEqual([event.slug, input.guestName, true, 3, true, null, event.slug, token, false]);
-    expect(mocks.sql.mock.lastCall![0].join("?")).toContain("AND rsvps_open FOR SHARE");
+    expect(mocks.sql.mock.lastCall!.slice(1)).toEqual([event.slug, "guest-update", null, token, input.guestName, true, 3, true, null]);
+    expect(mocks.sql.mock.lastCall![0].join("?")).toContain("shindig_write_event_rsvp");
   });
   it("normalizes declined party size and visibility even when forged values are supplied", async () => {
     await rsvps.updateRsvpForGuest(token, { ...input, attending: false, partySize: 19 }, await scope());
-    expect(mocks.sql.mock.lastCall!.slice(2, 7)).toEqual([input.guestName, false, null, false, null]);
+    expect(mocks.sql.mock.lastCall!.slice(5)).toEqual([input.guestName, false, null, false, null]);
   });
   it("binds initial writes and duplicate retry lookups to the same resolved event", async () => {
     const event = await scope();
-    mocks.sql.mockResolvedValueOnce([]).mockResolvedValueOnce([{ id: second, ...input, comment: null, editTokenHash: token }]);
+    mocks.sql.mockResolvedValueOnce([{ result: { status: "duplicate", rsvp: { id: second, ...input, comment: null } } }]);
     expect((await rsvps.saveRsvp({ id: second, eventSlug: event.slug, ...input }, token, event)).status).toBe("duplicate");
     expect(mocks.sql.mock.calls[0].slice(1)).toContain(event.slug);
-    expect(mocks.sql.mock.calls[1][0].join("?")).toContain("AND event_slug = ?");
-    expect(mocks.sql.mock.calls[1].slice(1)).toEqual([second, event.slug]);
+    expect(mocks.sql).toHaveBeenCalledTimes(1);
+    expect(mocks.sql.mock.calls[0].slice(1, 5)).toEqual([event.slug, "guest-create", second, token]);
   });
   it("returns no match for an edit token not found within the event", async () => {
     const event = await scope(); expect(await rsvps.getRsvpForGuest(token, event)).toBeNull();

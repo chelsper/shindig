@@ -11,6 +11,7 @@ import { DRAFT_IMAGE_LIMIT, DRAFT_IMAGE_TYPES } from "../event-draft-artwork";
 import { parsePublicationSnapshot, publicationEvent, type PublicationSnapshot, type PublicationVersions } from "../event-publication";
 import { hasUnpublishedChanges, isLifecycleAction, type EventLifecycle, type LifecycleAction } from "../event-lifecycle";
 import { EventAliasError, isEventAlias, validateEventAlias } from "../event-alias";
+import { RsvpAdmissionError, rsvpAvailability } from "../rsvp-policy";
 
 function database() {
   const url = process.env.DATABASE_URL?.trim();
@@ -57,7 +58,18 @@ export async function getHostEventPublication(slug: string): Promise<EventPublic
 }
 export async function getPublishedEvent(slug: string) {
   const publication = await getEventPublication(slug);
-  return publication ? publicationEvent(publication.id, publication.snapshot, publication.rsvpsOpen, publication.publicAlias) : null;
+  if (!publication) return null;
+  const event = publicationEvent(publication.id, publication.snapshot, publication.rsvpsOpen, publication.publicAlias);
+  const limits = publication.snapshot.settings.rsvp;
+  // Only the state crosses the public boundary, never names, rows or hidden
+  // attendance totals. Unconfigured events need no additional count query.
+  let attending = 0;
+  if (limits.capacity != null && rsvpAvailability(publication.rsvpsOpen, limits) === "open") {
+    const rows = await database()`SELECT coalesce(sum(party_size) FILTER (WHERE attending),0)::int AS total FROM rsvps WHERE event_slug = ${publication.slug}`;
+    attending = Number(rows[0]?.total);
+    if (!Number.isSafeInteger(attending) || attending < 0) throw new Error("RSVP availability unavailable.");
+  }
+  return { ...event, rsvpAvailability: rsvpAvailability(publication.rsvpsOpen, limits, attending) };
 }
 export async function listHostPublications() {
   if (!(await isAdminAuthenticated())) throw new Error("Host access required.");
@@ -142,6 +154,7 @@ export async function publishEventRecord(id: string, versions: PublicationVersio
     RETURNING revision`; }
   catch (error) {
     const failure = error as { code?: string; constraint?: string; constraint_name?: string } | null;
+    if (failure?.code === "23514" && (failure.constraint ?? failure.constraint_name) === "event_capacity_below_attendance") throw new RsvpAdmissionError("Capacity can’t be lower than the guests already attending. Review Guest responses, then raise the capacity or turn it off before publishing.");
     if (failure?.code === "23505" && (failure.constraint ?? failure.constraint_name) === "event_publications_public_alias_key") throw new EventAliasError("That link was just taken. Choose another name and publish again.");
     throw error;
   }

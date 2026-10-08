@@ -18,6 +18,20 @@ beforeEach(() => {
   mocks.settings.mockResolvedValue({ settings: snapshot.settings, revision: versions.settings }); mocks.sql.mockResolvedValue([]);
 });
 describe("public publication boundary", () => {
+  it("uses only a scoped attendance aggregate for capacity and returns no private records", async () => {
+    mocks.sql.mockResolvedValueOnce([{ ...publication, snapshot: { ...snapshot, settings: { ...snapshot.settings, rsvp: { ...snapshot.settings.rsvp, capacity: 5 } } } }]).mockResolvedValueOnce([{ total: 5 }]);
+    const event = await getPublishedEvent(eventSlug);
+    expect(event?.rsvpAvailability).toBe("full");
+    expect(mocks.sql.mock.lastCall![0].join("?")).toContain("sum(party_size) FILTER (WHERE attending)");
+    expect(mocks.sql.mock.lastCall!.slice(1)).toEqual([eventSlug]);
+    expect(mocks.sql.mock.lastCall![0].join("?")).not.toMatch(/guest_name|comment|edit_token|display_on_guest_list/);
+    expect(event).not.toHaveProperty("total"); expect(event).not.toHaveProperty("guests");
+  });
+  it("does not cache deadline state or query attendance after closing", async () => {
+    mocks.sql.mockResolvedValue([{ ...publication, snapshot: { ...snapshot, settings: { ...snapshot.settings, rsvp: { ...snapshot.settings.rsvp, capacity: 5, deadlineAtUtc: "2001-11-01T22:00:00.000Z" } } } }]);
+    expect((await getPublishedEvent(eventSlug))?.rsvpAvailability).toBe("deadline");
+    expect(mocks.sql).toHaveBeenCalledTimes(1);
+  });
   it("never reads mutable drafts or checks host cookies to serve a guest", async () => {
     mocks.sql.mockResolvedValue([publication]);
     const event = await getPublishedEvent(eventSlug); expect(event?.title).toBe("Garden Supper");

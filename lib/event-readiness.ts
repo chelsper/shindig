@@ -2,7 +2,7 @@ import type { EventDraftFields } from "./event-drafts";
 import type { PublicationSnapshot, Coordinates } from "./event-publication";
 
 export type PublicationIssue = {
-  id: "date" | "end" | "location" | "weather";
+  id: "date" | "end" | "location" | "weather" | "deadline";
   message: string;
   destination: string;
 };
@@ -13,6 +13,7 @@ export function publicationIssues(snapshot: PublicationSnapshot): PublicationIss
   const issues: PublicationIssue[] = [];
   if (!snapshot.details.startsAtUtc) issues.push({ id: "date", message: "Add the event start date and time.", destination: "#draft-date-heading" });
   if (!snapshot.details.endsAtUtc) issues.push({ id: "end", message: "Add an end time for accurate calendar entries.", destination: "#draft-date-heading" });
+  if (snapshot.settings.rsvp.deadlineAtUtc && snapshot.details.startsAtUtc && Date.parse(snapshot.settings.rsvp.deadlineAtUtc) > Date.parse(snapshot.details.startsAtUtc)) issues.push({ id: "deadline", message: "Set the RSVP deadline at or before the event starts.", destination: "/settings#rsvp-limits" });
   if (!snapshot.details.address.trim()) issues.push({ id: "location", message: "Add the event address.", destination: "#draft-place-heading" });
   if (snapshot.settings.features.weather && !snapshot.coordinates) issues.push({ id: "weather", message: "Confirm the event’s latitude and longitude, or turn Weather off.", destination: "/publish#weather-location" });
   return issues;

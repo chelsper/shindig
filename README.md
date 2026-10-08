@@ -1,6 +1,62 @@
 # Shindig
 
-## Duplicate Event (Step 9 — current)
+## RSVP deadlines & event capacity (Step 10 — current)
+
+For new-style Shindig events, open **Your events → event → RSVP & Hub →
+A little room to plan**. Both controls default to **off**. Save the private draft,
+then **Review & publish** to apply them. Jasper Shucks is unchanged.
+
+- **RSVP deadline:** choose a date/time in the event's timezone, at or before
+  the event start. Stored as an unambiguous UTC minute; skipped/repeated daylight
+  saving times are rejected by the editor. A passed deadline is allowed intentionally
+  and closes new guest replies and all guest edits immediately on publication.
+  Hosts can still correct saved responses. No scheduler or cron is needed.
+- **Total guest capacity:** 1–10,000 people, separate from the existing 1–20
+  per-response maximum. Counts every attending person, including private names
+  and host-added guests. Declines have no party size and do not consume places.
+  Full events still accept declines and existing guests' unchanged/reduced parties.
+  Increases must fit in full; no waitlist, partial allocation or automatic removal.
+  Host additions/increases obey the same capacity. Publishing a capacity below
+  existing attendance is rejected without changing the live version.
+- Guest pages show a friendly full/closed message and event-local reply-by time.
+  The server checks every write again; an old browser tab cannot bypass limits.
+  The public availability projection includes only a state, never RSVP rows,
+  names, comments, tokens or hidden attendance totals. Existing guest-list privacy
+  is unchanged. Private edit links and calendar/Hub navigation remain available.
+- The immediate manual close switch still takes precedence. Reopening it cannot
+  override a deadline or capacity. Disabling limits requires saving and publishing.
+  Duplicate Event keeps capacity but clears the deadline along with the event dates.
+
+**For another environment:** apply [`019_rsvp_deadline_capacity.sql`](db/migrations/019_rsvp_deadline_capacity.sql)
+after 001–018 in the intended Neon database, then deploy this application before
+enabling limits. The reapplicable migration adds two nullable draft settings,
+constraints, a publication check trigger, and a transactional RSVP function. It
+does not alter existing RSVP data, enable limits, or publish any event. No new
+packages, environment variables, authentication or notifications.
+
+Migration 019 was applied and verified in Shindig production on October 8, 2026.
+Function definitions match this migration; existing data and disabled defaults
+were preserved. No event was published and no limit was enabled by the release.
+
+The server-only DAL locks the event's publication row before counting/writing
+attendance. Guest and host creates/edits/deletes share that lock with publication
+and lifecycle changes. The volatile PostgreSQL function obtains fresh READ COMMITTED
+snapshots after lock waits; the publication capacity check runs after acquiring
+the row lock. Retry keys confirm the original response without adding places.
+Do not roll back to pre-019 application code while limits are enabled: old code
+does not participate in this admission protocol. Direct SQL writes bypass the
+application workflow and should not be used to add/edit attendees.
+
+Tests: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
+`tests/rsvp-limits-postgres.test.ts` runs actual migrations/DAL in a disposable
+in-memory PostgreSQL with `SHINDIG_TEST_PGLITE` set to a temporary PGlite
+`dist/index.js` path. It never connects to Neon. The optional independent-connection
+race test uses `SHINDIG_TEST_LIMITS_PG_SOCKET=/private/tmp/shindig-limits-pg.<id>`
+and a fresh local database named `shindig_limits_test` on port 55449 with a
+`psql` client (override its path with `SHINDIG_TEST_PSQL`). The suite installs migrations itself; never point it at
+production or a shared application database.
+
+## Duplicate Event (Step 9)
 
 Open **Your events → select an event → Duplicate Event** at the bottom of its
 setup overview. The existing Oyster Roast has a Duplicate Event link directly
@@ -11,7 +67,8 @@ on Your events. Name the copy and confirm before anything is created.
   artwork and crop. Published, unpublished, archived and draft sources are supported.
   The legacy Oyster Roast copy uses standard Shindig invitation/RSVP labels, not
   its event-specific wording. The source and Jasper Shucks guest pages are unchanged.
-- Clears both dates and weather-coordinate confirmation. Generates a new event
+- Clears both dates, the RSVP deadline and weather-coordinate confirmation; keeps
+  optional capacity. Generates a new event
   identity; no publication, public alias, calendar identity, RSVP, guest edit token,
   playlist suggestion, applause, question/answer, host update, poll or vote is copied.
   Unsaved RSVP defaults still require an explicit save. Review printed artwork and
@@ -630,6 +687,9 @@ Set `ADMIN_PASSWORD` to a strong, unique password to enable the private host das
    - [`db/migrations/014_event_publications.sql`](db/migrations/014_event_publications.sql)
    - [`db/migrations/015_event_lifecycle.sql`](db/migrations/015_event_lifecycle.sql)
    - [`db/migrations/016_event_archive.sql`](db/migrations/016_event_archive.sql)
+   - [`db/migrations/017_event_public_aliases.sql`](db/migrations/017_event_public_aliases.sql)
+   - [`db/migrations/018_event_duplication.sql`](db/migrations/018_event_duplication.sql)
+   - [`db/migrations/019_rsvp_deadline_capacity.sql`](db/migrations/019_rsvp_deadline_capacity.sql)
 3. In the Neon project dashboard, choose **Connect** and copy the pooled Postgres connection string.
 4. Put that connection string in `.env.local`:
 

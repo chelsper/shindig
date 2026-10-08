@@ -98,8 +98,8 @@ export async function duplicateEventRecord(value: unknown): Promise<string> {
     ), artwork AS (
       INSERT INTO event_draft_artwork (event_id, settings) SELECT id, ${JSON.stringify(artwork)}::jsonb FROM created RETURNING event_id
     ), settings AS (
-      INSERT INTO event_draft_settings (event_id, max_party_size, allow_comments, guest_list_default_visible, features)
-      SELECT id, ${rsvp.maxPartySize}, ${rsvp.allowComments}, ${rsvp.guestListDefaultVisible}, ${JSON.stringify(features)}::jsonb
+      INSERT INTO event_draft_settings (event_id, max_party_size, allow_comments, guest_list_default_visible, features, rsvp_deadline, guest_capacity)
+      SELECT id, ${rsvp.maxPartySize}, ${rsvp.allowComments}, ${rsvp.guestListDefaultVisible}, ${JSON.stringify(features)}::jsonb, NULL, ${rsvp.capacity ?? null}::integer
       FROM created WHERE ${source.settingsSaved} RETURNING event_id
     ) UPDATE event_duplication_requests r SET completed_event_id = created.id, completed_at = now()
       FROM created, artwork WHERE r.id = created.id AND artwork.event_id = created.id

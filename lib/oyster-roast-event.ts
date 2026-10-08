@@ -1,4 +1,5 @@
 import { OYSTER_ROAST_WEBSITE } from "./site";
+import type { RsvpLimits, RsvpAvailability } from "./rsvp-policy";
 
 export type EventFeatures = {
   guestList: boolean;
@@ -73,8 +74,9 @@ export type EventConfiguration =
     calendarUid: string; calendarFilename: string; websiteUrl: string;
     features: EventFeatures;
     coordinates: { latitude: number; longitude: number } | null;
-    rsvp?: { maxPartySize: number; allowComments: boolean; guestListDefaultVisible: boolean };
+    rsvp?: { maxPartySize: number; allowComments: boolean; guestListDefaultVisible: boolean } & RsvpLimits;
     rsvpsOpen?: boolean;
+    rsvpAvailability?: RsvpAvailability;
     eventHub: { path: string; headerImage: { url: string; alt: string; focalX: number; focalY: number; zoomPercent: number } };
     invitation: {
       eyebrow: string; timeNote: string; rsvpHeading: string;
