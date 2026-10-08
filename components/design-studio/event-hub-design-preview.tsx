@@ -1,5 +1,7 @@
-import { DESIGN_PREVIEW_EVENT as event } from "../../lib/design-preview";
+import { DESIGN_PREVIEW_EVENT as event, type DesignPreviewDevice } from "../../lib/design-preview";
 import { eventDesignVariables, getEventDesign, type EventDesignId } from "../../lib/event-design";
+import { artworkAspect, defaultArtworkCrop, type ArtworkCrop as Crop, type LocalArtwork } from "../../lib/design-artwork";
+import { ArtworkCrop } from "./artwork-crop";
 import styles from "./design-studio.module.css";
 
 function SampleGuestList() {
@@ -24,12 +26,12 @@ function SampleHostNote() {
   </section>;
 }
 
-export function EventHubDesignPreview({ designId }: { designId: EventDesignId }) {
+export function EventHubDesignPreview({ designId, artwork = null, crop = defaultArtworkCrop(), device = "phone" }: { designId: EventDesignId; artwork?: LocalArtwork | null; crop?: Crop; device?: DesignPreviewDevice }) {
   const design = getEventDesign(designId);
   return <article className={styles.hubPreview} style={eventDesignVariables(design)} data-design={design.id} aria-label={`${design.name} sample Event Hub — visual preview only`}>
     <div className={styles.hubWordmark}><span>Shindig.</span><span>Good people. Great gatherings.</span></div>
     <header className={styles.hubHeader}>
-      <div className={styles.hubArtwork} aria-hidden="true"><span>A reason to gather</span><span className={styles.hubSun}>✳</span><span>No. 01</span></div>
+      {artwork ? <ArtworkCrop artwork={artwork} crop={crop} aspect={artworkAspect("hub", device)} /> : <div className={styles.hubArtwork} aria-hidden="true"><span>A reason to gather</span><span className={styles.hubSun}>✳</span><span>No. 01</span></div>}
       <div className={styles.hubHeaderContent}>
         <p className={styles.hubEyebrow}>The Event Hub</p>
         <h2>{event.titleLead}<br /><em>{event.titleAccent}</em></h2>

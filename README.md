@@ -32,7 +32,48 @@ when viewed on a phone. Captions explicitly identify the scaled preview.
 `PreviewFrame`. The Hub includes only a fictional guest list and host note.
 Sample RSVP, calendar and directions controls are visual only; nothing submits,
 downloads or navigates. No live Hub components or data layers are imported.
-Image-framing changes and saved design settings remain separate future work.
+Saved design settings remain separate future work.
+
+### Artwork & framing — Step 3 (preview-only)
+
+Open **Artwork & framing** inside the Design Studio. Choose a JPG, PNG or WebP
+from your device (up to 10 MB, 40 megapixels and 16,000 pixels on either side).
+HEIC, SVG and other formats receive a friendly conversion message. File metadata,
+signatures and decoded dimensions are checked before showing the image. Nothing
+is uploaded: the source is a browser-local object URL, never an image-optimizer
+request, Blob upload or database write. No original image is edited.
+
+- One selected image appears in both fictional previews, with independent
+  invitation and Hub position/zoom settings. Choosing a crop also selects that
+  preview. Drag the editor image or use the labeled, keyboard-accessible sliders.
+- Zoom is 100–250%; position is clamped to keep the frame covered. Invitation
+  artwork uses a 4:5 frame; Hub uses 16:9 on Phone and 3:1 on Desktop. The editor
+  and preview share the same geometry. Hub phone/desktop share a focal point,
+  so check both sizes before deciding on a crop.
+- **Reset invitation/Hub header crop** restores only that crop to center / 100%.
+  **Remove artwork** restores the selected style’s original sample appearance.
+  Replacing an image resets both crops; a failed replacement keeps the previous
+  image and crops. Selecting the same file again is supported.
+- New selections cancel older decoding. Failure, removal, replacement and
+  unmount release unused object URLs. A decoder timeout prevents a stuck loading
+  state. Reload/navigation clears this preview-only state; there is no save.
+
+`lib/design-artwork.ts` owns validation and crop math; `lib/local-design-artwork.ts`
+handles local decoding. `useDesignArtwork` owns image lifetime and the two crops;
+`ArtworkControls` and `ArtworkCrop` are isolated from live event editors.
+No package, environment variable, migration or production guest/admin code changed.
+
+Verified locally: lint, typecheck, 1,185 tests and webpack production build pass;
+the existing native PostgreSQL concurrency test is still skipped. Tests cover
+invalid/corrupt files, cancellation/timeouts, URL cleanup, crop boundaries and
+scaled drag math, independent resets, and both artwork previews. Browser checks
+cover image selection, drag, keyboard zoom, per-view preservation/reset, removal,
+matching editor/preview crops, and 320px/390px layouts without horizontal overflow.
+
+The isolated Step 3 release passed lint, typecheck, 1,139 tests and a webpack
+production build, with the same one native concurrency test skipped. It adds only
+preview-local artwork/framing components, utilities, tests and documentation;
+host-account code, dependencies and migration 020 remain excluded.
 
 Browser checks covered style switching, keyboard selection, reset/reload, and
 320px, 390px and 768px layouts without horizontal overflow. The deployment is

@@ -78,7 +78,7 @@ describe("preview-only design studio", () => {
     expect(metadata.referrer).toBe("no-referrer");
   });
   it("has no persistence, guest actions, real-event imports, or global style overrides", async () => {
-    const files = await Promise.all(["app/design/page.tsx", "components/design-studio/design-studio.tsx", "components/design-studio/invitation-design-preview.tsx", "components/design-studio/event-hub-design-preview.tsx", "components/design-studio/design-preview.tsx", "components/design-studio/preview-frame.tsx", "lib/event-design.ts", "lib/design-preview.ts"].map((path) => readFile(path, "utf8")));
+    const files = await Promise.all(["app/design/page.tsx", "components/design-studio/design-studio.tsx", "components/design-studio/invitation-design-preview.tsx", "components/design-studio/event-hub-design-preview.tsx", "components/design-studio/design-preview.tsx", "components/design-studio/preview-frame.tsx", "components/design-studio/artwork-controls.tsx", "components/design-studio/artwork-crop.tsx", "components/design-studio/use-design-artwork.ts", "lib/event-design.ts", "lib/design-preview.ts", "lib/design-artwork.ts", "lib/local-design-artwork.ts"].map((path) => readFile(path, "utf8")));
     for (const text of files) expect(text).not.toMatch(/\bfetch\(|localStorage|sessionStorage|lib\/server\/|oyster-roast-event|app\/actions|use server/);
     const css = await readFile("components/design-studio/design-studio.module.css", "utf8");
     expect(css).not.toMatch(/:root|:global|^body\s*\{|^html\s*\{/m);

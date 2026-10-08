@@ -1,14 +1,17 @@
 import { eventDesignVariables, getEventDesign, type EventDesignId } from "../../lib/event-design";
 import { DESIGN_PREVIEW_EVENT as event } from "../../lib/design-preview";
+import { artworkAspect, defaultArtworkCrop, type ArtworkCrop as Crop, type LocalArtwork } from "../../lib/design-artwork";
+import { ArtworkCrop } from "./artwork-crop";
 import styles from "./design-studio.module.css";
 
 // A deliberately fictional sample. Never import a real event, guest, RSVP
 // action or host data into this account-free public prototype.
-export function InvitationDesignPreview({ designId }: { designId: EventDesignId }) {
+export function InvitationDesignPreview({ designId, artwork = null, crop = defaultArtworkCrop() }: { designId: EventDesignId; artwork?: LocalArtwork | null; crop?: Crop }) {
   const design = getEventDesign(designId);
-  return <article className={styles.invitation} style={eventDesignVariables(design)} data-design={design.id} aria-label={`${design.name} sample invitation — visual preview only`}>
+  return <article className={`${styles.invitation} ${artwork ? styles.invitationWithArtwork : ""}`} style={eventDesignVariables(design)} data-design={design.id} aria-label={`${design.name} sample invitation — visual preview only`}>
     <div className={styles.invitationBorder}>
       <div className={styles.invitationIdentity}>
+      {artwork ? <ArtworkCrop artwork={artwork} crop={crop} aspect={artworkAspect("invitation", "phone")} /> : <>
       <div className={styles.invitationTopline}><span>A reason to gather</span><span aria-hidden="true">No. 01</span></div>
       <div className={styles.ornament} aria-hidden="true">
         <span className={styles.ornamentLine} />
@@ -22,8 +25,10 @@ export function InvitationDesignPreview({ designId }: { designId: EventDesignId 
       <p className={styles.invitationEyebrow}>You’re invited</p>
       <h2 className={styles.invitationTitle}>{event.titleLead}<br /><em>{event.titleAccent}</em></h2>
       <p className={styles.hostLine}>with {event.hosts}</p>
+      </>}
       </div>
       <div className={styles.invitationContent}>
+      {artwork && <div className={styles.artworkInvitationHeading}><p className={styles.invitationEyebrow}>You’re invited</p><h2 className={styles.invitationTitle}>{event.titleLead}<br /><em>{event.titleAccent}</em></h2><p className={styles.hostLine}>with {event.hosts}</p></div>}
       <div className={styles.eventDetails}>
         <div><p className={styles.detailLabel}>When</p><p>{event.date}</p><p className={styles.detailSecondary}>{event.year} · {event.time}</p></div>
         <div><p className={styles.detailLabel}>Where</p><p>{event.venue}</p><p className={styles.detailSecondary}>{event.location}</p></div>

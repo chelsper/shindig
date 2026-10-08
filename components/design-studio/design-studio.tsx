@@ -5,12 +5,15 @@ import { useState } from "react";
 import { DEFAULT_EVENT_DESIGN, EVENT_DESIGNS, eventDesignVariables, getEventDesign, type EventDesignId } from "../../lib/event-design";
 import type { DesignPreviewDevice, DesignPreviewPage } from "../../lib/design-preview";
 import { DesignPreview } from "./design-preview";
+import { ArtworkControls } from "./artwork-controls";
+import { useDesignArtwork } from "./use-design-artwork";
 import styles from "./design-studio.module.css";
 
 export function DesignStudio() {
   const [selected, setSelected] = useState<EventDesignId>(DEFAULT_EVENT_DESIGN);
   const [page, setPage] = useState<DesignPreviewPage>("invitation");
   const [device, setDevice] = useState<DesignPreviewDevice>("phone");
+  const artworkState = useDesignArtwork();
   const design = getEventDesign(selected);
   return <main className={styles.studio}>
     <div className={styles.container}>
@@ -68,8 +71,9 @@ export function DesignStudio() {
               </label>)}
             </div></fieldset>
           </div>
+          <ArtworkControls state={artworkState} page={page} device={device} onPageChange={setPage} />
           <div id="design-preview-content" className={styles.previewStage}>
-            <DesignPreview designId={selected} page={page} device={device} />
+            <DesignPreview designId={selected} page={page} device={device} artwork={artworkState.artwork} crop={artworkState.crops[page]} />
           </div>
           <p className={styles.stageCaption}>{device === "phone" ? "390 px phone" : "960 px desktop"} layout · scaled to fit. A fictional dinner party; sample actions are inactive.</p>
         </section>
