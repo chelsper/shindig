@@ -7,6 +7,7 @@ import { saveDraftArtwork } from "../../app/admin/events/[id]/artwork/actions";
 import { EventDraftPreview } from "./event-draft-preview";
 import { EventSetupNavigation } from "./event-setup-navigation";
 import { DraftDesignControls } from "./draft-design-controls";
+import { DraftArtworkFraming } from "./draft-artwork-framing";
 import { PreviewFrame } from "../design-studio/preview-frame";
 import type { DesignPreviewDevice } from "../../lib/design-preview";
 import { getEventDesign, type EventDesignId } from "../../lib/event-design";
@@ -91,15 +92,17 @@ export function EventDraftArtworkEditor({ draft, initial, uploadConfigured, requ
               <button type="button" className={`${button} mt-3`} disabled={Boolean(busy) || conflict || settings.design?.style === requestedDesign} onClick={() => { setSettings((current) => ({ ...current, design: { style: requestedDesign, invitationCrop: current.design?.invitationCrop ?? defaultArtworkCrop() } })); setDirty(true); setMessage(null); setError(null); }}>{settings.design?.style === requestedDesign ? `${getEventDesign(requestedDesign).name} selected` : `Apply ${getEventDesign(requestedDesign).name}`}</button>
               <p className="mt-2 text-xs leading-5 text-[#202523]/60">Choose Save artwork in the bottom bar, then Review &amp; publish. Applying a style here does not save or publish it.</p>
             </section>}
-            <DraftDesignControls id={draft.id} settings={settings} view={view} onViewChange={setView} device={device} disabled={Boolean(busy) || conflict} onChange={(next) => { setSettings(next); setDirty(true); setMessage(null); setError(null); }} />
+            <DraftDesignControls settings={settings} disabled={Boolean(busy) || conflict} onChange={(next) => { setSettings(next); setDirty(true); setMessage(null); setError(null); }} />
             {!uploadConfigured && <p role="status" className="rounded-2xl bg-[#fff4d8] p-4 text-sm leading-6 text-[#765319]">Uploads need a private Vercel Blob store. Add EVENT_DRAFT_BLOB_READ_WRITE_TOKEN to the server environment. Draft artwork is never stored in the live event’s public image store.</p>}
             {(["invitation", "header"] as const).map((kind) => <section key={kind} className={panel}>
               <h2 className="font-serif text-2xl">{kind === "invitation" ? "Invitation artwork" : "Event Hub header"}</h2>
-              <p className="mt-2 text-sm leading-6 text-[#202523]/60">{kind === "invitation" ? settings.design ? "A 4:5 frame, using your invitation crop above." : "Shown in full, without cropping." : "Upload a separate image, or use the invitation artwork. Its framing is independent of the invitation."}</p>
+              <p className="mt-2 text-sm leading-6 text-[#202523]/60">{kind === "invitation" ? settings.design ? "A 4:5 frame. Adjust your invitation crop below." : "Shown in full, without cropping." : "Upload a separate image, or use the invitation artwork. Adjust the header’s framing below."}</p>
               <label className="field-label mt-4">{kind === "invitation" ? "Upload invitation artwork" : "Upload a separate header"}<input type="file" accept={DRAFT_IMAGE_TYPES.join(",")} disabled={!uploadConfigured || conflict} onChange={(event) => void upload(kind, event)} className="field-input max-w-full cursor-pointer py-3 text-xs file:mr-2 file:rounded-full file:border-0 file:bg-[#e9f2f8] file:px-3 file:py-2 file:text-xs" /></label>
               <p className="mt-2 text-xs leading-5 text-[#202523]/55">JPG, PNG, WebP or AVIF · Up to 4 MB</p>
               {settings[kind].path && <><label className="field-label mt-4">{kind === "invitation" ? "Invitation image description" : "Header image description"}<input className="field-input" value={settings[kind].alt} onChange={(event) => update(kind, { alt: event.target.value })} maxLength={180} required /></label><button className="mt-3 min-h-11 text-xs text-[#355f9e] underline underline-offset-4" type="button" onClick={() => update(kind, { path: null, alt: "" })}>{kind === "invitation" ? "Remove from draft" : "Use invitation artwork instead"}</button></>}
-              {kind === "header" && !settings.design && <div className="mt-5 space-y-4">{([ ["focalX", "Horizontal focus", 0, 100], ["focalY", "Vertical focus", 0, 100], ["zoomPercent", "Zoom", 100, 200] ] as const).map(([key, label, min, max]) => <label key={key} className="block text-xs font-semibold text-[#202523]/70">{label} <span className="float-right text-[#355f9e]">{settings.header[key]}%</span><input type="range" className="mt-2 min-h-8 w-full accent-[#355f9e]" value={settings.header[key]} min={min} max={max} disabled={!(settings.header.path || settings.invitation.path) || conflict} onChange={(event) => { update("header", { [key]: Number(event.target.value) }); setView("hub"); }} /></label>)}</div>}
+              <DraftArtworkFraming id={draft.id} settings={settings} kind={kind} device={device} disabled={Boolean(busy) || conflict}
+                onChange={(next) => { setSettings(next); setView(kind === "header" ? "hub" : "invitation"); setDirty(true); setMessage(null); setError(null); }}
+                onDeviceChange={(size) => { setDevice(size); setView(kind === "header" ? "hub" : "invitation"); }} />
             </section>)}
           </fieldset>
         </form>

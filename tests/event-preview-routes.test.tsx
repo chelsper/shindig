@@ -69,7 +69,7 @@ describe("full-page host preview", () => {
     mocks.artwork.mockResolvedValue({ settings: { ...EMPTY_DRAFT_ARTWORK, invitation: { path, alt: "Garden artwork" }, header: { ...EMPTY_DRAFT_ARTWORK.header, focalY: 30, zoomPercent: 120 } }, revision: 1 });
     const html = renderToStaticMarkup(await Preview(context("hub")));
     expect(html).toContain(`/admin/events/${id}/artwork/image?`); expect(html).not.toContain("/_next/image");
-    expect(html).toContain("object-position:50% 30%"); expect(html).toContain("scale(1.2)"); expect(html).toContain("sm:aspect-[16/5]");
+    expect(html).toContain("object-position:50% 30%"); expect(html).toContain("scale(1.2)"); expect(html).toContain("sm:aspect-[16/6]");
   });
   it("handles incomplete drafts and failures without falling back to live content", async () => {
     mocks.draft.mockResolvedValue({ ...draft, startsAtUtc: null, address: "" });

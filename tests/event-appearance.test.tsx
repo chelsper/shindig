@@ -75,10 +75,11 @@ describe("saved event appearance", () => {
     expect(html).toContain(event.eventHub.path); expect(html).not.toContain("event-drafts/");
   });
   it("renders host controls with accessible independent crops and no automatic publish", () => {
-    const html = renderToStaticMarkup(<DraftDesignControls id={eventId} settings={artwork} view="invitation" onViewChange={() => {}} device="phone" disabled={false} onChange={() => {}} />);
-    expect(html).toContain('name="event-style"'); expect(html).toContain("Original layout"); expect(html).toContain("Reset invitation crop");
-    expect(html).toContain('aria-label="Invitation zoom"'); expect(html).toContain('max="250"'); expect(html).not.toContain('type="submit"');
+    const html = renderToStaticMarkup(<DraftDesignControls settings={artwork} disabled={false} onChange={() => {}} />);
+    expect(html).toContain('name="event-style"'); expect(html).toContain("Original layout"); expect(html).not.toContain('type="submit"');
     const editor = renderToStaticMarkup(<EventDraftArtworkEditor draft={draft} initial={{ settings: artwork, revision: 2 }} uploadConfigured />);
+    expect(editor).toContain("Reset invitation crop"); expect(editor).toContain("Reset header crop");
+    expect(editor).toContain('aria-label="Invitation zoom"'); expect(editor).toContain('aria-label="Header zoom"'); expect(editor).toContain('max="250"');
     expect(editor).toContain("Save draft design &amp; artwork"); expect(editor).toContain("Preview saved draft"); expect(editor).toContain("Review &amp; publish"); expect(editor).toContain("Private draft");
   });
   it("escapes host text and handles text-only designs without broken image requests", () => {

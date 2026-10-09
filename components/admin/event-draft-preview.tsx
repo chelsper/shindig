@@ -20,7 +20,7 @@ export function EventDraftPreview({ draft, artwork, view, children, actions, ful
   }
   return <div className={`mx-auto w-full overflow-hidden rounded-[1.75rem] border border-[#202523]/15 bg-[#f7f0e3] shadow-[0_16px_45px_rgb(32_37_35_/_0.08)] ${fullPage ? (view === "invitation" ? "grid max-w-6xl lg:grid-cols-2" : "max-w-4xl") : "max-w-[390px]"}`}>
     <div className={`border-b border-[#202523]/10 px-5 py-4 ${fullPage ? "lg:col-span-2" : ""}`}><span className="font-serif text-xl">Shindig</span><span className="float-right mt-1 text-[0.6rem] font-bold uppercase tracking-widest text-[#355f9e]">Private preview</span></div>
-    {image.path ? <div className={view === "hub" ? `relative aspect-[16/9] overflow-hidden bg-[#dceaf7] ${fullPage ? "sm:aspect-[16/5]" : ""}` : `min-w-0 p-4 pb-0 ${fullPage ? "lg:p-6" : ""}`}>
+    {image.path ? <div className={view === "hub" ? `relative aspect-[16/9] overflow-hidden bg-[#dceaf7] ${fullPage ? "sm:aspect-[16/6]" : ""}` : `min-w-0 p-4 pb-0 ${fullPage ? "lg:p-6" : ""}`}>
       <img src={draftImageUrl(draft.id, image.path)} alt={image.alt} className={view === "hub" ? "absolute h-full w-full object-cover" : "h-auto w-full rounded-2xl"} style={view === "hub" ? { objectPosition: `${artwork.header.focalX}% ${artwork.header.focalY}%`, transform: `scale(${artwork.header.zoomPercent / 100})`, transformOrigin: `${artwork.header.focalX}% ${artwork.header.focalY}%` } : undefined} />
     </div> : <div className="grid aspect-[16/9] place-items-center bg-[#e9f2f8] px-5 text-center text-sm text-[#355f9e]">Your artwork will appear here</div>}
     <div className={`min-w-0 space-y-4 p-5 ${fullPage ? "sm:p-8" : ""}`}>

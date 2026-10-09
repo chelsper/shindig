@@ -63,6 +63,19 @@ describe.skipIf(!modulePath)("saved style → preview → explicit publication P
     expect((await getPublishedEvent(f.slug))?.design).toEqual(changed.design);
     expect((await listHostEventCards()).find(({ id }) => id === f.id)?.hasUnpublishedChanges).toBe(false);
   });
+  it("saves and reloads a header-only crop without altering the invitation or live snapshot", async () => {
+    const f = await fixture();
+    await saveDraftArtworkRecord(f.id, 0, f.artwork); await publishEventRecord(f.id, f.versions, null);
+    const before = await getPublishedEvent(f.slug);
+    const changed = { ...f.artwork, header: { ...f.artwork.header, focalX: 15, focalY: 65, zoomPercent: 185 } };
+    expect(await saveDraftArtworkRecord(f.id, 1, changed)).toBe(2);
+    expect((await getDraftArtwork(f.id))?.settings).toEqual(changed);
+    expect(await getPublishedEvent(f.slug)).toEqual(before);
+    await publishEventRecord(f.id, { ...f.versions, artwork: 2, publication: 1 }, null);
+    const after = await getPublishedEvent(f.slug);
+    expect(after?.design).toEqual(before?.design); expect(after?.invitation).toEqual(before?.invitation);
+    expect(after?.eventHub.headerImage).toMatchObject({ focalX: 15, focalY: 65, zoomPercent: 185 });
+  });
   it("reviews persisted changes without changing the live snapshot; stale review stays rejected", async () => {
     const f = await fixture(); await saveDraftArtworkRecord(f.id, 0, f.artwork); await publishEventRecord(f.id, f.versions, null);
     const old = await getHostEventPublication(f.slug);

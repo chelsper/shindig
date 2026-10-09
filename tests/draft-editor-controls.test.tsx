@@ -23,6 +23,7 @@ vi.mock("../app/admin/events/[id]/settings/actions", () => ({ saveDraftSettings:
 import { EventDraftArtworkEditor } from "../components/admin/event-draft-artwork-editor";
 import { EventDraftSettingsEditor } from "../components/admin/event-draft-settings-editor";
 import { DraftDesignControls } from "../components/admin/draft-design-controls";
+import { DraftArtworkFraming } from "../components/admin/draft-artwork-framing";
 import { DraftEditorActionBar } from "../components/admin/draft-editor-action-bar";
 import { EditorViewToggle } from "../components/admin/editor-view-toggle";
 import { EventDraftPreview } from "../components/admin/event-draft-preview";
@@ -66,6 +67,21 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Artwork & Design editor safeguards", () => {
+  it("previews and saves a header adjustment separately from the invitation", async () => {
+    load("artwork");
+    const framing = () => find(el => el.type === DraftArtworkFraming && el.props.kind === "header")!;
+    const next = { ...art, header: { ...art.header, focalX: 20, focalY: 70, zoomPercent: 160 } };
+    (framing().props.onChange as (value: DraftArtwork) => void)(next); render();
+    expect(find(el => el.type === EventDraftPreview)!.props).toMatchObject({ view: "hub", artwork: next });
+    expect(bar().dirty).toBe(true); expect(harness.artwork).not.toHaveBeenCalled();
+    (framing().props.onDeviceChange as (device: string) => void)("desktop"); render();
+    expect(find(el => el.type === EventDraftPreview)!.props.fullPage).toBe(true);
+    toggle("preview"); toggle("edit");
+    await submit(); render();
+    expect(harness.artwork).toHaveBeenCalledWith({ id: draft.id, revision: 2, settings: next });
+    expect(next.design).toEqual(art.design); expect(next.invitation).toEqual(art.invitation);
+    expect(bar()).toMatchObject({ dirty: false, pending: false });
+  });
   it("retains unsaved style/crops and device/screen selections when switching mobile panels", () => {
     load("artwork");
     const next = { ...art, design: { style: "after-dark" as const, invitationCrop: { x: 12, y: 78, zoom: 160 } } };

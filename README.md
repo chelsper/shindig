@@ -379,6 +379,12 @@ crops. Phone/Desktop previews use the same presentation and image geometry as
 published pages. The invitation is 4:5; the Hub is 16:9 on phones and 3:1 at
 700px and wider, with one shared focal point across sizes. Zoom is 100–250%.
 Use drag or the labeled keyboard sliders; reset affects only the selected crop.
+Framing controls sit directly in the **Invitation artwork** and **Event Hub header**
+sections. The header has its own drag preview, zoom/position sliders, reset and
+Phone/Desktop buttons; no separate crop tab is needed. Without a separate header
+upload, it uses the invitation image but keeps an independent crop. Original
+layout also supports inline header framing (up to 200% zoom), while its invitation
+remains uncropped. Changes still require an explicit draft save and publication.
 
 **Save draft design & artwork → Preview saved draft → Review & publish.** Saving
 does not change the live event. The existing artwork revision protects against

@@ -106,12 +106,12 @@ describe("design customization controls", () => {
   });
   it("preserves images/header crop and resets overrides only when choosing a new style", () => {
     const change = vi.fn(), settings = { ...EMPTY_DRAFT_ARTWORK, design: custom, header: { ...EMPTY_DRAFT_ARTWORK.header, focalX: 20, zoomPercent: 220 } };
-    const tree = DraftDesignControls({ id: eventId, settings, onChange: change, view: "invitation", onViewChange: () => {}, device: "phone", disabled: false });
+    const tree = DraftDesignControls({ settings, onChange: change, disabled: false });
     (find(el => el.type === EventAppearanceControls, tree)!.props.onChange as (appearance: EventAppearance) => void)(base);
     expect(change).toHaveBeenLastCalledWith({ ...settings, design: base });
     (find(el => el.props.name === "event-style" && el.props.value === "classic", tree)!.props.onChange as () => void)();
     expect(change).toHaveBeenLastCalledWith({ ...settings, design: { ...base, style: "classic" } });
-    const original = renderToStaticMarkup(<DraftDesignControls id={eventId} settings={EMPTY_DRAFT_ARTWORK} onChange={change} view="invitation" onViewChange={() => {}} device="phone" disabled={false} />);
+    const original = renderToStaticMarkup(<DraftDesignControls settings={EMPTY_DRAFT_ARTWORK} onChange={change} disabled={false} />);
     expect(original).not.toContain('name="event-palette"'); expect(original).toContain("Original layout stays exactly as it is");
   });
 });
