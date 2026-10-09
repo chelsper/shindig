@@ -64,8 +64,9 @@ describe("authenticated event setup route", () => {
     const settings = { ...snapshot.settings, features: { ...snapshot.settings.features, weather: true } };
     mocks.settings.mockResolvedValue({ settings, revision: 3 });
     mocks.publication.mockResolvedValue({ ...publication, snapshot: { ...snapshot, settings, coordinates: { latitude: 30, longitude: -81 } } });
-    expect(renderToStaticMarkup(await Page(props))).not.toContain("Confirm the event’s latitude");
+    mocks.draft.mockResolvedValue({ ...draft, location: { address: draft.address, matchedAddress: draft.address, latitude: 30, longitude: -81, source: "published" } });
+    expect(renderToStaticMarkup(await Page(props))).not.toContain("Confirm the event’s weather location");
     mocks.draft.mockResolvedValue({ ...draft, address: "A new address", revision: 3 });
-    expect(renderToStaticMarkup(await Page(props))).toContain("Confirm the event’s latitude");
+    expect(renderToStaticMarkup(await Page(props))).toContain("Confirm the event’s weather location");
   });
 });

@@ -50,7 +50,7 @@ describe("published guest screens and calendar", () => {
     expect(html).toContain("2 things before you can publish");
     expect(html.indexOf('id="publish-readiness"')).toBeLessThan(html.indexOf("Saved version to publish"));
     expect(html).toContain(`href="/admin/events/${eventId}#draft-date-heading"`);
-    expect(html).toContain('href="#weather-location"');
+    expect(html).toContain(`href="/admin/events/${draft.id}/location"`);
     expect(html).toContain(`href="/admin/events/${eventId}/settings#hub-settings-heading"`);
     expect(html).toMatch(/disabled=""[^>]*>Finish setup to publish/);
   });

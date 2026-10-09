@@ -54,6 +54,6 @@ export function draftReadiness(draft: EventDraft, artwork: DraftArtwork, setting
     { id: "artwork", label: "Invitation artwork", complete: Boolean(artwork.invitation.path), required: false, href: `${base}/artwork` },
     { id: "end", label: "End time for calendar entries", complete: !missing.has("end"), required: true, href: `${base}#draft-date-heading` },
     ...(missing.has("deadline") ? [{ id: "deadline", label: "RSVP deadline must be at or before the event starts", complete: false, required: true, href: `${base}/settings#rsvp-limits` }] : []),
-    ...(settings.features.weather ? [{ id: "weather", label: "Weather location confirmed", complete: !missing.has("weather"), required: true, href: `${base}/publish#weather-location` }] : []),
+    ...(settings.features.weather ? [{ id: "weather", label: "Weather location confirmed", complete: !missing.has("weather"), required: true, href: `${base}/location` }] : []),
   ];
 }

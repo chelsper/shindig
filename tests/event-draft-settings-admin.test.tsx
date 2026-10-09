@@ -74,11 +74,12 @@ describe("private draft settings page and server action", () => {
     mocks.draft.mockResolvedValue(null); await expect(SettingsPage(context)).rejects.toThrow("not found");
     mocks.get.mockRejectedValue(new Error("private database secret"));
     const html = renderToStaticMarkup(await SettingsPage(context));
-    expect(html).toContain("migrations through 019"); expect(html).not.toContain("private database secret");
+    expect(html).toContain("migrations 001–019 and 021"); expect(html).not.toContain("private database secret");
   });
   it("does not report weather as incomplete when its saved location is confirmed", async () => {
     const coordinates = { latitude: 30, longitude: -81 };
     mocks.publication.mockResolvedValue({ snapshot: { details: draft, coordinates } });
+    mocks.draft.mockResolvedValue({ ...draft, address: "Confirmed address", location: { ...coordinates, address: "Confirmed address", matchedAddress: "Confirmed address", source: "manual" } });
     expect((await SettingsPage(context)).props.coordinates).toEqual(coordinates);
     mocks.draft.mockResolvedValue({ ...draft, address: "New event address" });
     expect((await SettingsPage(context)).props.coordinates).toBeNull();

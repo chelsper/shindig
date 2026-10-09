@@ -72,6 +72,6 @@ describe("private previews and readiness", () => {
   });
   it("does not silently reuse the Oyster Roast coordinates when weather is selected", () => {
     const items = draftReadiness(draft, EMPTY_DRAFT_ARTWORK, { ...DEFAULT_DRAFT_SETTINGS, features: { ...DEFAULT_DRAFT_SETTINGS.features, weather: true } }, true);
-    expect(items.find((item) => item.id === "weather")).toMatchObject({ complete: false, required: true, href: `/admin/events/${draft.id}/publish#weather-location` });
+    expect(items.find((item) => item.id === "weather")).toMatchObject({ complete: false, required: true, href: `/admin/events/${draft.id}/location` });
   });
 });

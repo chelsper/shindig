@@ -34,7 +34,7 @@ describe("host-only draft storage", () => {
   });
   it("loads only the requested private draft and normalizes timestamps", async () => {
     mocks.sql.mockResolvedValue([{ ...row, createdAt: new Date(row.createdAt), privateExtra: "ignored" }]);
-    expect(await getEventDraft(id)).toEqual({ ...row, createdAt: "2026-10-06T12:00:00.000Z", updatedAt: "2026-10-06T12:00:00.000Z" });
+    expect(await getEventDraft(id)).toEqual({ ...row, location: null, createdAt: "2026-10-06T12:00:00.000Z", updatedAt: "2026-10-06T12:00:00.000Z" });
     const [query, ...values] = mocks.sql.mock.calls[0];
     expect(query.join("?")).toContain("WHERE id = ?::uuid AND status = 'draft'"); expect(values).toEqual([id]);
   });

@@ -8,8 +8,8 @@ import type { EventDraft } from "../../lib/event-drafts";
 import { draftImageUrl, type DraftArtworkRecord } from "../../lib/event-draft-artwork";
 import { getEventDesign } from "../../lib/event-design";
 import { DRAFT_HUB_MODULES, type DraftSettingsRecord } from "../../lib/event-draft-settings";
-import { parseCoordinates, type Coordinates } from "../../lib/event-publication";
-import { publicationIssues } from "../../lib/event-readiness";
+import { type Coordinates } from "../../lib/event-publication";
+import { publicationIssues, savedWeatherCoordinates } from "../../lib/event-readiness";
 import { PublishReadiness, publicationBlocker } from "./publish-readiness";
 import { draftEventSlug } from "../../lib/event-routes";
 import { suggestEventAlias, validateEventAlias } from "../../lib/event-alias";
@@ -27,12 +27,10 @@ export function EventPublishReview({ draft, artwork, settings, live, musicConfig
 }) {
   const base = `/admin/events/${draft.id}`;
   const [alias, setAlias] = useState(live ? live.publicAlias ?? "" : suggestEventAlias(draft.title));
-  const [latitude, setLatitude] = useState(live?.coordinates ? String(live.coordinates.latitude) : "");
-  const [longitude, setLongitude] = useState(live?.coordinates ? String(live.coordinates.longitude) : "");
   const [confirmed, setConfirmed] = useState(false), [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false), [pending, startTransition] = useTransition();
   const busy = useRef(false), router = useRouter();
-  const coordinates = latitude.trim() && longitude.trim() ? parseCoordinates({ latitude: Number(latitude), longitude: Number(longitude) }) : null;
+  const coordinates = savedWeatherCoordinates(draft);
   const problems = publicationIssues({ details: draft, artwork: artwork.settings, settings: settings.settings, coordinates }).map((issue) => publicationBlocker(draft.id, issue));
   if (!settings.revision) problems.push({ id: "settings", message: "Save your RSVP & Hub choices.", href: `${base}/settings` });
   const parsedAlias = validateEventAlias(alias);
@@ -66,7 +64,7 @@ export function EventPublishReview({ draft, artwork, settings, live, musicConfig
       </dl>
       {artwork.settings.invitation.path && <Image className="mt-4 h-auto max-h-64 w-auto rounded-xl" src={draftImageUrl(draft.id, artwork.settings.invitation.path)} alt={artwork.settings.invitation.alt} width={180} height={240} unoptimized />}
       {!archived && settings.settings.features.playlist && !musicConfigured && <p className="mt-4 rounded-xl bg-[#fff4d8] p-4 text-sm leading-6">Music search isn’t configured in this environment yet. Saved songs still display, but new suggestions need the Spotify server credentials. You can publish with this temporary unavailable state or turn Playlist off first.</p>}
-      {!archived && settings.settings.features.weather && <fieldset id="weather-location" className="mt-5 scroll-mt-6 rounded-2xl bg-[#e9f2f8]/60 p-4"><legend className="px-1 text-sm font-semibold">Confirm weather location</legend><p className="text-xs leading-5">Use coordinates for the address above, not your current device location. Changing the address requires checking these again. These coordinates will be public.</p><div className="mt-3 grid gap-3 sm:grid-cols-2"><label className="field-label">Latitude<input className="field-input" type="number" step="any" min="-90" max="90" value={latitude} onChange={(e) => { setLatitude(e.target.value); setConfirmed(false); }} /></label><label className="field-label">Longitude<input className="field-input" type="number" step="any" min="-180" max="180" value={longitude} onChange={(e) => { setLongitude(e.target.value); setConfirmed(false); }} /></label></div></fieldset>}
+      {!archived && settings.settings.features.weather && <section id="weather-location" className="mt-5 scroll-mt-6 rounded-2xl bg-[#e9f2f8]/60 p-4"><h3 className="text-sm font-semibold">{coordinates ? "Weather location confirmed" : "Weather location needs confirmation"}</h3><p className="mt-2 break-words text-xs leading-5">{coordinates ? `${draft.location?.matchedAddress} · ${coordinates.latitude.toFixed(5)}, ${coordinates.longitude.toFixed(5)}` : "Find and confirm the event address in Location. It stays saved with your private draft."}</p><Link className={button} href={`${base}/location`}>{coordinates ? "Review saved location →" : "Confirm location →"}</Link></section>}
     </section>
     {!success && !archived && <form className="rounded-3xl border border-[#355f9e]/20 p-5 sm:p-7" onSubmit={(e) => {
       e.preventDefault(); if (busy.current || !confirmed || problems.length || archived) return;

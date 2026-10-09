@@ -59,6 +59,7 @@ describe("published routes", () => {
   });
   it("clears weather coordinates in publish review when the draft address has changed", async () => {
     const coordinates = { latitude: 30, longitude: -81 };
+    mocks.draft.mockResolvedValue({ ...draft, location: { ...coordinates, address: draft.address, matchedAddress: draft.address, source: "published" } });
     mocks.pub.mockResolvedValue({ ...publication, snapshot: { ...snapshot, coordinates } });
     expect((await PublishPage(adminContext)).props.children.props.live.coordinates).toEqual(coordinates);
     mocks.draft.mockResolvedValue({ ...draft, address: "A different address" });

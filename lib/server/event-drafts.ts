@@ -1,5 +1,6 @@
 import "server-only";
 import { neon } from "@neondatabase/serverless";
+import { parseEventLocation } from "../event-location";
 import { isAdminAuthenticated } from "./admin-session";
 import { isDraftId, isDraftRevision, validateEventDraft, type EventDraft, type EventDraftFields, type EventDraftSummary } from "../event-drafts";
 
@@ -17,7 +18,9 @@ const timestamp = (value: unknown) => {
 function readDraft(row: Record<string, unknown>): EventDraft {
   const parsed = validateEventDraft({ ...row, startsAtUtc: row.startsAtUtc === null ? null : timestamp(row.startsAtUtc), endsAtUtc: row.endsAtUtc === null ? null : timestamp(row.endsAtUtc) });
   if (!parsed.ok || !isDraftId(row.id) || !isDraftRevision(row.revision) || row.revision < 1 || row.status !== "draft") throw new Error("Invalid draft record.");
-  return { ...parsed.fields, id: row.id, status: "draft", revision: row.revision, createdAt: timestamp(row.createdAt), updatedAt: timestamp(row.updatedAt) };
+  const location = parseEventLocation(row.location, parsed.fields.address);
+  if (row.location != null && !location) throw new Error("Invalid saved location.");
+  return { ...parsed.fields, id: row.id, status: "draft", revision: row.revision, createdAt: timestamp(row.createdAt), updatedAt: timestamp(row.updatedAt), location };
 }
 
 export async function listEventDrafts(): Promise<EventDraftSummary[]> {
@@ -31,7 +34,7 @@ export async function getEventDraft(id: string): Promise<EventDraft | null> {
   const sql = await adminDatabase();
   if (!isDraftId(id)) return null;
   const rows = await sql`SELECT id, status, title, description, host_name AS "hostName", venue, address, city_label AS "cityLabel",
-    time_zone AS "timeZone", starts_at AS "startsAtUtc", ends_at AS "endsAtUtc", revision, created_at AS "createdAt", updated_at AS "updatedAt"
+    time_zone AS "timeZone", starts_at AS "startsAtUtc", ends_at AS "endsAtUtc", revision, created_at AS "createdAt", updated_at AS "updatedAt", location_confirmation AS location
     FROM events WHERE id = ${id}::uuid AND status = 'draft' LIMIT 1`;
   return rows.length ? readDraft(rows[0]) : null;
 }

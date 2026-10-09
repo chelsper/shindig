@@ -49,22 +49,22 @@ describe("guided event readiness", () => {
   });
   it("reuses confirmed coordinates only when the saved address matches", () => {
     const coordinates = { latitude: 30.1, longitude: -81.6 };
-    const published = { ...snapshot, coordinates, settings: weather };
-    expect(savedWeatherCoordinates(draft, null)).toBeNull();
-    expect(savedWeatherCoordinates(draft, published)).toEqual(coordinates);
-    expect(savedWeatherCoordinates({ ...draft, address: ` ${draft.address} ` }, published)).toEqual(coordinates);
-    expect(savedWeatherCoordinates({ ...draft, address: "456 A Different Street" }, published)).toBeNull();
+    const location = { ...coordinates, address: draft.address, matchedAddress: draft.address, source: "manual" as const };
+    expect(savedWeatherCoordinates(draft)).toBeNull();
+    expect(savedWeatherCoordinates({ ...draft, location })).toEqual(coordinates);
+    expect(savedWeatherCoordinates({ ...draft, address: ` ${draft.address} `, location })).toEqual(coordinates);
+    expect(savedWeatherCoordinates({ ...draft, address: "456 A Different Street", location })).toBeNull();
     expect(draftReadiness(draft, artwork.settings, weather, true, coordinates).find(({ id }) => id === "weather")?.complete).toBe(true);
     expect(renderToStaticMarkup(<EventSetupOverview {...props} coordinates={coordinates} settings={{ settings: weather, revision: 3 }} />)).not.toContain("Needs attention");
   });
 });
 
 describe("private setup navigation and publication states", () => {
-  it.each(["setup", "details", "artwork", "settings", "preview", "publish"] as const)("uses the same event-scoped navigation on %s", (current) => {
+  it.each(["setup", "details", "location", "artwork", "settings", "preview", "publish"] as const)("uses the same event-scoped navigation on %s", (current) => {
     const html = renderToStaticMarkup(<EventSetupNavigation id={id} current={current} />);
     expect(html.match(/aria-current="page"/g)).toHaveLength(1);
     const links = [...html.matchAll(/href="([^"]+)"/g)].map((match) => match[1]);
-    expect(links).toEqual([`${base}/setup`, base, `${base}/artwork`, `${base}/settings`, `${base}/preview`, `${base}/publish`]);
+    expect(links).toEqual([`${base}/setup`, base, `${base}/location`, `${base}/artwork`, `${base}/settings`, `${base}/preview`, `${base}/publish`]);
     expect(html).toContain("min-h-11"); expect(html).toContain("flex-wrap");
   });
   it.each([null, { visibility: "unpublished", rsvpsOpen: false, hasUnpublishedChanges: true }, { visibility: "archived", rsvpsOpen: false, hasUnpublishedChanges: true }] satisfies (SetupPublication | null)[])("never offers public links or QR downloads for private events: %j", (live) => {

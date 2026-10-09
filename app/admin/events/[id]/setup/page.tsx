@@ -30,6 +30,6 @@ export default async function EventSetupPage({ params, searchParams }: {
   const live = publication ? { visibility: publication.visibility, rsvpsOpen: publication.rsvpsOpen, hasUnpublishedChanges: hasUnpublishedChanges({ details: draft.revision, artwork: artwork.revision, settings: settings.revision }, publication.sourceRevisions) } : null;
   const query = await searchParams;
   return <ContentShell title="Bring your gathering together" contextLabel="Event setup" dashboardHref="/admin/events" description="A little guidance, from the first idea to the invitation. Pick up wherever you left off.">
-    <EventSetupOverview draft={draft} artwork={artwork} settings={settings} coordinates={savedWeatherCoordinates(draft, publication?.snapshot ?? null)} live={live} justSaved={query?.saved === "1"} justCopied={query?.copied === "1" && !publication} />
+    <EventSetupOverview draft={draft} artwork={artwork} settings={settings} coordinates={savedWeatherCoordinates(draft)} live={live} justSaved={query?.saved === "1"} justCopied={query?.copied === "1" && !publication} />
   </ContentShell>;
 }

@@ -1,5 +1,59 @@
 # Shindig
 
+## Saved event locations & publishing
+
+Host event setup now includes **Location**. Save the address in Details, choose
+**Find address**, select the correct match, check the confirmation, and choose
+**Confirm & save location**. This saves only the private draft. Review & publish
+still requires a separate explicit approval; no invitations are sent.
+
+- On-demand, host-only address lookup uses the [U.S. Census Geocoder](https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html):
+  `/geocoder/locations/onelineaddress?address=…&benchmark=Public_AR_Current&format=json`.
+  Hosts are told before lookup that the saved address is sent to Census.
+  Matches are approximate street-range coordinates, not guaranteed rooftop
+  positions. Automatic lookup supports U.S. addresses up to 100 characters.
+  Unmatched/international addresses have a validated manual-coordinate fallback.
+  No guest device location, automatic geocoding, map, or paid service is used.
+- Confirmation is stored in `events.location_confirmation`, bound to the saved
+  address. PostgreSQL clears it whenever that address changes. Other detail edits
+  retain it. Location changes advance the existing details revision, protecting
+  against stale browser tabs and stale publication reviews.
+- Weather-enabled events require saved confirmation before publication.
+  Publishing reads coordinates from the authenticated draft, not arbitrary
+  browser values. Match/provider metadata stays private. Existing published
+  snapshots and Jasper Shucks remain unchanged until an explicit publish.
+  Verify the event timezone in Details if the location changes regions; matching
+  does not silently alter times.
+- Requests time out after 8 seconds. Successful matches (including no matches)
+  are cached for 15 minutes in bounded server memory (100 addresses); identical
+  requests coalesce. Cache keys are hashed, addresses/errors are not logged.
+  A warm instance allows 30 uncached requests/minute and five concurrent lookups;
+  provider 429s pause lookups for at least one minute. These are best-effort
+  per-instance limits, not a distributed quota. Failures offer retry/manual entry.
+
+### Migration and deployment
+
+1. Before deploying this version, apply
+   [`021_confirmed_event_location.sql`](db/migrations/021_confirmed_event_location.sql)
+   to the intended Neon database after migrations **001–019**. It is independent
+   of the unfinished host-accounts migration **020**; do not apply 020 just for
+   location setup.
+2. Migration 021 adds the nullable confirmation, validation constraint and
+   address-invalidation trigger. On its first application only, it preserves
+   coordinates already published for the same saved address. It does not publish
+   drafts, change live snapshots, or modify RSVPs. Reapplying never resurrects a
+   cleared confirmation.
+3. Deploy through the existing Vercel workflow. No new packages, credentials or
+   environment variables are required. Keep the existing server-only database
+   and host authentication settings.
+4. In a private draft, confirm Location, reload to verify persistence, and review
+   the readiness checklist. Publish only an event you intend to share.
+
+Tests use synthetic addresses and an isolated in-memory PostgreSQL database.
+They cover matching/caching/failures, host-only actions, migration replay,
+confirmation and address invalidation, stale revisions, private/public boundaries,
+and create → design → confirm → publish → RSVP → guest update → host records.
+
 ## Design Studio — public preview
 
 Open `/design` to compare **Classic**, **Coastal** and

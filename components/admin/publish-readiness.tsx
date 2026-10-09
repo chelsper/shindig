@@ -3,7 +3,7 @@ import type { PublicationIssue } from "../../lib/event-readiness";
 
 export type PublishBlocker = { id: string; message: string; href: string };
 export function publicationBlocker(id: string, issue: PublicationIssue): PublishBlocker {
-  return { id: issue.id, message: issue.message, href: issue.id === "weather" ? "#weather-location" : `/admin/events/${id}${issue.destination}` };
+  return { id: issue.id, message: issue.message, href: `/admin/events/${id}${issue.destination}` };
 }
 
 export function PublishReadiness({ id, blockers }: { id: string; blockers: PublishBlocker[] }) {

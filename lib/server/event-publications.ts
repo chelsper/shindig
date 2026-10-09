@@ -11,6 +11,7 @@ import { DRAFT_IMAGE_LIMIT, DRAFT_IMAGE_TYPES } from "../event-draft-artwork";
 import { parsePublicationSnapshot, publicationEvent, type PublicationSnapshot, type PublicationVersions } from "../event-publication";
 import { hasUnpublishedChanges, isLifecycleAction, type EventLifecycle, type LifecycleAction } from "../event-lifecycle";
 import { EventAliasError, isEventAlias, validateEventAlias } from "../event-alias";
+import { savedWeatherCoordinates } from "../event-readiness";
 import { RsvpAdmissionError, rsvpAvailability } from "../rsvp-policy";
 
 function database() {
@@ -124,7 +125,11 @@ export async function publishEventRecord(id: string, versions: PublicationVersio
   if (!alias.ok) throw new EventAliasError(alias.message);
   const [draft, art, settings] = await Promise.all([getEventDraft(id), getDraftArtwork(id), getDraftSettings(id)]);
   if (!draft || !art || !settings || draft.revision !== versions.details || art.revision !== versions.artwork || settings.revision !== versions.settings) return null;
-  const snapshot = parsePublicationSnapshot(id, { details: draft, artwork: art.settings, settings: settings.settings, coordinates });
+  const savedCoordinates = settings.settings.features.weather ? savedWeatherCoordinates(draft) : null;
+  // Coordinates must already be saved with this reviewed details revision. A
+  // stale or tampered browser cannot substitute a new location at publication.
+  if (settings.settings.features.weather && JSON.stringify(coordinates) !== JSON.stringify(savedCoordinates)) return null;
+  const snapshot = parsePublicationSnapshot(id, { details: draft, artwork: art.settings, settings: settings.settings, coordinates: savedCoordinates });
   for (const image of [snapshot.artwork.invitation, snapshot.artwork.header]) {
     if (!image.path) continue;
     const token = draftImageStorageToken();

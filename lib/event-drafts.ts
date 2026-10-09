@@ -1,10 +1,11 @@
 import { eventLocalToUtc, normalizeTimeZone } from "./event-date-time";
+import type { ConfirmedEventLocation } from "./event-location";
 
 export const DRAFT_LIMITS = { title: 180, description: 2000, hostName: 120, venue: 120, address: 300, cityLabel: 100 } as const;
 export type EventDraftFields = Record<keyof typeof DRAFT_LIMITS, string> & {
   timeZone: string; startsAtUtc: string | null; endsAtUtc: string | null;
 };
-export type EventDraft = EventDraftFields & { id: string; status: "draft"; revision: number; createdAt: string; updatedAt: string };
+export type EventDraft = EventDraftFields & { id: string; status: "draft"; revision: number; createdAt: string; updatedAt: string; location?: ConfirmedEventLocation | null };
 export type EventDraftSummary = Pick<EventDraft, "id" | "title" | "startsAtUtc" | "timeZone" | "cityLabel" | "updatedAt">;
 export const EMPTY_EVENT_DRAFT: EventDraftFields = {
   title: "", description: "", hostName: "", venue: "", address: "", cityLabel: "",
