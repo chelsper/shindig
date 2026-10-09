@@ -31,7 +31,7 @@ describe("host-only invitation editing", () => {
     const result = await saveInvitation(request());
     expect(result).toEqual({ ok: true, settings, revision: 1 });
     expect(mocks.save).toHaveBeenCalledWith(settings, 0);
-    for (const path of ["/", "/invitation", "/event", "/admin", "/admin/invitation", "/calendar/oyster-roast.ics", "/api/weather"]) expect(mocks.revalidate).toHaveBeenCalledWith(path);
+    for (const path of ["/", "/invitation", "/event", "/admin", "/admin/invitation", "/admin/events", "/calendar/oyster-roast.ics", "/api/weather"]) expect(mocks.revalidate).toHaveBeenCalledWith(path);
     expect(mocks.revalidate).toHaveBeenCalledWith("/rsvp/[token]", "page");
   });
   it.each([null, {}, { ...request(), revision: "0" }, { ...request(), settings: { ...settings, title: " " } }, { ...request(), startsAtLocal: "2026-03-08T02:30" }])("rejects invalid requests server-side", async (input) => {

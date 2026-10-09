@@ -1,5 +1,39 @@
 # Shindig
 
+## Unified host event dashboard
+
+`/admin/events` now shows one card per event, combining the published version
+and its private working draft. Cards include artwork, event-local date/time,
+status, and shortcuts to edit, guest management, the live invitation and sharing.
+Live and formerly published cards show their last published identity; a renamed
+working draft is labeled separately. Unpublished and archived cards never offer
+public links or sharing. Drafts have no guest-management link until first
+publication. Archive/restore and duplication remain in the existing workflows.
+
+The **Changes waiting to publish** indicator uses the same semantic comparison
+as Review & publish, so an identical resave does not create a false warning.
+Archived events instead say **Saved changes to review**. Both lead to the
+protected comparison, not an automatic publish. No action on a card publishes,
+archives, restores or edits data directly.
+
+`lib/server/event-dashboard.ts` authenticates before a single joined database
+read (one row per event), without guest queries, per-card reads or shared caches.
+Only summary values leave the server; raw snapshots, private location metadata
+and guest content are excluded. New-event thumbnails use the existing protected
+image endpoint. Failed/missing thumbnails get a decorative fallback. A database
+failure shows an error, not an empty list or an invented publication status.
+
+The original Oyster Roast retains its existing management, invitation and Hub
+routes. Its card reads the current saved invitation settings independently; if
+those fail, a management link remains without guessed dates/artwork. Its Share
+control copies the existing public invitation URL, with a manual-copy fallback.
+Other published cards open their existing event-specific Share panel.
+
+No migration, dependency or environment variable is added. This does not enable
+the unfinished host-account rollout or change any guest-facing page. Tests cover
+statuses, privacy, links, semantic changes, errors, and the real joined query
+through draft → publish → edit → unpublish → archive using disposable PostgreSQL.
+
 ## Review changes before publishing
 
 For an existing event, **Review & publish** now compares the last published

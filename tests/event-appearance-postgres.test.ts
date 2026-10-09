@@ -12,6 +12,7 @@ import { getDraftArtwork, saveDraftArtworkRecord } from "../lib/server/event-dra
 import { getDraftSettings, saveDraftSettingsRecord } from "../lib/server/event-draft-settings";
 import { getPublishedEvent, getHostEventPublication, publishEventRecord, listHostPublications } from "../lib/server/event-publications";
 import { compareEventPublication } from "../lib/event-publication-changes";
+import { listHostEventCards } from "../lib/server/event-dashboard";
 import { getDuplicationSource } from "../lib/server/event-duplication";
 import { EMPTY_DRAFT_ARTWORK, type DraftArtwork } from "../lib/event-draft-artwork";
 import { draft, snapshot } from "./fixtures/publication";
@@ -86,6 +87,29 @@ describe.skipIf(!modulePath)("saved style → preview → explicit publication P
     expect((await getPublishedEvent(f.slug))?.design).toBeDefined();
     await publishEventRecord(f.id, { ...f.versions, artwork: 2, publication: 1 }, null);
     expect(await getPublishedEvent(f.slug)).not.toHaveProperty("design");
+  });
+  it("keeps one dashboard card through draft, publish, edits, unpublish and archive", async () => {
+    const f = await fixture();
+    const own = async () => (await listHostEventCards()).filter(({ id }) => id === f.id);
+    expect(await own()).toMatchObject([{ status: "draft", title: draft.title, image: null, guestsHref: null }]);
+    await saveDraftArtworkRecord(f.id, 0, f.artwork);
+    await publishEventRecord(f.id, f.versions, null);
+    expect(await own()).toHaveLength(1);
+    expect((await own())[0]).toMatchObject({ status: "published", hasUnpublishedChanges: false, title: draft.title });
+    await saveEventDraftRecord(f.id, 1, draft);
+    expect((await own())[0].hasUnpublishedChanges).toBe(false);
+    await saveEventDraftRecord(f.id, 2, { ...draft, title: "A changed draft name" });
+    expect((await own())[0]).toMatchObject({ title: draft.title, draftTitle: "A changed draft name", hasUnpublishedChanges: true });
+    const before = (await db.query("SELECT snapshot FROM event_publications WHERE event_id=$1", [f.id])).rows[0];
+    await own();
+    expect((await db.query("SELECT snapshot FROM event_publications WHERE event_id=$1", [f.id])).rows[0]).toEqual(before);
+    await db.query("UPDATE event_publications SET visibility='unpublished', rsvps_open=false WHERE event_id=$1", [f.id]);
+    expect((await own())[0]).toMatchObject({ status: "unpublished", publicHref: null, shareHref: null, guestsHref: `/admin/events/${f.id}/guests` });
+    await db.query("UPDATE event_publications SET visibility='archived' WHERE event_id=$1", [f.id]);
+    expect(await own()).toHaveLength(1);
+    expect((await own())[0]).toMatchObject({ status: "archived", publicHref: null, hasUnpublishedChanges: true });
+    state.authenticated = false;
+    await expect(listHostEventCards()).rejects.toThrow("Host access");
   });
   it("includes appearance in duplicate-source data and stale-copy fingerprint", async () => {
     const f = await fixture(); await saveDraftArtworkRecord(f.id, 0, f.artwork);
