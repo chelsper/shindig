@@ -1,5 +1,33 @@
 # Shindig
 
+## Review changes before publishing
+
+For an existing event, **Review & publish** now compares the last published
+snapshot with the saved draft. Only changed fields appear, grouped into wording,
+dates/timezone, location, design/artwork, RSVP rules and Event Hub features.
+Each group links back to its editor; private invitation/Hub previews remain
+available. Image comparisons show full, uncropped artwork; check framing in the
+previews. Calendar-affecting edits include a reminder that previously downloaded
+calendar files do not update automatically.
+
+First publication has its own introduction. A resave with identical values says
+**No content changes**; revisions and private geocoder metadata are not changes.
+Unpublished/archived events compare against **Last published**, never claim to
+be live, and retain their existing lifecycle and RSVP-closure protections.
+
+The comparison is computed after host authentication from stored, validated
+snapshots and exposes only whitelisted display values to the host component.
+Artwork uses the existing protected image route. Reviewing never writes or
+publishes anything, and does not query guest responses or other guest content.
+Publication still requires explicit confirmation and the existing atomic saved
+revision checks; saving in another tab requires a fresh review. Failed reads do
+not masquerade as a first publication. No notifications are sent.
+
+No new migration, environment variable or package is required. Tests cover
+semantic comparisons, timezone/DST and cleared values, artwork/fallback/crops,
+RSVP and feature flags, authentication/privacy, unchanged resaves, and an isolated
+PostgreSQL save → compare → stale rejection → publish → retry flow.
+
 ## Saved event locations & publishing
 
 Host event setup now includes **Location**. Save the address in Details, choose

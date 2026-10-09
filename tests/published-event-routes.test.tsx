@@ -145,6 +145,42 @@ describe("published routes", () => {
   });
 });
 describe("scoped providers and host screens", () => {
+  it("computes the comparison from saved and published data without a write or guest query", async () => {
+    mocks.draft.mockResolvedValue({ ...draft, title: "A revised evening", revision: 3 });
+    const page = await PublishPage(adminContext);
+    const props = page.props.children.props;
+    expect(props.changeReview.changeCount).toBe(1);
+    expect(props.changeReview.groups[0].changes[0]).toMatchObject({ id: "title", before: { text: "Garden Supper" }, after: { text: "A revised evening" } });
+    expect(props.live).not.toHaveProperty("snapshot");
+    expect(props.changeReview).not.toHaveProperty("snapshot");
+    expect(props.changeReview).not.toHaveProperty("sourceRevisions");
+    for (const fn of [mocks.save, mocks.list, mocks.guest, mocks.revalidate]) expect(fn).not.toHaveBeenCalled();
+  });
+  it("resets the review component identity after any saved or published revision changes", async () => {
+    const first = (await PublishPage(adminContext)).props.children.key;
+    mocks.draft.mockResolvedValue({ ...draft, revision: draft.revision + 1 });
+    expect((await PublishPage(adminContext)).props.children.key).not.toBe(first);
+    mocks.draft.mockResolvedValue(draft);
+    mocks.pub.mockResolvedValue({ ...publication, revision: publication.revision + 1 });
+    expect((await PublishPage(adminContext)).props.children.key).not.toBe(first);
+  });
+  it("treats a failed published read as unavailable, never as a first publication", async () => {
+    mocks.pub.mockRejectedValue(new Error("postgresql://private-credential"));
+    const html = renderToStaticMarkup(await PublishPage(adminContext));
+    expect(html).toContain("Review is temporarily unavailable");
+    expect(html).not.toContain("private-credential");
+    expect(html).not.toContain("Your first invitation");
+    expect(html).not.toContain("<form");
+    expect(mocks.save).not.toHaveBeenCalled();
+  });
+  it("keeps comparison-only draft wording out of the public invitation until publish", async () => {
+    mocks.draft.mockResolvedValue({ ...draft, description: "PRIVATE SAVED WORDING", revision: 3 });
+    expect((await PublishPage(adminContext)).props.children.props.changeReview.groups[0].changes[0].after.text).toBe("PRIVATE SAVED WORDING");
+    const html = renderToStaticMarkup(await Invitation(context));
+    expect(html).toContain("An evening together.");
+    expect(html).not.toContain("PRIVATE SAVED WORDING");
+    expect(mocks.save).not.toHaveBeenCalled();
+  });
   it("searches only when the resolved event enables the playlist", async () => {
     expect((await music(request(`/api/music/search?q=hello&event=${eventSlug}`))).status).toBe(200);
     mocks.pub.mockResolvedValue(null); mocks.search.mockClear();

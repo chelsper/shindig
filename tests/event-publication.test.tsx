@@ -1,3 +1,4 @@
+import { compareEventPublication } from "../lib/event-publication-changes";
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 vi.mock("../app/actions", () => ({ submitRsvp: vi.fn() }));
@@ -46,7 +47,7 @@ describe("publication validation and public projection", () => {
 describe("published guest screens and calendar", () => {
   const event = publicationEvent(eventId, snapshot);
   it("explains the actual end-time and weather blockers before the review and links to each fix", () => {
-    const html = renderToStaticMarkup(<EventPublishReview draft={{ ...draft, endsAtUtc: null }} artwork={{ settings: snapshot.artwork, revision: 0 }} settings={{ settings: { ...snapshot.settings, features: { ...snapshot.settings.features, weather: true } }, revision: 1 }} live={null} />);
+    const html = renderToStaticMarkup(<EventPublishReview changeReview={null} draft={{ ...draft, endsAtUtc: null }} artwork={{ settings: snapshot.artwork, revision: 0 }} settings={{ settings: { ...snapshot.settings, features: { ...snapshot.settings.features, weather: true } }, revision: 1 }} live={null} />);
     expect(html).toContain("2 things before you can publish");
     expect(html.indexOf('id="publish-readiness"')).toBeLessThan(html.indexOf("Saved version to publish"));
     expect(html).toContain(`href="/admin/events/${eventId}#draft-date-heading"`);
@@ -55,11 +56,11 @@ describe("published guest screens and calendar", () => {
     expect(html).toMatch(/disabled=""[^>]*>Finish setup to publish/);
   });
   it("shows no setup blocker for a complete draft while still requiring confirmation", () => {
-    const html = renderToStaticMarkup(<EventPublishReview draft={draft} artwork={{ settings: snapshot.artwork, revision: 0 }} settings={{ settings: snapshot.settings, revision: 1 }} live={null} />);
+    const html = renderToStaticMarkup(<EventPublishReview changeReview={null} draft={draft} artwork={{ settings: snapshot.artwork, revision: 0 }} settings={{ settings: snapshot.settings, revision: 1 }} live={null} />);
     expect(html).not.toContain('id="publish-readiness"'); expect(html).toMatch(/disabled=""[^>]*>Publish event/);
   });
   it("provides a direct fix when RSVP and Hub settings were never saved", () => {
-    const html = renderToStaticMarkup(<EventPublishReview draft={draft} artwork={{ settings: snapshot.artwork, revision: 0 }} settings={{ settings: snapshot.settings, revision: 0 }} live={null} />);
+    const html = renderToStaticMarkup(<EventPublishReview changeReview={null} draft={draft} artwork={{ settings: snapshot.artwork, revision: 0 }} settings={{ settings: snapshot.settings, revision: 0 }} live={null} />);
     expect(html).toContain("One thing before you can publish"); expect(html).toContain(`href="/admin/events/${eventId}/settings"`);
     expect(html).toContain("Save your RSVP &amp; Hub choices.");
   });
@@ -74,14 +75,14 @@ describe("published guest screens and calendar", () => {
     expect(html.includes("Add to Calendar")).toBe(attending); expect(html).toContain(`href="/e/${eventSlug}/event"`);
   });
   it("distinguishes unpublished data from a draft and requires review to republish", () => {
-    const html = renderToStaticMarkup(<EventPublishReview draft={draft} artwork={{ settings: snapshot.artwork, revision: 0 }} settings={{ settings: snapshot.settings, revision: 3 }} live={{ revision: 5, publishedAt: "2026-10-06", coordinates: null, visibility: "unpublished", rsvpsOpen: false, hasUnpublishedChanges: true }} />);
-    expect(html).toContain("Unpublished changes"); expect(html).toContain("Your gathering is private again"); expect(html).toContain("Republish reviewed event");
+    const html = renderToStaticMarkup(<EventPublishReview changeReview={compareEventPublication(eventId, snapshot, snapshot)} draft={draft} artwork={{ settings: snapshot.artwork, revision: 0 }} settings={{ settings: snapshot.settings, revision: 3 }} live={{ revision: 5, publishedAt: "2026-10-06", coordinates: null, visibility: "unpublished", rsvpsOpen: false, hasUnpublishedChanges: true }} />);
+    expect(html).toContain("No content changes"); expect(html).toContain("Your gathering is private again"); expect(html).toContain("Republish reviewed event");
     expect(html).toContain("RSVPs will remain closed"); expect(html).toContain(`href="/admin/events/${eventId}/guests"`);
     expect(html).not.toContain(`href="/e/${eventSlug}`); expect(html).not.toContain("Your gathering is live");
     expect(html).not.toContain("Confirm: Unpublish");
   });
   it("renders archived review with restore, host access and CSV but no publication controls or public links", () => {
-    const html = renderToStaticMarkup(<EventPublishReview draft={draft} artwork={{ settings: snapshot.artwork, revision: 0 }} settings={{ settings: snapshot.settings, revision: 3 }} live={{ revision: 6, publishedAt: "2026-10-06", coordinates: null, visibility: "archived", rsvpsOpen: false, hasUnpublishedChanges: false }} />);
+    const html = renderToStaticMarkup(<EventPublishReview changeReview={compareEventPublication(eventId, snapshot, snapshot)} draft={draft} artwork={{ settings: snapshot.artwork, revision: 0 }} settings={{ settings: snapshot.settings, revision: 3 }} live={{ revision: 6, publishedAt: "2026-10-06", coordinates: null, visibility: "archived", rsvpsOpen: false, hasUnpublishedChanges: false }} />);
     for (const text of ["Archived", "Restore event", "Everything is saved", "Export all RSVPs", 'href="/admin/events?view=archived"', `href="/admin/events/${eventId}/guests"`]) expect(html).toContain(text);
     for (const text of ["<form", "Reopen RSVPs", "Publish changes", "Republish reviewed event", "Ready to invite", `href="/e/${eventSlug}`, "Confirm: Restore event"]) expect(html).not.toContain(text);
   });
@@ -107,10 +108,10 @@ describe("published guest screens and calendar", () => {
   });
   it("requires explicit confirmation and shows review/share paths without publicizing drafts", () => {
     const props = { draft, artwork: { settings: snapshot.artwork, revision: 0 }, settings: { settings: snapshot.settings, revision: 3 } };
-    const html = renderToStaticMarkup(<EventPublishReview {...props} live={null} />);
+    const html = renderToStaticMarkup(<EventPublishReview changeReview={null} {...props} live={null} />);
     expect(html).toMatch(/disabled=""[^>]*>Publish event/); expect(html).toContain("Make this version public");
     expect(html).not.toContain(`href="/e/${eventSlug}`);
-    const live = renderToStaticMarkup(<EventPublishReview {...props} live={{ revision: 1, publishedAt: "2026-10-06", coordinates: null, visibility: "published", rsvpsOpen: true, hasUnpublishedChanges: false }} />);
+    const live = renderToStaticMarkup(<EventPublishReview changeReview={compareEventPublication(eventId, snapshot, snapshot)} {...props} live={{ revision: 1, publishedAt: "2026-10-06", coordinates: null, visibility: "published", rsvpsOpen: true, hasUnpublishedChanges: false }} />);
     expect(live).toContain(`href="/e/${eventSlug}"`); expect(live).toContain("Publish changes");
     expect(live).toContain('aria-label="Choose a link to share"'); expect(live).toContain("Get QR code");
   });

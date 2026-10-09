@@ -19,9 +19,12 @@ import { EventLinkField } from "./event-link-field";
 import { EventSharePanel } from "./event-share-panel";
 import { EventSetupNavigation } from "./event-setup-navigation";
 import { rsvpDeadlineLabel } from "../../lib/rsvp-policy";
+import type { PublicationChangeReview as ChangeReview } from "../../lib/event-publication-changes";
+import { PublicationChangeReview } from "./publication-change-review";
 
-export function EventPublishReview({ draft, artwork, settings, live, musicConfigured = true }: {
+export function EventPublishReview({ draft, artwork, settings, live, changeReview, musicConfigured = true }: {
   draft: EventDraft; artwork: DraftArtworkRecord; settings: DraftSettingsRecord;
+  changeReview: ChangeReview | null;
   live: (EventLifecycle & { revision: number; publishedAt: string; coordinates: Coordinates | null; hasUnpublishedChanges: boolean; publicAlias?: string | null; title?: string }) | null;
   musicConfigured?: boolean;
 }) {
@@ -33,6 +36,7 @@ export function EventPublishReview({ draft, artwork, settings, live, musicConfig
   const coordinates = savedWeatherCoordinates(draft);
   const problems = publicationIssues({ details: draft, artwork: artwork.settings, settings: settings.settings, coordinates }).map((issue) => publicationBlocker(draft.id, issue));
   if (!settings.revision) problems.push({ id: "settings", message: "Save your RSVP & Hub choices.", href: `${base}/settings` });
+  if (live && !changeReview) problems.push({ id: "comparison", message: "Reload this page to review the latest published changes.", href: "#publication-changes" });
   const parsedAlias = validateEventAlias(alias);
   if (!parsedAlias.ok) problems.push({ id: "alias", message: parsedAlias.message, href: "#event-link" });
   const versions = { details: draft.revision, artwork: artwork.revision, settings: settings.revision, publication: live?.revision ?? 0 };
@@ -40,7 +44,7 @@ export function EventPublishReview({ draft, artwork, settings, live, musicConfig
   const button = "inline-flex min-h-11 items-center text-sm font-semibold text-[#355f9e] underline underline-offset-4";
   return <div className="space-y-6 pb-10">
     <EventSetupNavigation id={draft.id} current="publish" onNavigate={(event) => { if (busy.current) event.preventDefault(); }} />
-    <div role="status" className="text-sm leading-6 text-[#202523]/70"><span className="font-semibold">{eventStatus(live)}</span>{live && <span> · {live.hasUnpublishedChanges ? "Unpublished changes — review the saved version below." : "Saved draft matches the last published version."}</span>}</div>
+    <div role="status" className="text-sm leading-6 text-[#202523]/70"><span className="font-semibold">{eventStatus(live)}</span>{live && <span> · {live.hasUnpublishedChanges ? changeReview?.changeCount === 0 ? "Saved again — no content changes from the last published version." : "Unpublished changes — review the saved version below." : "Saved draft matches the last published version."}</span>}</div>
     {!archived && !success && <PublishReadiness id={draft.id} blockers={problems} />}
     {live && <EventLifecycleControls key={live.revision} id={draft.id} live={live} />}
     {archived && <section className="rounded-3xl border border-[#202523]/15 bg-[#e9f2f8]/50 p-5 sm:p-7">
@@ -49,6 +53,7 @@ export function EventPublishReview({ draft, artwork, settings, live, musicConfig
       <div className="mt-3 flex flex-wrap gap-x-5"><Link className={button} href={`${base}/guests`}>Manage saved responses &amp; content →</Link><a className={button} href={`${base}/guests/export`}>Export all RSVPs</a><Link className={button} href="/admin/events?view=archived">Archived events</Link></div>
     </section>}
     {live?.visibility === "unpublished" && !success && <section className="rounded-3xl border border-[#b78228]/25 bg-[#fff4d8] p-5 sm:p-7"><h2 className="font-serif text-2xl">Your gathering is private again</h2><p className="mt-2 text-sm leading-6">Shared links are unavailable. Nothing has been deleted. Review the saved version below before republishing; the same links and guest update links will work again.</p><Link className={button} href={`${base}/guests`}>Manage saved responses &amp; content →</Link></section>}
+    {!success && <PublicationChangeReview id={draft.id} review={changeReview} visibility={live?.visibility ?? null} savedAgain={live?.hasUnpublishedChanges} />}
     {(live?.visibility === "published" || success) && <div id="share-event" className="scroll-mt-6"><EventSharePanel id={draft.id} publicSlug={(parsedAlias.ok && parsedAlias.alias) || draftEventSlug(draft.id)} title={success ? draft.title : live?.title ?? draft.title} rsvpsOpen={live?.rsvpsOpen !== false} /></div>}
     {!live && !success && <EventLinkField id={draft.id} value={alias} disabled={pending} onChange={(value) => { setAlias(value); setConfirmed(false); setMessage(""); }} />}
     <section className="rounded-3xl border border-[#202523]/10 bg-[#fffaf1] p-5 sm:p-7">
@@ -78,7 +83,7 @@ export function EventPublishReview({ draft, artwork, settings, live, musicConfig
     }}>
       <h2 className="font-serif text-2xl">Ready to invite your people?</h2>
       {problems.length > 0 && <p className="mt-3 text-sm leading-6 text-[#765319]">Publishing is waiting for {problems.length === 1 ? "one setup detail" : `${problems.length} setup details`}. <Link className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4" href="#publish-readiness">Show me what to finish →</Link></p>}
-      <label className="mt-4 flex min-h-12 items-start gap-3 text-sm leading-6"><input type="checkbox" className="mt-1 size-5 shrink-0 accent-[#355f9e]" checked={confirmed} disabled={pending} onChange={(e) => setConfirmed(e.target.checked)} /><span>I reviewed the saved details, artwork and settings. Make this version public to anyone with the link.</span></label>
+      <label className="mt-4 flex min-h-12 items-start gap-3 text-sm leading-6"><input type="checkbox" className="mt-1 size-5 shrink-0 accent-[#355f9e]" checked={confirmed} disabled={pending} onChange={(e) => setConfirmed(e.target.checked)} /><span>{live ? "I reviewed the changes above and the saved details, artwork and settings." : "I reviewed the saved details, artwork and settings."} Make this version public to anyone with the link.</span></label>
       {live?.rsvpsOpen === false && <p className="mt-3 text-sm leading-6">RSVPs will remain closed after publishing. Use Reopen RSVPs above when you’re ready.</p>}
       <button className="primary-button mt-4 w-full" aria-describedby={problems.length ? "publish-readiness-heading" : undefined} disabled={!confirmed || problems.length > 0 || pending} type="submit">{pending ? "Publishing…" : problems.length ? "Finish setup to publish" : live?.visibility === "unpublished" ? "Republish reviewed event" : live ? "Publish changes" : "Publish event"}</button>
       <p className="mt-3 text-xs leading-5 text-[#202523]/60">No invitations or messages will be sent. Jasper Shucks will not change.</p>

@@ -1,3 +1,4 @@
+import { compareEventPublication } from "../lib/event-publication-changes";
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
@@ -41,16 +42,16 @@ describe("friendly presentation preserves permanent identity", () => {
 describe("host sharing presentation", () => {
   const props = { draft, artwork: { settings: snapshot.artwork, revision: 0 }, settings: { settings: snapshot.settings, revision: 3 } };
   it("suggests a link before first publication without providing a public link or QR", () => {
-    const html = renderToStaticMarkup(<EventPublishReview {...props} live={null} />);
+    const html = renderToStaticMarkup(<EventPublishReview changeReview={null} {...props} live={null} />);
     expect(html).toContain('value="garden-supper"'); expect(html).toContain("Check link"); expect(html).not.toContain('href="/e/'); expect(html).not.toContain("Get QR code");
   });
   it("locks the link after publishing and exposes only a public share target", () => {
-    const html = renderToStaticMarkup(<EventPublishReview {...props} live={{ ...publication, coordinates: null, hasUnpublishedChanges: false, publicAlias: "garden-supper" }} />);
+    const html = renderToStaticMarkup(<EventPublishReview changeReview={compareEventPublication(eventId, snapshot, snapshot)} {...props} live={{ ...publication, coordinates: null, hasUnpublishedChanges: false, publicAlias: "garden-supper" }} />);
     expect(html).toContain('href="/e/garden-supper"'); expect(html).toContain("Copy link"); expect(html).toContain("Get QR code");
     expect(html).not.toContain('id="event-link"'); expect(html).not.toContain("?token=");
   });
   it.each(["unpublished", "archived"] as const)("hides all share controls while %s", (visibility) => {
-    const html = renderToStaticMarkup(<EventPublishReview {...props} live={{ ...publication, visibility, rsvpsOpen: false, coordinates: null, hasUnpublishedChanges: false, publicAlias: "garden-supper" }} />);
+    const html = renderToStaticMarkup(<EventPublishReview changeReview={compareEventPublication(eventId, snapshot, snapshot)} {...props} live={{ ...publication, visibility, rsvpsOpen: false, coordinates: null, hasUnpublishedChanges: false, publicAlias: "garden-supper" }} />);
     expect(html).not.toContain("Share your event"); expect(html).not.toContain("Get QR code"); expect(html).not.toContain('href="/e/');
   });
   it("preserves a compact original-link share panel for already-published events", () => {
