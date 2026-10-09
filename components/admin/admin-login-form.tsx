@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import type { EventDesignId } from "../../lib/event-design";
 
 import {
   loginAdmin,
@@ -9,11 +10,12 @@ import {
 
 const initialState: AdminLoginState = { error: null };
 
-export function AdminLoginForm() {
+export function AdminLoginForm({ designStyle }: { designStyle?: EventDesignId } = {}) {
   const [state, formAction, isPending] = useActionState(loginAdmin, initialState);
 
   return (
     <form action={formAction} className="mt-8 grid gap-5">
+      {designStyle && <input type="hidden" name="designStyle" value={designStyle} />}
       <label className="field-label">
         Host password
         <input

@@ -37,6 +37,9 @@
 .resetButton { min-height: 44px; display: inline-flex; gap: 9px; align-items: center; border: 0; background: transparent; padding: 0; color: #375345; font-size: 12px; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
 .resetButton:disabled { color: #777a72; cursor: default; text-decoration: none; }
 .localNotice { max-width: 300px; margin: 16px 0 0; color: #63665c; font-size: 11px; line-height: 1.75; }
+.continueDesign { margin-top: 22px; padding-top: 20px; border-top: 1px solid #d8d4ca; }
+.useDesign { display: flex; min-height: 48px; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; border-radius: 999px; background: #375345; color: #fffdf7; font-size: 13px; font-weight: 600; text-decoration: none; }
+.continueDesign p { margin: 10px 0 0; color: #63665c; font-size: 12px; line-height: 1.65; }
 .previewSection { min-width: 0; }
 .previewHeading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 18px; margin-bottom: 16px; }
 .previewHeading h2 { margin: 0; font-size: 13px; font-weight: 600; }

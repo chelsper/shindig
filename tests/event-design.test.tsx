@@ -60,6 +60,9 @@ describe("preview-only design studio", () => {
       expect(html).toContain(`aria-describedby="style-description-${id}"`);
     }
     expect(html).toContain("Nothing is saved or published.");
+    expect(html).toContain('href="/admin/design?style=classic"');
+    expect(html).toContain("Use this design");
+    expect(html).toContain("Only your style choice carries over");
     expect(html).toContain("fictional dinner party");
     expect(html).toContain('aria-live="polite"');
     expect(html).toContain("Preview page");

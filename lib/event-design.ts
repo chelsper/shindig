@@ -45,6 +45,10 @@ export const EVENT_DESIGNS = [
 export type EventDesignId = EventDesign["id"];
 export const DEFAULT_EVENT_DESIGN: EventDesignId = "classic";
 
+export function parseEventDesignId(value: unknown): EventDesignId | null {
+  return EVENT_DESIGNS.find(({ id }) => id === value)?.id ?? null;
+}
+
 export function getEventDesign(id: unknown): EventDesign {
   return EVENT_DESIGNS.find((design) => design.id === id) ?? EVENT_DESIGNS[0];
 }

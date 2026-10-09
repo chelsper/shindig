@@ -53,7 +53,12 @@ export function DesignStudio() {
             <dl><div><dt>Palette</dt><dd>{design.paletteLabel}</dd></div><div><dt>Typography</dt><dd>{design.typographyLabel}</dd></div></dl>
             <button type="button" onClick={() => setSelected(DEFAULT_EVENT_DESIGN)} disabled={selected === DEFAULT_EVENT_DESIGN} className={styles.resetButton}>Reset to Classic <span aria-hidden="true">↺</span></button>
           </section>
-          <p className={styles.localNotice}>Just trying things on. Your choice stays in this preview and resets when you leave or reload. Nothing is saved or published.</p>
+          <section className={styles.continueDesign} aria-label="Use this design for an event">
+            <Link href={`/admin/design?style=${selected}`} className={styles.useDesign}>Use this design <span aria-hidden="true">→</span></Link>
+            <p>Choose or create your event, save its design, then review and publish.</p>
+            <p>Only your style choice carries over. Add your artwork and framing in the event editor.</p>
+          </section>
+          <p className={styles.localNotice}>This is a fictional preview. Nothing is saved or published. Use the button above to continue in the host dashboard.</p>
         </aside>
         <section className={styles.previewSection} aria-labelledby="preview-title">
           <div className={styles.previewHeading}><h2 id="preview-title">A guest’s-eye view</h2><span aria-live="polite" aria-atomic="true">{design.name} · {page === "invitation" ? "Invitation" : "Event Hub"} · {device === "phone" ? "Phone" : "Desktop"}</span></div>

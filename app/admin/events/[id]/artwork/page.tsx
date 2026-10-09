@@ -7,10 +7,11 @@ import { isAdminAuthenticated } from "../../../../../lib/server/admin-session";
 import { getEventDraft } from "../../../../../lib/server/event-drafts";
 import { draftImageStorageToken, getDraftArtwork } from "../../../../../lib/server/event-draft-artwork";
 import { isDraftId } from "../../../../../lib/event-drafts";
+import { parseEventDesignId } from "../../../../../lib/event-design";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Draft Artwork | Shindig", robots: { index: false, follow: false }, referrer: "no-referrer" };
-export default async function DraftArtworkPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function DraftArtworkPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams?: Promise<{ style?: string | string[] }> }) {
   if (!(await isAdminAuthenticated())) redirect("/admin");
   const { id } = await params;
   if (!isDraftId(id)) notFound();
@@ -21,5 +22,5 @@ export default async function DraftArtworkPage({ params }: { params: Promise<{ i
   }
   const [draft, initial] = data;
   if (!draft || !initial) notFound();
-  return <EventDraftArtworkEditor draft={draft} initial={initial} uploadConfigured={Boolean(draftImageStorageToken())} />;
+  return <EventDraftArtworkEditor draft={draft} initial={initial} uploadConfigured={Boolean(draftImageStorageToken())} requestedDesign={parseEventDesignId((await searchParams)?.style) ?? undefined} />;
 }

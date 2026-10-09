@@ -8,7 +8,9 @@ import type { EventDraft } from "../../lib/event-drafts";
 import { draftImageUrl, type DraftArtworkRecord } from "../../lib/event-draft-artwork";
 import { getEventDesign } from "../../lib/event-design";
 import { DRAFT_HUB_MODULES, type DraftSettingsRecord } from "../../lib/event-draft-settings";
-import { publicationProblems, parseCoordinates, type Coordinates } from "../../lib/event-publication";
+import { parseCoordinates, type Coordinates } from "../../lib/event-publication";
+import { publicationIssues } from "../../lib/event-readiness";
+import { PublishReadiness, publicationBlocker } from "./publish-readiness";
 import { draftEventSlug } from "../../lib/event-routes";
 import { suggestEventAlias, validateEventAlias } from "../../lib/event-alias";
 import { eventStatus, type EventLifecycle } from "../../lib/event-lifecycle";
@@ -31,16 +33,17 @@ export function EventPublishReview({ draft, artwork, settings, live, musicConfig
   const [success, setSuccess] = useState(false), [pending, startTransition] = useTransition();
   const busy = useRef(false), router = useRouter();
   const coordinates = latitude.trim() && longitude.trim() ? parseCoordinates({ latitude: Number(latitude), longitude: Number(longitude) }) : null;
-  const problems = publicationProblems({ details: draft, artwork: artwork.settings, settings: settings.settings, coordinates });
-  if (!settings.revision) problems.push("Save your RSVP & Hub choices.");
+  const problems = publicationIssues({ details: draft, artwork: artwork.settings, settings: settings.settings, coordinates }).map((issue) => publicationBlocker(draft.id, issue));
+  if (!settings.revision) problems.push({ id: "settings", message: "Save your RSVP & Hub choices.", href: `${base}/settings` });
   const parsedAlias = validateEventAlias(alias);
-  if (!parsedAlias.ok) problems.push(parsedAlias.message);
+  if (!parsedAlias.ok) problems.push({ id: "alias", message: parsedAlias.message, href: "#event-link" });
   const versions = { details: draft.revision, artwork: artwork.revision, settings: settings.revision, publication: live?.revision ?? 0 };
   const archived = live?.visibility === "archived";
   const button = "inline-flex min-h-11 items-center text-sm font-semibold text-[#355f9e] underline underline-offset-4";
   return <div className="space-y-6 pb-10">
     <EventSetupNavigation id={draft.id} current="publish" onNavigate={(event) => { if (busy.current) event.preventDefault(); }} />
     <div role="status" className="text-sm leading-6 text-[#202523]/70"><span className="font-semibold">{eventStatus(live)}</span>{live && <span> · {live.hasUnpublishedChanges ? "Unpublished changes — review the saved version below." : "Saved draft matches the last published version."}</span>}</div>
+    {!archived && !success && <PublishReadiness id={draft.id} blockers={problems} />}
     {live && <EventLifecycleControls key={live.revision} id={draft.id} live={live} />}
     {archived && <section className="rounded-3xl border border-[#202523]/15 bg-[#e9f2f8]/50 p-5 sm:p-7">
       <h2 className="font-serif text-2xl">Everything is saved</h2>
@@ -76,10 +79,10 @@ export function EventPublishReview({ draft, artwork, settings, live, musicConfig
       finally { busy.current = false; } });
     }}>
       <h2 className="font-serif text-2xl">Ready to invite your people?</h2>
-      {problems.length > 0 && <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-[#843528]">{problems.map((problem) => <li key={problem}>{problem}</li>)}</ul>}
+      {problems.length > 0 && <p className="mt-3 text-sm leading-6 text-[#765319]">Publishing is waiting for {problems.length === 1 ? "one setup detail" : `${problems.length} setup details`}. <Link className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4" href="#publish-readiness">Show me what to finish →</Link></p>}
       <label className="mt-4 flex min-h-12 items-start gap-3 text-sm leading-6"><input type="checkbox" className="mt-1 size-5 shrink-0 accent-[#355f9e]" checked={confirmed} disabled={pending} onChange={(e) => setConfirmed(e.target.checked)} /><span>I reviewed the saved details, artwork and settings. Make this version public to anyone with the link.</span></label>
       {live?.rsvpsOpen === false && <p className="mt-3 text-sm leading-6">RSVPs will remain closed after publishing. Use Reopen RSVPs above when you’re ready.</p>}
-      <button className="primary-button mt-4 w-full" disabled={!confirmed || problems.length > 0 || pending} type="submit">{pending ? "Publishing…" : live?.visibility === "unpublished" ? "Republish reviewed event" : live ? "Publish changes" : "Publish event"}</button>
+      <button className="primary-button mt-4 w-full" aria-describedby={problems.length ? "publish-readiness-heading" : undefined} disabled={!confirmed || problems.length > 0 || pending} type="submit">{pending ? "Publishing…" : problems.length ? "Finish setup to publish" : live?.visibility === "unpublished" ? "Republish reviewed event" : live ? "Publish changes" : "Publish event"}</button>
       <p className="mt-3 text-xs leading-5 text-[#202523]/60">No invitations or messages will be sent. Jasper Shucks will not change.</p>
     </form>}
     {message && <p role="status" className="rounded-2xl bg-[#e9f2f8] p-4 text-sm leading-6">{message}</p>}

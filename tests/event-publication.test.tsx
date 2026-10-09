@@ -45,6 +45,24 @@ describe("publication validation and public projection", () => {
 });
 describe("published guest screens and calendar", () => {
   const event = publicationEvent(eventId, snapshot);
+  it("explains the actual end-time and weather blockers before the review and links to each fix", () => {
+    const html = renderToStaticMarkup(<EventPublishReview draft={{ ...draft, endsAtUtc: null }} artwork={{ settings: snapshot.artwork, revision: 0 }} settings={{ settings: { ...snapshot.settings, features: { ...snapshot.settings.features, weather: true } }, revision: 1 }} live={null} />);
+    expect(html).toContain("2 things before you can publish");
+    expect(html.indexOf('id="publish-readiness"')).toBeLessThan(html.indexOf("Saved version to publish"));
+    expect(html).toContain(`href="/admin/events/${eventId}#draft-date-heading"`);
+    expect(html).toContain('href="#weather-location"');
+    expect(html).toContain(`href="/admin/events/${eventId}/settings#hub-settings-heading"`);
+    expect(html).toMatch(/disabled=""[^>]*>Finish setup to publish/);
+  });
+  it("shows no setup blocker for a complete draft while still requiring confirmation", () => {
+    const html = renderToStaticMarkup(<EventPublishReview draft={draft} artwork={{ settings: snapshot.artwork, revision: 0 }} settings={{ settings: snapshot.settings, revision: 1 }} live={null} />);
+    expect(html).not.toContain('id="publish-readiness"'); expect(html).toMatch(/disabled=""[^>]*>Publish event/);
+  });
+  it("provides a direct fix when RSVP and Hub settings were never saved", () => {
+    const html = renderToStaticMarkup(<EventPublishReview draft={draft} artwork={{ settings: snapshot.artwork, revision: 0 }} settings={{ settings: snapshot.settings, revision: 0 }} live={null} />);
+    expect(html).toContain("One thing before you can publish"); expect(html).toContain(`href="/admin/events/${eventId}/settings"`);
+    expect(html).toContain("Save your RSVP &amp; Hub choices.");
+  });
   it("shows a closed message instead of the invitation form without removing the Hub link", () => {
     const html = renderToStaticMarkup(<InvitationPage event={{ ...event, rsvpsOpen: false }} persistenceDisabled={false} />);
     expect(html).toContain("RSVPs are closed"); expect(html).toContain(`href="/e/${eventSlug}/event"`);

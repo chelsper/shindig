@@ -16,6 +16,31 @@ artwork, global styles or saved appearance of Jasper Shucks or any other real
 event has changed. The playground remains unsaved; real event design settings
 are edited separately in the protected draft workflow below.
 
+### Continue from the playground
+
+**Use this design** opens `/admin/design?style=…`, with a server-validated style
+choice. Host sign-in returns to that choice; no arbitrary return URL is accepted.
+Only authenticated hosts can see/select their event drafts. Archived events are
+excluded. Choose an existing event or create one; **Apply [style]** changes only
+the editor's unsaved state. Then **Save draft design & artwork → Review & publish**.
+Only the style carries over—not fictional event details, browser-local images or
+crops. Add artwork and framing in the real event editor. A GET never writes data.
+
+The publish review now leads with a count of outstanding setup requirements and
+direct fix links. Missing end time, missing address, unsaved RSVP/Hub settings,
+invalid links and Weather without coordinates still prevent publishing. Weather
+can be configured on the review or explicitly disabled/saved in RSVP & Hub;
+times/coordinates are never guessed. Complete drafts still require the existing
+review checkbox, server validation and atomic revision checks.
+
+This follow-up adds no dependency, migration or environment variable. Lint,
+typecheck and tests pass: 1,202 tests in the isolated password-admin release,
+1,248 with the pending host-account work; the existing native concurrency test
+remains skipped. Production builds also pass in both checkouts. Local browser checks cover style handoff through sign-in,
+database-unavailable handling, reactive blocker counts, explicit Apply and
+390px layouts without overflow. Production was inspected read-only: no draft,
+event setting, guest record or publication was changed.
+
 `lib/event-design.ts` is the single preset/token definition; the picker, sample
 invitation and sample Hub share it. `lib/design-preview.ts` contains the one
 fictional sample event, named preview sizes and fitting calculation. Colors are

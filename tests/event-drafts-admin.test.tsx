@@ -26,10 +26,17 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("private event draft actions and pages", () => {
+  it("carries only a canonical playground style into a new private draft", async () => {
+    const page = await NewPage({ searchParams: Promise.resolve({ style: "coastal" }) });
+    expect(page.props.requestedDesign).toBe("coastal");
+    expect(renderToStaticMarkup(page)).toContain("Next: apply Coastal");
+    expect((await NewPage({ searchParams: Promise.resolve({ style: "https://evil.example" }) })).props.requestedDesign).toBeUndefined();
+    expect(mocks.save).not.toHaveBeenCalled();
+  });
   it("checks the admin session before reads, form rendering or writes", async () => {
     mocks.auth.mockResolvedValue(false);
     expect(await saveEventDraft({ id, revision: 0, fields })).toMatchObject({ ok: false, message: expect.stringContaining("session") });
-    for (const page of [() => EventsPage({}), () => EventsPage({ searchParams: Promise.resolve({ view: "archived" }) }), () => NewPage(), () => EditPage(props)]) await expect(page()).rejects.toThrow("redirect");
+    for (const page of [() => EventsPage({}), () => EventsPage({ searchParams: Promise.resolve({ view: "archived" }) }), () => NewPage({}), () => EditPage(props)]) await expect(page()).rejects.toThrow("redirect");
     expect(mocks.redirect).toHaveBeenCalledWith("/admin");
     expect(mocks.get).not.toHaveBeenCalled(); expect(mocks.list).not.toHaveBeenCalled(); expect(mocks.save).not.toHaveBeenCalled();
     expect(mocks.publications).not.toHaveBeenCalled();
@@ -101,7 +108,7 @@ describe("private event draft actions and pages", () => {
     expect(html).toContain("migration 010"); expect(html).not.toContain("private connection");
   });
   it("starts a blank draft with a unique creation key without database writes", async () => {
-    const first = await NewPage(), second = await NewPage();
+    const first = await NewPage({}), second = await NewPage({});
     expect(first.props.id).not.toEqual(second.props.id);
     const html = renderToStaticMarkup(first);
     for (const text of ["Let’s make a Shindig", "Save draft", "Hosted by (optional)", "Event timezone", "There is no guest link yet."]) expect(html).toContain(text);

@@ -9,11 +9,13 @@ import { EventSetupNavigation } from "./event-setup-navigation";
 import { DraftDesignControls } from "./draft-design-controls";
 import { PreviewFrame } from "../design-studio/preview-frame";
 import type { DesignPreviewDevice } from "../../lib/design-preview";
+import { getEventDesign, type EventDesignId } from "../../lib/event-design";
+import { defaultArtworkCrop } from "../../lib/design-artwork";
 
 const panel = "rounded-[1.5rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 sm:p-6";
 const button = "inline-flex min-h-11 items-center justify-center rounded-full border border-[#355f9e]/25 bg-[#e9f2f8]/65 px-4 text-xs font-bold text-[#214e91] disabled:opacity-40";
 
-export function EventDraftArtworkEditor({ draft, initial, uploadConfigured }: { draft: EventDraft; initial: DraftArtworkRecord; uploadConfigured: boolean }) {
+export function EventDraftArtworkEditor({ draft, initial, uploadConfigured, requestedDesign }: { draft: EventDraft; initial: DraftArtworkRecord; uploadConfigured: boolean; requestedDesign?: EventDesignId }) {
   const [settings, setSettings] = useState(initial.settings);
   const [revision, setRevision] = useState(initial.revision);
   const [view, setView] = useState<"invitation" | "hub">("invitation");
@@ -76,6 +78,12 @@ export function EventDraftArtworkEditor({ draft, initial, uploadConfigured }: { 
       <div className="grid min-w-0 gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,390px)]">
         <form onSubmit={save} className="min-w-0">
           <fieldset disabled={Boolean(busy)} className="min-w-0 space-y-5">
+            {requestedDesign && <section className={`${panel} border-[#355f9e]/30`} aria-label="Design from the playground">
+              <h2 className="font-serif text-2xl">Bring {getEventDesign(requestedDesign).name} to this event</h2>
+              <p className="mt-2 text-sm leading-6 text-[#202523]/65">Your style choice came from the playground. Its sample details, local artwork and crops haven’t been copied. Your existing event artwork stays in place.</p>
+              <button type="button" className={`${button} mt-3`} disabled={Boolean(busy) || conflict || settings.design?.style === requestedDesign} onClick={() => { setSettings((current) => ({ ...current, design: { style: requestedDesign, invitationCrop: current.design?.invitationCrop ?? defaultArtworkCrop() } })); setDirty(true); setMessage(null); setError(null); }}>{settings.design?.style === requestedDesign ? `${getEventDesign(requestedDesign).name} selected` : `Apply ${getEventDesign(requestedDesign).name}`}</button>
+              <p className="mt-2 text-xs leading-5 text-[#202523]/60">Save draft design &amp; artwork below, then Review &amp; publish. Applying a style here does not save or publish it.</p>
+            </section>}
             <DraftDesignControls id={draft.id} settings={settings} view={view} onViewChange={setView} device={device} disabled={Boolean(busy) || conflict} onChange={(next) => { setSettings(next); setDirty(true); setMessage(null); setError(null); }} />
             {!uploadConfigured && <p role="status" className="rounded-2xl bg-[#fff4d8] p-4 text-sm leading-6 text-[#765319]">Uploads need a private Vercel Blob store. Add EVENT_DRAFT_BLOB_READ_WRITE_TOKEN to the server environment. Draft artwork is never stored in the live event’s public image store.</p>}
             {(["invitation", "header"] as const).map((kind) => <section key={kind} className={panel}>

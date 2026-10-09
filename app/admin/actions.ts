@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { parseEventDesignId } from "../../lib/event-design";
 
 import {
   clearAdminSession,
@@ -88,7 +89,8 @@ export async function loginAdmin(
   }
 
   await createAdminSession();
-  redirect("/admin");
+  const design = parseEventDesignId(formData.get("designStyle"));
+  redirect(design ? `/admin/design?style=${design}` : "/admin");
 }
 
 export async function logoutAdmin() {

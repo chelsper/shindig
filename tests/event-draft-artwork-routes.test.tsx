@@ -38,6 +38,12 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("host-only artwork actions, page and image routes", () => {
+  it("carries a validated style request to the editor without saving it", async () => {
+    const page = await ArtworkPage({ ...context, searchParams: Promise.resolve({ style: "coastal" }) });
+    expect(page.props.requestedDesign).toBe("coastal");
+    expect(mocks.save).not.toHaveBeenCalled();
+    expect((await ArtworkPage({ ...context, searchParams: Promise.resolve({ style: ["coastal"] }) })).props.requestedDesign).toBeUndefined();
+  });
   it("checks authentication before reading or writing any draft/image", async () => {
     mocks.auth.mockResolvedValue(false);
     expect((await POST(await uploadRequest(), context)).status).toBe(401);

@@ -7,11 +7,12 @@ import { saveEventDraft } from "../../app/admin/events/actions";
 import { DRAFT_LIMITS, EMPTY_EVENT_DRAFT, type EventDraft } from "../../lib/event-drafts";
 import { eventLocalInput } from "../../lib/event-date-time";
 import { EventSetupNavigation } from "./event-setup-navigation";
+import { getEventDesign, type EventDesignId } from "../../lib/event-design";
 
 const panel = "rounded-[1.5rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 sm:p-7";
 const secondary = "inline-flex min-h-11 items-center justify-center rounded-full border border-[#355f9e]/25 bg-[#e9f2f8]/65 px-4 text-xs font-bold text-[#214e91] focus-visible:outline-2 focus-visible:outline-offset-4";
 
-export function EventDraftEditor({ id, initialDraft, timeZones, justSaved = false }: { id: string; initialDraft?: EventDraft; timeZones: string[]; justSaved?: boolean }) {
+export function EventDraftEditor({ id, initialDraft, timeZones, justSaved = false, requestedDesign }: { id: string; initialDraft?: EventDraft; timeZones: string[]; justSaved?: boolean; requestedDesign?: EventDesignId }) {
   const router = useRouter();
   const initial = initialDraft ?? EMPTY_EVENT_DRAFT;
   const [fields, setFields] = useState(() => ({ ...initial, startsAtLocal: eventLocalInput(initial.startsAtUtc, initial.timeZone), endsAtLocal: eventLocalInput(initial.endsAtUtc, initial.timeZone) }));
@@ -42,7 +43,7 @@ export function EventDraftEditor({ id, initialDraft, timeZones, justSaved = fals
         const result = await saveEventDraft({ id, revision, fields });
         if (!result.ok) { setError(result.message); setConflict(Boolean(result.conflict)); return; }
         setRevision(result.revision); setDirty(false); setSaved(true);
-        if (revision === 0) router.replace(`/admin/events/${result.id}/setup?saved=1`);
+        if (revision === 0) router.replace(requestedDesign ? `/admin/events/${result.id}/artwork?style=${requestedDesign}` : `/admin/events/${result.id}/setup?saved=1`);
       } catch { setError("We couldn’t confirm the save. Your changes are still here. Please try again."); }
       finally { busy.current = false; }
     });
@@ -76,7 +77,7 @@ export function EventDraftEditor({ id, initialDraft, timeZones, justSaved = fals
           </section>
           <section className={panel} aria-labelledby="draft-date-heading">
             <h2 id="draft-date-heading" className="font-serif text-2xl">When shall we?</h2>
-            <p className="mt-2 text-sm leading-6 text-[#202523]/60">Not sure yet? Leave the dates blank.</p>
+            <p className="mt-2 text-sm leading-6 text-[#202523]/60">Dates can stay blank while you draft. A start and end time are required before publishing, so guests get accurate calendar entries.</p>
             <div className="mt-5 grid gap-5">
               <label className="field-label min-w-0">Event timezone<select name="timeZone" className="field-input min-w-0 max-w-full" value={fields.timeZone} onChange={(event) => change("timeZone", event.target.value)}>
                 {timeZones.map((zone) => <option key={zone} value={zone}>{zone.replaceAll("_", " ")}</option>)}
@@ -102,6 +103,7 @@ export function EventDraftEditor({ id, initialDraft, timeZones, justSaved = fals
             {error && <p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm leading-6 text-red-900">{error}</p>}
             {conflict && <a className={`${secondary} mt-3`} href={`/admin/events/${id}`} onClick={(event) => { if (!allowLeave()) event.preventDefault(); }}>Reopen saved draft</a>}
             {saved && <p role="status" className="mt-4 rounded-xl bg-[#e4eee1] p-3 text-sm text-[#285630]">Draft saved privately. Review and publish when you’re ready to update guest pages.</p>}
+            {requestedDesign && !initialDraft && <p className="mt-4 text-sm leading-6 text-[#355f9e]">Next: apply {getEventDesign(requestedDesign).name} and add artwork. Nothing is published by saving this draft.</p>}
             <button type="submit" className="primary-button mt-5 w-full" disabled={pending || conflict || !dirty || !fields.title.trim()}>{pending ? "Saving draft…" : "Save draft"}</button>
             <p className="mt-2 text-center text-xs leading-5 text-[#202523]/55">{dirty ? "You have unsaved changes." : revision ? "Your saved draft is up to date." : "Only the event name is required."}</p>
           </section>
