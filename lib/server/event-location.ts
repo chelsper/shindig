@@ -3,7 +3,7 @@ import { requireHostPrincipal } from "./host-access";
 import { neon } from "@neondatabase/serverless";
 import { getEventDraft } from "./event-drafts";
 import { isDraftId, isDraftRevision } from "../event-drafts";
-import { parseEventLocation, type ConfirmedEventLocation } from "../event-location";
+import { eventAddressQuery, parseEventLocation, type ConfirmedEventLocation } from "../event-location";
 import { LocationError, LocationConflictError, searchAddress } from "./address-search";
 
 async function currentDraft(id: string, revision: number) {
@@ -16,7 +16,7 @@ async function currentDraft(id: string, revision: number) {
 
 export async function findDraftAddress(id: string, revision: number) {
   const draft = await currentDraft(id, revision);
-  return searchAddress(draft.address);
+  return searchAddress(eventAddressQuery(draft.address, draft.cityLabel));
 }
 
 export async function confirmDraftLocation(id: string, revision: number, input: unknown, confirmed: unknown) {
@@ -29,7 +29,7 @@ export async function confirmDraftLocation(id: string, revision: number, input: 
     location = parseEventLocation({ address: draft.address, matchedAddress: draft.address, latitude: row.latitude, longitude: row.longitude, source: "manual" }, draft.address);
   } else if (row.source === "census") {
     // Never trust a browser-supplied provider label or coordinates.
-    const matches = await searchAddress(draft.address);
+    const matches = await searchAddress(eventAddressQuery(draft.address, draft.cityLabel));
     const match = matches.find((match) => match.matchedAddress === row.matchedAddress && match.latitude === row.latitude && match.longitude === row.longitude);
     if (match) location = parseEventLocation({ ...match, address: draft.address, source: "census" }, draft.address);
   }
@@ -40,6 +40,7 @@ export async function confirmDraftLocation(id: string, revision: number, input: 
   const rows = await sql`UPDATE events SET location_confirmation = ${JSON.stringify(location)}::jsonb,
     revision = revision + 1, updated_at = now()
     WHERE id = ${id}::uuid AND status = 'draft' AND revision = ${revision} AND address = ${draft.address}
+      AND city_label = ${draft.cityLabel}
       AND owner_host_id IS NOT DISTINCT FROM ${principal.ownerId}::text
     RETURNING revision`;
   if (!rows.length) throw new LocationConflictError("This draft changed while you were confirming. Reload the location page and try again.");

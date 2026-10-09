@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
 import type { EventDraft } from "../../lib/event-drafts";
-import { locationNumbers, parseEventLocation, type AddressMatch } from "../../lib/event-location";
+import { eventAddressQuery, locationNumbers, parseEventLocation, type AddressMatch } from "../../lib/event-location";
 import { findEventAddress, saveEventLocation } from "../../app/admin/events/[id]/location/actions";
 import { EventSetupNavigation } from "./event-setup-navigation";
 import { DraftEditorActionBar } from "./draft-editor-action-bar";
@@ -19,6 +19,7 @@ export function EventLocationEditor({ draft }: { draft: EventDraft }) {
   const dirty = manual || selected !== null;
   const candidate = manual ? locationNumbers(latitude, longitude) : selected === null ? null : matches?.[selected] ?? null;
   const base = `/admin/events/${draft.id}`;
+  const addressQuery = eventAddressQuery(draft.address, draft.cityLabel);
   const link = "inline-flex min-h-11 items-center font-semibold text-[#355f9e] underline underline-offset-4";
   useEffect(() => {
     if (!dirty && !pending) return;
@@ -37,7 +38,7 @@ export function EventLocationEditor({ draft }: { draft: EventDraft }) {
       const result = await findEventAddress(draft.id, revision);
       if (!result.ok) { setError(result.message); setConflict(Boolean(result.conflict)); return; }
       setMatches(result.matches); setSelected(null); setConfirmed(false);
-      if (!result.matches.length) setMessage("No matching address found. Check Details, or use manual coordinates below.");
+      if (!result.matches.length) setMessage("No matching address found. In Details, include the street address plus city and state or ZIP code, save, then try again. You can also use manual coordinates below.");
     } catch { setError("Address search couldn’t connect. Please try again or use manual coordinates."); }
     finally { lock.current = false; setPending(null); }
   }
@@ -64,7 +65,7 @@ export function EventLocationEditor({ draft }: { draft: EventDraft }) {
     <div className="space-y-6">
     <section className="rounded-3xl border border-[#202523]/10 bg-[#fffaf1] p-5 sm:p-7">
       <h2 className="font-serif text-2xl">Where we’re gathering</h2>
-      <p className="mt-3 break-words text-sm leading-6">{draft.venue && <span className="block font-semibold">{draft.venue}</span>}{draft.address || "Save an address in Details first."}</p>
+      <p className="mt-3 break-words text-sm leading-6">{draft.venue && <span className="block font-semibold">{draft.venue}</span>}{addressQuery || "Save an address in Details first."}</p>
       <Link className={link} href={`${base}#draft-place-heading`} onClick={leave}>Edit the address →</Link>
       <p className="text-xs leading-5 text-[#202523]/65">Timezone: {draft.timeZone}. Address matching does not change event times. Check the timezone in Details if you change regions.</p>
     </section>
@@ -72,13 +73,13 @@ export function EventLocationEditor({ draft }: { draft: EventDraft }) {
       <h2 className="font-serif text-2xl">Location confirmed</h2>
       <p className="mt-2 break-words text-sm leading-6">{saved.matchedAddress}</p>
       <p className="mt-1 text-xs leading-5">{saved.latitude.toFixed(5)}, {saved.longitude.toFixed(5)} · {saved.source === "census" ? "U.S. Census address match" : saved.source === "published" ? "Previously reviewed location" : "Manually confirmed"}</p>
-      <p className="mt-3 text-sm leading-6">Saved privately. Changing the street address clears this confirmation. Live pages change only after publishing.</p>
+      <p className="mt-3 text-sm leading-6">Saved privately. Changing the address or city/area clears this confirmation. Live pages change only after publishing.</p>
     </section>}
     <form id="event-location-form" aria-label="Event location" noValidate onSubmit={save}>
     <fieldset disabled={pending !== null || conflict} className="min-w-0">
     {draft.address && <section className="rounded-3xl border border-[#202523]/10 bg-[#fffaf1] p-5 sm:p-7" aria-labelledby="find-location-heading">
       <h2 id="find-location-heading" className="font-serif text-2xl">{saved ? "Check another match" : "Find your event address"}</h2>
-      <p id="address-privacy" className="mt-2 text-sm leading-6 text-[#202523]/70">Find address sends the saved address above to the U.S. Census address matcher. U.S. addresses only; matches are approximate street locations. Nothing is saved until you confirm.</p>
+      <p id="address-privacy" className="mt-2 text-sm leading-6 text-[#202523]/70">Find address sends the saved address above, including city/area when needed, to the U.S. Census address matcher. Include a city and state or ZIP code in Details. U.S. addresses only; matches are approximate street locations. Nothing is saved until you confirm.</p>
       <button type="button" className="primary-button mt-4 w-full px-6 sm:w-auto" aria-describedby="address-privacy" disabled={pending !== null || manual} onClick={find}>{pending === "find" ? "Finding address…" : "Find address"}</button>
       {matches && matches.length > 0 && <fieldset className="mt-5 space-y-3"><legend className="mb-2 text-sm font-semibold">Choose the matching place</legend>{matches.map((match, index) => <label key={index} className="flex min-h-12 cursor-pointer items-start gap-3 rounded-2xl border border-[#355f9e]/20 p-4 text-sm leading-6">
         <input type="radio" name="address-match" className="mt-1 size-5 shrink-0 accent-[#355f9e]" checked={!manual && selected === index} disabled={pending !== null} onChange={() => { setSelected(index); setManual(false); changed(); }} />

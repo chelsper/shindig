@@ -105,6 +105,32 @@ describe.skipIf(!modulePath)("saved location and complete event journey in Postg
     await expect(publishEventRecord(f.id, f.versions, null)).rejects.toThrow("Incomplete publication");
     expect(await getPublishedEvent(f.slug)).toBeNull();
   });
+  it("uses the saved city/area for lookup and revalidates the same query on confirmation", async () => {
+    const id = randomUUID();
+    const fields = { ...draft, address: "4600 Silver Hill Rd", cityLabel: "Washington, DC 20233" };
+    await saveEventDraftRecord(id, 0, fields);
+    const match = { matchedAddress: "4600 SILVER HILL RD, WASHINGTON, DC, 20233", coordinates: { x: coordinates.longitude, y: coordinates.latitude } };
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ result: { addressMatches: [match] } })));
+    expect(await findDraftAddress(id, 1)).toEqual([{ matchedAddress: match.matchedAddress, ...coordinates }]);
+    expect(new URL(String(vi.mocked(fetch).mock.calls[0][0])).searchParams.get("address")).toBe("4600 Silver Hill Rd, Washington, DC 20233");
+    const result = await confirmDraftLocation(id, 1, { matchedAddress: match.matchedAddress, ...coordinates, source: "census" }, true);
+    expect(result.location).toMatchObject({ address: fields.address, matchedAddress: match.matchedAddress, ...coordinates });
+    expect(fetch).toHaveBeenCalledTimes(1); // Confirmation reuses the identical cached query.
+    expect((await getEventDraft(id))?.revision).toBe(2);
+    expect(await getPublishedEvent(`event-${id}`)).toBeNull();
+  });
+  it("clears coordinates on a city-only edit, rejects stale matches and leaves the live event alone", async () => {
+    const f = await fixture();
+    await confirmDraftLocation(f.id, 1, manual, true);
+    await publishEventRecord(f.id, { ...f.versions, details: 2 }, coordinates);
+    await saveEventDraftRecord(f.id, 2, { ...draft, cityLabel: "Different City, FL" });
+    expect((await getEventDraft(f.id))?.location).toBeNull();
+    expect((await getEventDraft(f.id))?.revision).toBe(3);
+    await expect(confirmDraftLocation(f.id, 2, manual, true)).rejects.toThrow("draft has changed");
+    expect(await publishEventRecord(f.id, { ...f.versions, details: 3, publication: 1 }, coordinates)).toBeNull();
+    expect((await getPublishedEvent(f.slug))?.coordinates).toEqual(coordinates);
+    expect(fetch).not.toHaveBeenCalled();
+  });
   it("invalidates confirmation on address changes, not unrelated edits, and keeps live coordinates frozen", async () => {
     const f = await fixture();
     await confirmDraftLocation(f.id, 1, manual, true);

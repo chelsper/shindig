@@ -8,6 +8,30 @@ export type ConfirmedEventLocation = {
 
 export type AddressMatch = Pick<ConfirmedEventLocation, "matchedAddress" | "latitude" | "longitude">;
 
+// Details permits either a complete address or street + a separate city/area.
+// Use the same composed query for the host's preview, lookup and verification.
+const usStateEnding = /\b(?:AL|AK|AZ|AR|CA|CO|CT|DE|DC|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|PR|VI|GU|AS|MP)\s*$/i;
+const addressWords = (value: string) => value.toLowerCase().replace(/[.,]/g, " ").replace(/\s+/g, " ").trim();
+export function eventAddressQuery(address: string, cityLabel: string): string {
+  const street = address.trim(), city = cityLabel.trim();
+  if (!street || !city) return street;
+  // A full postal address is authoritative; a display area may be a nickname.
+  if (/\s\d{5}(?:-\d{4})?\s*$/.test(street) || usStateEnding.test(street)) return street;
+  const streetWords = addressWords(street), cityWords = addressWords(city);
+  if (!cityWords || ` ${streetWords} `.includes(` ${cityWords} `)) return street;
+  // Avoid repeating a city already entered after the street, while retaining
+  // any additional state/ZIP supplied in the separate field.
+  const cityParts = city.split(/\s+/);
+  for (let count = cityParts.length; count > 0; count--) {
+    const prefix = addressWords(cityParts.slice(0, count).join(" "));
+    if (prefix && streetWords.endsWith(` ${prefix}`)) {
+      const rest = cityParts.slice(count).join(" ").replace(/^[,\s]+/, "");
+      return rest ? `${street.replace(/[,\s]+$/, "")}, ${rest}` : street;
+    }
+  }
+  return `${street.replace(/[,\s]+$/, "")}, ${city}`;
+}
+
 export function parseEventLocation(value: unknown, address: string): ConfirmedEventLocation | null {
   if (!value || typeof value !== "object" || Array.isArray(value) || !address.trim()) return null;
   const row = value as Record<string, unknown>;

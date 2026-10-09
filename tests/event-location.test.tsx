@@ -72,6 +72,13 @@ describe("host location boundary and display", () => {
     const empty = renderToStaticMarkup(<EventLocationEditor draft={{ ...draft, address: "" }} />);
     expect(empty).toContain("Save an address in Details first."); expect(empty).not.toContain(">Find address<");
   });
+  it("shows the exact combined address and guidance before sending a lookup", () => {
+    const html = renderToStaticMarkup(<EventLocationEditor draft={{ ...draft, address: "4600 Silver Hill Rd", cityLabel: "Washington, DC 20233" }} />);
+    expect(html).toContain("4600 Silver Hill Rd, Washington, DC 20233");
+    expect(html).toContain("including city/area when needed");
+    expect(html).toContain("Include a city and state or ZIP code in Details");
+    expect(mocks.find).not.toHaveBeenCalled();
+  });
   it("strictly validates coordinates, address binding and source", () => {
     expect(parseEventLocation(location, draft.address)).toEqual(location);
     for (const value of [null, [], { ...location, source: "fake" }, { ...location, latitude: Infinity }, { ...location, longitude: 181 }, { ...location, latitude: "30" }, { ...location, matchedAddress: "x\nprivate" }]) expect(parseEventLocation(value, draft.address)).toBeNull();

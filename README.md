@@ -183,13 +183,17 @@ still requires a separate explicit approval; no invitations are sent.
 
 - On-demand, host-only address lookup uses the [U.S. Census Geocoder](https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html):
   `/geocoder/locations/onelineaddress?address=…&benchmark=Public_AR_Current&format=json`.
-  Hosts are told before lookup that the saved address is sent to Census.
+  Lookup combines the saved street address with City / area, without appending
+  a duplicate locality to a complete postal address. Hosts see the exact composed
+  query and are told before lookup that it is sent to Census. Include city/state
+  or ZIP in Details. Confirmation rechecks the same server-composed query.
   Matches are approximate street-range coordinates, not guaranteed rooftop
   positions. Automatic lookup supports U.S. addresses up to 100 characters.
   Unmatched/international addresses have a validated manual-coordinate fallback.
   No guest device location, automatic geocoding, map, or paid service is used.
 - Confirmation is stored in `events.location_confirmation`, bound to the saved
-  address. PostgreSQL clears it whenever that address changes. Other detail edits
+  address. PostgreSQL clears it whenever that address changes; the draft-saving
+  layer also clears it atomically when City / area changes. Other detail edits
   retain it. Location changes advance the existing details revision, protecting
   against stale browser tabs and stale publication reviews.
 - Weather-enabled events require saved confirmation before publication.

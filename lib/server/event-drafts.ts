@@ -56,6 +56,7 @@ export async function saveEventDraftRecord(id: string, revision: number, input: 
     return existing && saved?.ok && JSON.stringify(saved.fields) === JSON.stringify(f) ? { id: existing.id, revision: existing.revision } : null;
   }
   const rows = await sql`UPDATE events SET title = ${f.title}, description = ${f.description}, host_name = ${f.hostName},
+    location_confirmation = CASE WHEN btrim(city_label) IS DISTINCT FROM ${f.cityLabel} THEN NULL ELSE location_confirmation END,
     venue = ${f.venue}, address = ${f.address}, city_label = ${f.cityLabel}, time_zone = ${f.timeZone},
     starts_at = ${f.startsAtUtc}::timestamptz, ends_at = ${f.endsAtUtc}::timestamptz, revision = revision + 1, updated_at = now()
     WHERE id = ${id}::uuid AND status = 'draft' AND revision = ${revision}

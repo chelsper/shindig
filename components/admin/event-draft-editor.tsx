@@ -107,8 +107,9 @@ export function EventDraftEditor({ id, initialDraft, timeZones, justSaved = fals
             <p className="mt-2 text-sm leading-6 text-[#202523]/60">These details are optional while you’re planning.</p>
             <div className="mt-5 grid gap-5">
               {textField("venue", "Venue (optional)", "The backyard")}
-              {textField("address", "Address (optional)")}
-              {textField("cityLabel", "City / area (optional)")}
+              {textField("address", "Address (optional)", "Street address or full mailing address")}
+              {textField("cityLabel", "City / area (optional)", "City, state and ZIP code")}
+              <p className="-mt-3 text-xs leading-5 text-[#202523]/60">For address lookup, include the city and state or ZIP code. You can put them here or in the full address above. Save Details before finding your location.</p>
             </div>
           </section>
           <section className={`${panel} border-[#355f9e]/20`} aria-label="Save private draft">
