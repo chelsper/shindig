@@ -4,15 +4,20 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { saveEventDraft } from "../../app/admin/events/actions";
-import { DRAFT_LIMITS, EMPTY_EVENT_DRAFT, type EventDraft } from "../../lib/event-drafts";
+import { DRAFT_LIMITS, EMPTY_EVENT_DRAFT, validateDraftForm, type EventDraft } from "../../lib/event-drafts";
 import { eventLocalInput } from "../../lib/event-date-time";
 import { EventSetupNavigation } from "./event-setup-navigation";
 import { getEventDesign, type EventDesignId } from "../../lib/event-design";
+import { EMPTY_DRAFT_ARTWORK } from "../../lib/event-draft-artwork";
+import { DEFAULT_DRAFT_SETTINGS } from "../../lib/event-draft-settings";
+import type { EventEditorPreviewContext } from "../../lib/event-editor-preview";
+import { EventEditorPreview } from "./event-editor-preview";
+import { EventEditorActions } from "./event-editor-actions";
 
 const panel = "rounded-[1.5rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 sm:p-7";
 const secondary = "inline-flex min-h-11 items-center justify-center rounded-full border border-[#355f9e]/25 bg-[#e9f2f8]/65 px-4 text-xs font-bold text-[#214e91] focus-visible:outline-2 focus-visible:outline-offset-4";
 
-export function EventDraftEditor({ id, initialDraft, timeZones, justSaved = false, requestedDesign }: { id: string; initialDraft?: EventDraft; timeZones: string[]; justSaved?: boolean; requestedDesign?: EventDesignId }) {
+export function EventDraftEditor({ id, initialDraft, timeZones, justSaved = false, requestedDesign, previewContext }: { id: string; initialDraft?: EventDraft; timeZones: string[]; justSaved?: boolean; requestedDesign?: EventDesignId; previewContext?: EventEditorPreviewContext | null }) {
   const router = useRouter();
   const initial = initialDraft ?? EMPTY_EVENT_DRAFT;
   const [fields, setFields] = useState(() => ({ ...initial, startsAtLocal: eventLocalInput(initial.startsAtUtc, initial.timeZone), endsAtLocal: eventLocalInput(initial.endsAtUtc, initial.timeZone) }));
@@ -22,7 +27,9 @@ export function EventDraftEditor({ id, initialDraft, timeZones, justSaved = fals
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [mobileView, setMobileView] = useState<"edit" | "preview">("edit");
   const busy = useRef(false);
+  const context = initialDraft ? previewContext ?? null : { artwork: EMPTY_DRAFT_ARTWORK, settings: { settings: DEFAULT_DRAFT_SETTINGS, revision: 0 } };
   useEffect(() => {
     if (!dirty) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); };
@@ -37,6 +44,8 @@ export function EventDraftEditor({ id, initialDraft, timeZones, justSaved = fals
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy.current || conflict) return;
+    const validation = validateDraftForm(fields);
+    if (!validation.ok) { setError(validation.message); setSaved(false); return; }
     busy.current = true; setError(null); setSaved(false);
     startTransition(async () => {
       try {
@@ -52,9 +61,9 @@ export function EventDraftEditor({ id, initialDraft, timeZones, justSaved = fals
     <input className="field-input min-w-0" name={key} required={key === "title"} maxLength={DRAFT_LIMITS[key]} value={fields[key]} onChange={(event) => change(key, event.target.value)} placeholder={placeholder} />
   </label>;
 
-  return <main className="relative min-h-screen bg-[#f7f0e3] px-4 py-6 text-[#202523] sm:px-6 sm:py-9">
+  return <main className="relative min-h-screen bg-[#f7f0e3] px-4 pt-6 pb-64 text-[#202523] sm:px-6 sm:pt-9">
     <div aria-hidden="true" className="page-texture" />
-    <div className="relative mx-auto max-w-3xl">
+    <div className="relative mx-auto max-w-6xl">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#202523]/12 pb-5">
         <Link href="/admin/events" className="font-serif text-2xl" onClick={(event) => { if (!allowLeave()) event.preventDefault(); }}>Shindig</Link>
         <Link href="/admin/events" className={secondary} onClick={(event) => { if (!allowLeave()) event.preventDefault(); }}>Back to your events</Link>
@@ -62,10 +71,15 @@ export function EventDraftEditor({ id, initialDraft, timeZones, justSaved = fals
       <section className="py-7">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#355f9e]">Host Dashboard · Private draft</p>
         <h1 className="mt-2 font-serif text-4xl tracking-[-0.04em] sm:text-5xl">{initialDraft ? "A Shindig in the making" : "Let’s make a Shindig"}</h1>
-        <p className="mt-3 max-w-xl text-sm leading-6 text-[#202523]/65">Start with a name. The rest can come together later. Saving here won’t publish an invitation or change the Oyster Roast.</p>
+        <p className="mt-3 max-w-xl text-sm leading-6 text-[#202523]/65">Start with a name and watch the invitation take shape. Save privately, then review when you’re ready. Nothing here publishes automatically.</p>
         {initialDraft && <EventSetupNavigation id={id} current="details" onNavigate={(event) => { if (!allowLeave()) event.preventDefault(); }} />}
       </section>
-      <form onSubmit={submit}>
+      <div role="group" aria-label="Editor view" className="sticky top-0 z-20 -mx-4 mb-5 flex gap-2 border-b border-[#202523]/10 bg-[#f7f0e3]/95 px-4 py-3 backdrop-blur-sm lg:hidden">
+        {(["edit", "preview"] as const).map((view) => <button key={view} type="button" aria-pressed={mobileView === view} aria-controls={`event-${view}-panel`} onClick={() => setMobileView(view)} className={`${secondary} flex-1 ${mobileView === view ? "border-[#355f9e] bg-[#e9f2f8]" : "bg-[#fffaf1]"}`}>{view === "edit" ? "Edit details" : "Preview invitation"}</button>)}
+      </div>
+      <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-start">
+      <form id="event-details-form" aria-label="Event details" noValidate onSubmit={submit} className={`min-w-0 ${mobileView === "edit" ? "block" : "hidden lg:block"}`}>
+        <div id="event-edit-panel">
         <fieldset disabled={pending} className="min-w-0 space-y-5">
           <section className={panel} aria-labelledby="draft-basics-heading">
             <h2 id="draft-basics-heading" className="font-serif text-2xl">The good idea</h2>
@@ -100,15 +114,16 @@ export function EventDraftEditor({ id, initialDraft, timeZones, justSaved = fals
           </section>
           <section className={`${panel} border-[#355f9e]/20`} aria-label="Save private draft">
             <p className="text-sm leading-6 text-[#202523]/65">{initialDraft ? "Save changes privately, then use Review & publish to update your guest pages. Saving this draft never changes a published version." : "Private to the host dashboard. Save your event basics to continue to artwork and RSVP & Hub settings. There is no guest link yet."}</p>
-            {error && <p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm leading-6 text-red-900">{error}</p>}
-            {conflict && <a className={`${secondary} mt-3`} href={`/admin/events/${id}`} onClick={(event) => { if (!allowLeave()) event.preventDefault(); }}>Reopen saved draft</a>}
-            {saved && <p role="status" className="mt-4 rounded-xl bg-[#e4eee1] p-3 text-sm text-[#285630]">Draft saved privately. Review and publish when you’re ready to update guest pages.</p>}
             {requestedDesign && !initialDraft && <p className="mt-4 text-sm leading-6 text-[#355f9e]">Next: apply {getEventDesign(requestedDesign).name} and add artwork. Nothing is published by saving this draft.</p>}
-            <button type="submit" className="primary-button mt-5 w-full" disabled={pending || conflict || !dirty || !fields.title.trim()}>{pending ? "Saving draft…" : "Save draft"}</button>
-            <p className="mt-2 text-center text-xs leading-5 text-[#202523]/55">{dirty ? "You have unsaved changes." : revision ? "Your saved draft is up to date." : "Only the event name is required."}</p>
           </section>
         </fieldset>
+        </div>
       </form>
+      <aside id="event-preview-panel" className={`min-w-0 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-12rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-2 ${mobileView === "preview" ? "block" : "hidden lg:block"}`}>
+        <EventEditorPreview id={id} fields={fields} context={context} dirty={dirty} />
+      </aside>
+      </div>
     </div>
+    <EventEditorActions id={id} revision={revision} dirty={dirty} pending={pending} conflict={conflict} hasTitle={Boolean(fields.title.trim())} error={error} saved={saved} onLeave={(event) => { if (!allowLeave()) event.preventDefault(); }} />
   </main>;
 }

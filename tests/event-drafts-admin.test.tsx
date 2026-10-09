@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 vi.mock("../lib/server/event-dashboard", () => ({ listHostEventCards: mocks.cards }));
 vi.mock("../lib/server/invitation-settings", () => ({ getEventConfiguration: mocks.legacy }));
-const mocks = vi.hoisted(() => ({ auth: vi.fn(), save: vi.fn(), get: vi.fn(), list: vi.fn(), cards: vi.fn(), legacy: vi.fn(), revalidate: vi.fn(), redirect: vi.fn(), notFound: vi.fn(), replace: vi.fn() }));
+const mocks = vi.hoisted(() => ({ auth: vi.fn(), save: vi.fn(), get: vi.fn(), artwork: vi.fn(), settings: vi.fn(), list: vi.fn(), cards: vi.fn(), legacy: vi.fn(), revalidate: vi.fn(), redirect: vi.fn(), notFound: vi.fn(), replace: vi.fn() }));
+vi.mock("../lib/server/event-draft-artwork", () => ({ getDraftArtwork: mocks.artwork }));
+vi.mock("../lib/server/event-draft-settings", () => ({ getDraftSettings: mocks.settings }));
 vi.mock("../lib/server/admin-session", () => ({ isAdminAuthenticated: mocks.auth }));
 vi.mock("../lib/server/event-drafts", () => ({ saveEventDraftRecord: mocks.save, getEventDraft: mocks.get, listEventDrafts: mocks.list }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
@@ -15,6 +17,8 @@ import { EventDraftEditor } from "../components/admin/event-draft-editor";
 import { EMPTY_EVENT_DRAFT, type EventDraft } from "../lib/event-drafts";
 import { OYSTER_ROAST_EVENT } from "../lib/oyster-roast-event";
 import type { HostEventCard } from "../lib/event-dashboard";
+import { EMPTY_DRAFT_ARTWORK } from "../lib/event-draft-artwork";
+import { DEFAULT_DRAFT_SETTINGS } from "../lib/event-draft-settings";
 
 const id = "5199b7de-d731-4bb1-8e55-3380e2f0e365";
 const fields = { ...EMPTY_EVENT_DRAFT, title: "Birthday", startsAtLocal: "2026-11-07T17:00", endsAtLocal: "" };
@@ -31,6 +35,8 @@ const props = { params: Promise.resolve({ id }), searchParams: Promise.resolve({
 beforeEach(() => {
   vi.resetAllMocks(); mocks.auth.mockResolvedValue(true); mocks.save.mockResolvedValue({ id, revision: 1 }); mocks.get.mockResolvedValue(draft); mocks.list.mockResolvedValue([]);
   mocks.cards.mockResolvedValue([]); mocks.legacy.mockResolvedValue(OYSTER_ROAST_EVENT);
+  mocks.artwork.mockResolvedValue({ settings: EMPTY_DRAFT_ARTWORK, revision: 0 });
+  mocks.settings.mockResolvedValue({ settings: DEFAULT_DRAFT_SETTINGS, revision: 0 });
   mocks.redirect.mockImplementation(() => { throw new Error("redirect"); }); mocks.notFound.mockImplementation(() => { throw new Error("not found"); });
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -51,6 +57,7 @@ describe("private event draft actions and pages", () => {
     expect(mocks.redirect).toHaveBeenCalledWith("/admin");
     expect(mocks.get).not.toHaveBeenCalled(); expect(mocks.list).not.toHaveBeenCalled(); expect(mocks.save).not.toHaveBeenCalled();
     expect(mocks.cards).not.toHaveBeenCalled(); expect(mocks.legacy).not.toHaveBeenCalled();
+    expect(mocks.artwork).not.toHaveBeenCalled(); expect(mocks.settings).not.toHaveBeenCalled();
   });
   it("saves normalized event-local data and only refreshes private draft routes", async () => {
     expect(await saveEventDraft({ id, revision: 0, fields })).toEqual({ ok: true, id, revision: 1 });
@@ -154,5 +161,26 @@ describe("private event draft actions and pages", () => {
     expect(html).not.toContain("<script>unsafe"); expect(html).toContain("&lt;script&gt;");
     expect(html).toContain("Draft saved privately. Review and publish when you’re ready to update guest pages.");
     expect(html).toContain('href="/admin/events"');
+  });
+  it("loads only this draft’s saved preview context after confirming the draft exists", async () => {
+    const page = await EditPage(props);
+    expect(page.key).toBe(id);
+    expect(mocks.artwork).toHaveBeenCalledExactlyOnceWith(id); expect(mocks.settings).toHaveBeenCalledExactlyOnceWith(id);
+    expect(page.props.previewContext).toEqual({ artwork: EMPTY_DRAFT_ARTWORK, settings: { settings: DEFAULT_DRAFT_SETTINGS, revision: 0 } });
+    expect(mocks.get.mock.invocationCallOrder[0]).toBeLessThan(mocks.artwork.mock.invocationCallOrder[0]);
+    expect(mocks.save).not.toHaveBeenCalled(); expect(mocks.legacy).not.toHaveBeenCalled();
+  });
+  it.each(["artwork", "settings"] as const)("keeps details editable when %s preview loading fails", async (part) => {
+    mocks[part].mockRejectedValue(new Error("postgresql://secret"));
+    const page = await EditPage(props);
+    expect(page.props.previewContext).toBeNull();
+    const html = renderToStaticMarkup(page);
+    expect(html).toContain('value="Private party"'); expect(html).toContain("preview is unavailable");
+    expect(html).not.toContain("secret"); expect(html).not.toContain("RSVP preview uses suggested defaults");
+  });
+  it("does not load optional preview data for missing drafts or when creating one", async () => {
+    mocks.get.mockResolvedValue(null); await expect(EditPage(props)).rejects.toThrow("not found");
+    await NewPage({});
+    expect(mocks.artwork).not.toHaveBeenCalled(); expect(mocks.settings).not.toHaveBeenCalled();
   });
 });

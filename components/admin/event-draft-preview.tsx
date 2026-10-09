@@ -1,10 +1,10 @@
 /* eslint-disable @next/next/no-img-element -- Authenticated private images must not pass through the public image optimizer. */
-import type { EventDraft } from "../../lib/event-drafts";
+import type { EventDraftFields } from "../../lib/event-drafts";
 import { draftImageUrl, type DraftArtwork } from "../../lib/event-draft-artwork";
 import type { ReactNode } from "react";
 import { DesignedHub, DesignedInvitation } from "../event-design/event-presentation";
 
-export function EventDraftPreview({ draft, artwork, view, children, actions, fullPage = false }: { draft: EventDraft; artwork: DraftArtwork; view: "invitation" | "hub"; children?: ReactNode; actions?: ReactNode; fullPage?: boolean }) {
+export function EventDraftPreview({ draft, artwork, view, children, actions, fullPage = false }: { draft: EventDraftFields & { id: string }; artwork: DraftArtwork; view: "invitation" | "hub"; children?: ReactNode; actions?: ReactNode; fullPage?: boolean }) {
   const header = artwork.header.path ? artwork.header : artwork.invitation;
   const image = view === "hub" ? header : artwork.invitation;
   const date = draft.startsAtUtc ? new Intl.DateTimeFormat("en-US", { timeZone: draft.timeZone, weekday: "long", month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(new Date(draft.startsAtUtc)) : "Date & time to come";

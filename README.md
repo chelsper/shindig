@@ -1,5 +1,33 @@
 # Shindig
 
+## Event editor — live private preview
+
+The event-details editor now previews typed wording, dates/timezone and location
+alongside the form on desktop. Phones use **Edit details / Preview invitation**
+buttons; switching views keeps all inputs. The preview reuses the invitation
+presentation with this draft’s saved artwork/design and RSVP choices. It never
+loads guest data or calls calendar, weather, music or public RSVP services.
+
+Preview text is local to the editor until **Save draft** succeeds. Blank dates
+stay blank; invalid and ambiguous daylight-saving times use the same conversion
+and validation as the server, with an honest preview note. Missing saved preview
+data does not prevent details editing and is never replaced with live event
+content or guessed settings. Failed artwork shows a fallback and warning.
+
+A fixed, safe-area-aware action bar keeps save status and recovery errors visible
+in either view. **Review & publish** opens the existing review page only after
+the draft is saved and clean; it never publishes directly. Saving disables edits
+and repeated submissions, preserves optimistic revision checks and retains input
+on errors. Existing unsaved-navigation warnings and new-draft setup/style handoff
+remain in place. RSVP submission stays disabled inside the preview.
+
+Only the private event editor changes; guest pages, the original Oyster Roast,
+publishing rules and authentication remain unchanged. No migration, dependency
+or environment variable is required. Tests cover preview projection, timezone
+edge cases, guarded loading, mobile-toggle state, repeated saves, errors,
+conflicts and review gating.
+
+
 ## Unified host event dashboard
 
 `/admin/events` now shows one card per event, combining the published version
