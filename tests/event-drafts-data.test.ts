@@ -29,14 +29,14 @@ describe("host-only draft storage", () => {
     const result = await listEventDrafts();
     expect(result).toEqual([{ id, title: fields.title, startsAtUtc: null, timeZone: fields.timeZone, cityLabel: "", updatedAt: "2026-10-06T12:00:00.000Z" }]);
     const sql = mocks.sql.mock.calls[0][0].join("?");
-    expect(sql).toContain("WHERE status = 'draft' ORDER BY updated_at DESC, id");
+    expect(sql).toContain("WHERE status = 'draft' AND owner_host_id IS NOT DISTINCT FROM ?::text ORDER BY updated_at DESC, id");
     expect(sql).not.toMatch(/description|host_name|rsvps|invitation_settings|SELECT \*/);
   });
   it("loads only the requested private draft and normalizes timestamps", async () => {
     mocks.sql.mockResolvedValue([{ ...row, createdAt: new Date(row.createdAt), privateExtra: "ignored" }]);
     expect(await getEventDraft(id)).toEqual({ ...row, location: null, createdAt: "2026-10-06T12:00:00.000Z", updatedAt: "2026-10-06T12:00:00.000Z" });
     const [query, ...values] = mocks.sql.mock.calls[0];
-    expect(query.join("?")).toContain("WHERE id = ?::uuid AND status = 'draft'"); expect(values).toEqual([id]);
+    expect(query.join("?")).toContain("WHERE id = ?::uuid AND status = 'draft'"); expect(values).toEqual([id, null]);
   });
   it("handles invalid/missing IDs without inventing a record", async () => {
     expect(await getEventDraft("not-a-uuid")).toBeNull(); expect(mocks.sql).not.toHaveBeenCalled();
@@ -48,7 +48,7 @@ describe("host-only draft storage", () => {
     const [query, ...values] = mocks.sql.mock.calls[0];
     expect(query.join("?")).toContain("ON CONFLICT (id) DO NOTHING");
     expect(query.join("?")).toContain("'draft'");
-    expect(values).toEqual([id, "Birthday", "", "", "", "", "", "America/New_York", null, null]);
+    expect(values).toEqual([id, "Birthday", "", "", "", "", "", "America/New_York", null, null, null]);
     expect(query.join("?")).not.toMatch(/rsvps|invitation_settings|published/);
   });
   it("acknowledges duplicate creation only when all saved fields match", async () => {
@@ -63,7 +63,7 @@ describe("host-only draft storage", () => {
     const [query, ...values] = mocks.sql.mock.calls[0];
     expect(query.join("?")).toContain("revision = revision + 1, updated_at = now()");
     expect(query.join("?")).toContain("WHERE id = ?::uuid AND status = 'draft' AND revision = ?");
-    expect(values.slice(-2)).toEqual([id, 1]);
+    expect(values.slice(-3)).toEqual([id, 1, null]);
     mocks.sql.mockResolvedValue([]); expect(await saveEventDraftRecord(id, 1, fields)).toBeNull();
   });
   it("validates again at the storage boundary", async () => {

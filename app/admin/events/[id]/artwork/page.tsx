@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ContentShell } from "../../../../../components/admin/content-shell";
 import { EventDraftArtworkEditor } from "../../../../../components/admin/event-draft-artwork-editor";
-import { isAdminAuthenticated } from "../../../../../lib/server/admin-session";
+import { isHostAuthenticated } from "../../../../../lib/server/host-access";
 import { getEventDraft } from "../../../../../lib/server/event-drafts";
 import { draftImageStorageToken, getDraftArtwork } from "../../../../../lib/server/event-draft-artwork";
 import { isDraftId } from "../../../../../lib/event-drafts";
@@ -12,7 +12,7 @@ import { parseEventDesignId } from "../../../../../lib/event-design";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Draft Artwork | Shindig", robots: { index: false, follow: false }, referrer: "no-referrer" };
 export default async function DraftArtworkPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams?: Promise<{ style?: string | string[] }> }) {
-  if (!(await isAdminAuthenticated())) redirect("/admin");
+  if (!(await isHostAuthenticated())) redirect("/host/sign-in");
   const { id } = await params;
   if (!isDraftId(id)) notFound();
   let data;

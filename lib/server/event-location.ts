@@ -1,4 +1,5 @@
 import "server-only";
+import { requireHostPrincipal } from "./host-access";
 import { neon } from "@neondatabase/serverless";
 import { getEventDraft } from "./event-drafts";
 import { isDraftId, isDraftRevision } from "../event-drafts";
@@ -19,6 +20,7 @@ export async function findDraftAddress(id: string, revision: number) {
 }
 
 export async function confirmDraftLocation(id: string, revision: number, input: unknown, confirmed: unknown) {
+  const principal = await requireHostPrincipal();
   const draft = await currentDraft(id, revision);
   if (confirmed !== true || !input || typeof input !== "object") throw new LocationError("Please check and confirm the event location before saving.");
   const row = input as Record<string, unknown>;
@@ -38,6 +40,7 @@ export async function confirmDraftLocation(id: string, revision: number, input: 
   const rows = await sql`UPDATE events SET location_confirmation = ${JSON.stringify(location)}::jsonb,
     revision = revision + 1, updated_at = now()
     WHERE id = ${id}::uuid AND status = 'draft' AND revision = ${revision} AND address = ${draft.address}
+      AND owner_host_id IS NOT DISTINCT FROM ${principal.ownerId}::text
     RETURNING revision`;
   if (!rows.length) throw new LocationConflictError("This draft changed while you were confirming. Reload the location page and try again.");
   return { revision: rows[0].revision as number, location };

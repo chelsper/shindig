@@ -2,7 +2,7 @@ import "server-only";
 
 import { createHash, randomUUID } from "node:crypto";
 import { neon } from "@neondatabase/serverless";
-import { OYSTER_ROAST_SCOPE, eventScopeSlug, eventFeatureEnabled, requireEventFeature, type EventScope } from "./event-scope";
+import { OYSTER_ROAST_SCOPE, requireHostEventScope, eventScopeSlug, eventFeatureEnabled, requireEventFeature, type EventScope } from "./event-scope";
 import type { PublicQuestion } from "../questions";
 import type { AnswerInput, QuestionInput } from "./event-content-validation";
 
@@ -54,6 +54,7 @@ export async function insertGuestQuestion(input: QuestionInput, scope: EventScop
 }
 
 export async function listQuestionsForAdmin(scope: EventScope = OYSTER_ROAST_SCOPE): Promise<AdminQuestion[]> {
+  await requireHostEventScope(scope);
   const eventSlug = eventScopeSlug(scope);
   const sql = database();
   const rows = await sql`
@@ -71,6 +72,7 @@ export async function listQuestionsForAdmin(scope: EventScope = OYSTER_ROAST_SCO
 }
 
 export async function saveQuestionAnswer(id: string, input: AnswerInput, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<boolean> {
+  await requireHostEventScope(scope);
   const eventSlug = eventScopeSlug(scope);
   const sql = database();
   const rows = await sql`
@@ -85,6 +87,7 @@ export async function saveQuestionAnswer(id: string, input: AnswerInput, scope: 
 }
 
 export async function removeQuestion(id: string, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<void> {
+  await requireHostEventScope(scope);
   const eventSlug = eventScopeSlug(scope);
   const sql = database();
   await sql`DELETE FROM event_questions WHERE event_slug = ${eventSlug} AND id = ${id}::uuid`;

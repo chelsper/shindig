@@ -195,7 +195,7 @@ describe("scoped providers and host screens", () => {
   });
   it("protects review, event response pages and CSV before event reads", async () => {
     mocks.auth.mockResolvedValue(false);
-    for (const page of [PublishPage, Guests]) await expect(page(adminContext)).rejects.toThrow("redirect:/admin");
+    for (const page of [PublishPage, Guests]) await expect(page(adminContext)).rejects.toThrow("redirect:/host/sign-in");
     expect((await exportCsv(request("/export"), adminContext)).status).toBe(401);
     for (const fn of [mocks.event, mocks.pub, mocks.draft, mocks.artwork, mocks.settings, mocks.list]) expect(fn).not.toHaveBeenCalled();
   });

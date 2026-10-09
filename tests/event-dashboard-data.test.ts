@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 const state = vi.hoisted(() => ({ auth: true, query: vi.fn() }));
 vi.mock("../lib/server/admin-session", () => ({ isAdminAuthenticated: async () => state.auth }));
+vi.mock("../lib/server/host-access", () => ({ requireHostPrincipal: async () => { if (!state.auth) throw new Error("Host access required."); return { ownerId: null }; } }));
 vi.mock("@neondatabase/serverless", () => ({ neon: () => state.query }));
 import { listHostEventCards } from "../lib/server/event-dashboard";
 import { draft, snapshot, eventId, otherEventId } from "./fixtures/publication";

@@ -93,14 +93,14 @@ describe.skipIf(!embeddedModule && !socket)("real PostgreSQL RSVP deadlines and 
     expect(JSON.stringify(publicEvent)).not.toMatch(/Hidden household|Private note|totalGuestCount|totalResponses|editTokenHash/);
     expect((await getPublishedEvent(b.slug))?.rsvpAvailability).toBe("open");
     await expect(saveRsvp(input(a.guest, { partySize: 1 }), hash(), a.guest)).rejects.toThrow(RsvpAdmissionError);
-    expect((await getRsvpSummary(a.guest)).totalResponses).toBe(2);
+    expect((await getRsvpSummary(a.host)).totalResponses).toBe(2);
   });
   it("accepts one of simultaneous parties competing for the last places", async () => {
     const a = await event({ capacity: 3 });
     await saveRsvp(input(a.guest, { partySize: 1 }), hash(), a.guest);
     const outcomes = await Promise.allSettled([saveRsvp(input(a.guest), hash(), a.guest), saveRsvp(input(a.guest), hash(), a.guest)]);
     expect(outcomes.filter((r) => r.status === "fulfilled")).toHaveLength(1);
-    expect((await getRsvpSummary(a.guest)).totalPartySize).toBe(3);
+    expect((await getRsvpSummary(a.host)).totalPartySize).toBe(3);
   });
   it("deduplicates same-key retries at capacity and after the deadline without overwriting", async () => {
     const a = await event({ capacity: 2 }), key = hash(), rsvp = input(a.guest);
@@ -110,7 +110,7 @@ describe.skipIf(!embeddedModule && !socket)("real PostgreSQL RSVP deadlines and 
     expect((await saveRsvp({ ...rsvp, guestName: "Do not overwrite" }, key, a.guest)).status).toBe("duplicate");
     expect((await getRsvpForGuest(key, a.guest))?.guestName).toBe(fields.guestName);
     await expect(saveRsvp(rsvp, hash(), a.guest)).rejects.toThrow();
-    expect((await getRsvpSummary(a.guest)).totalResponses).toBe(1);
+    expect((await getRsvpSummary(a.host)).totalResponses).toBe(1);
   });
   it("allows keeping/reducing a party or declining at capacity and releases seats", async () => {
     const a = await event({ capacity: 3 }), key = hash();
@@ -151,7 +151,7 @@ describe.skipIf(!embeddedModule && !socket)("real PostgreSQL RSVP deadlines and 
   });
   it("requires real host authorization for host capacity writes", async () => {
     const a = await event();
-    await expect(createRsvpForAdmin(randomUUID(), fields, a.guest)).rejects.toThrow("Host access");
+    await expect(createRsvpForAdmin(randomUUID(), fields, a.guest)).rejects.toThrow("Event unavailable");
     state.auth = false; queries.length = 0;
     await expect(createRsvpForAdmin(randomUUID(), fields, a.host)).rejects.toThrow("Host access");
     expect(queries).toHaveLength(0);
@@ -163,7 +163,7 @@ describe.skipIf(!embeddedModule && !socket)("real PostgreSQL RSVP deadlines and 
     expect((await getPublishedEvent(a.slug))!.rsvp?.capacity).toBe(3);
     await republish(a.id, { capacity: null });
     expect((await saveRsvp(input(a.guest), hash(), a.guest)).status).toBe("created");
-    expect((await getRsvpSummary(a.guest)).totalPartySize).toBe(5);
+    expect((await getRsvpSummary(a.host)).totalPartySize).toBe(5);
   });
   it("does not let manual reopen bypass a deadline, or deadline removal bypass manual close", async () => {
     const a = await event({ deadlineAtUtc: "2001-11-01T22:00:00.000Z" });
@@ -188,10 +188,10 @@ describe.skipIf(!embeddedModule && !socket)("real PostgreSQL RSVP deadlines and 
   it("reapplies migration without changing existing replies or controls", async () => {
     const a = await event({ capacity: 4, deadlineAtUtc: "2099-11-01T22:00:00.000Z" });
     await saveRsvp(input(a.guest), hash(), a.guest);
-    const before = await getRsvpSummary(a.guest), settings = await getDraftSettings(a.id), published = await getPublishedEvent(a.slug);
+    const before = await getRsvpSummary(a.host), settings = await getDraftSettings(a.id), published = await getPublishedEvent(a.slug);
     const migration = await readFile("db/migrations/019_rsvp_deadline_capacity.sql", "utf8");
     if (db) await db.exec(migration); else await native(migration);
-    expect(await getRsvpSummary(a.guest)).toEqual(before); expect(await getDraftSettings(a.id)).toEqual(settings); expect(await getPublishedEvent(a.slug)).toEqual(published);
+    expect(await getRsvpSummary(a.host)).toEqual(before); expect(await getDraftSettings(a.id)).toEqual(settings); expect(await getPublishedEvent(a.slug)).toEqual(published);
   });
   it.skipIf(!socket)("refreshes the count after a native concurrent lock wait, including publication checks", async () => {
     const a = await event({ capacity: 4 });
@@ -208,7 +208,7 @@ describe.skipIf(!embeddedModule && !socket)("real PostgreSQL RSVP deadlines and 
     const lower = republish(a.id, { capacity: 2 });
     const outcomes = await Promise.allSettled([write, lower]); await hold;
     expect(outcomes.every((r) => r.status === "rejected")).toBe(true);
-    expect((await getRsvpSummary(a.guest)).totalPartySize).toBe(3);
+    expect((await getRsvpSummary(a.host)).totalPartySize).toBe(3);
     expect((await getPublishedEvent(a.slug))!.rsvp?.capacity).toBe(4);
   });
 });

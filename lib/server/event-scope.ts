@@ -2,6 +2,7 @@ import "server-only";
 import { OYSTER_ROAST_EVENT, type EventFeatures } from "../oyster-roast-event";
 import { draftEventSlug } from "../event-routes";
 import type { DraftSettings } from "../event-draft-settings";
+import { requireHostPrincipal } from "./host-access";
 import { isAdminAuthenticated } from "./admin-session";
 import { getEventDraft } from "./event-drafts";
 import { getDraftSettings } from "./event-draft-settings";
@@ -18,6 +19,7 @@ export type EventScope = Readonly<{
   rsvpsOpen: boolean;
 }>;
 const issuedScopes = new WeakSet<EventScope>();
+const scopeOwners = new WeakMap<EventScope, string | null>();
 function issue(slug: string, access: EventScope["access"], settings: DraftSettings, rsvpsOpen = true, publicAlias?: string | null): EventScope {
   const scope: EventScope = Object.freeze({
     [brand]: true as const, slug, access, rsvpsOpen, ...(publicAlias ? { publicSlug: publicAlias } : {}),
@@ -41,6 +43,18 @@ export function eventScopeSlug(scope: EventScope): string {
   assertEventScope(scope);
   return scope.slug;
 }
+
+// Private data operations require a current session AND a host-only scope
+// issued for that same principal. Public scopes never grant host privileges.
+export async function requireHostEventScope(scope: EventScope): Promise<void> {
+  assertEventScope(scope);
+  if (scope === OYSTER_ROAST_SCOPE) {
+    if (!(await isAdminAuthenticated())) throw new Error("Host access required.");
+    return;
+  }
+  const principal = await requireHostPrincipal();
+  if (scope.access !== "host" || !scopeOwners.has(scope) || scopeOwners.get(scope) !== principal.ownerId) throw new Error("Event unavailable.");
+}
 export function eventFeatureEnabled(scope: EventScope, feature: keyof EventFeatures): boolean {
   assertEventScope(scope);
   return scope.features[feature];
@@ -58,14 +72,19 @@ export async function resolvePublicEventScope(slug: string): Promise<EventScope 
 }
 
 export async function resolveHostEventScope(slug: string): Promise<EventScope | null> {
-  if (!(await isAdminAuthenticated())) throw new Error("Host access required.");
+  const principal = await requireHostPrincipal();
   const publication = await getHostEventPublication(slug);
-  return publication ? issue(publication.slug, "host", publication.snapshot.settings, publication.rsvpsOpen, publication.publicAlias) : null;
+  if (!publication) return null;
+  const scope = issue(publication.slug, "host", publication.snapshot.settings, publication.rsvpsOpen, publication.publicAlias);
+  scopeOwners.set(scope, principal.ownerId);
+  return scope;
 }
 
 export async function getHostDraftScope(id: string): Promise<EventScope | null> {
-  if (!(await isAdminAuthenticated())) throw new Error("Host access required.");
+  const principal = await requireHostPrincipal();
   const [draft, record] = await Promise.all([getEventDraft(id), getDraftSettings(id)]);
   if (!draft || !record) return null;
-  return issue(draftEventSlug(draft.id), "host", record.settings);
+  const scope = issue(draftEventSlug(draft.id), "host", record.settings);
+  scopeOwners.set(scope, principal.ownerId);
+  return scope;
 }

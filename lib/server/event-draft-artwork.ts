@@ -1,14 +1,14 @@
 import "server-only";
 import { neon } from "@neondatabase/serverless";
 import { head } from "@vercel/blob";
-import { isAdminAuthenticated } from "./admin-session";
+import { isHostAuthenticated } from "./host-access";
 import { getEventDraft } from "./event-drafts";
 import { isDraftRevision } from "../event-drafts";
 import { DRAFT_IMAGE_LIMIT, DRAFT_IMAGE_TYPES, EMPTY_DRAFT_ARTWORK, validateDraftArtwork, type DraftArtworkRecord } from "../event-draft-artwork";
 
 export function draftImageStorageToken() { return process.env.EVENT_DRAFT_BLOB_READ_WRITE_TOKEN?.trim(); }
 async function database() {
-  if (!(await isAdminAuthenticated())) throw new Error("Host access required.");
+  if (!(await isHostAuthenticated())) throw new Error("Host access required.");
   const url = process.env.DATABASE_URL?.trim();
   if (!url) throw new Error("Draft storage is not configured.");
   return neon(url);

@@ -1,14 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { isAdminAuthenticated } from "../../../lib/server/admin-session";
+import { isHostAuthenticated } from "../../../lib/server/host-access";
 import { saveEventDraftRecord } from "../../../lib/server/event-drafts";
 import { isDraftId, isDraftRevision, validateDraftForm } from "../../../lib/event-drafts";
 
 export type SaveDraftResult = { ok: true; id: string; revision: number } | { ok: false; message: string; conflict?: boolean };
 
 export async function saveEventDraft(input: unknown): Promise<SaveDraftResult> {
-  if (!(await isAdminAuthenticated())) return { ok: false, message: "Your host session has expired. Sign in again before saving." };
+  if (!(await isHostAuthenticated())) return { ok: false, message: "Your host session has expired. Sign in again before saving." };
   if (!input || typeof input !== "object") return { ok: false, message: "Please check the event details." };
   const row = input as Record<string, unknown>;
   if (!isDraftId(row.id) || !isDraftRevision(row.revision)) return { ok: false, message: "Please reopen the draft editor before saving." };

@@ -1,3 +1,4 @@
+vi.mock("server-only", () => ({}));
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), source: vi.fn(), copy: vi.fn(), revalidate: vi.fn(), redirect: vi.fn(), notFound: vi.fn(), replace: vi.fn() }));
@@ -22,7 +23,7 @@ afterEach(() => vi.restoreAllMocks());
 describe("host-only duplication screen and action", () => {
   it("authenticates before reading a source or writing a copy", async () => {
     mocks.auth.mockResolvedValue(false);
-    await expect(Page(props)).rejects.toThrow("redirect"); expect(mocks.redirect).toHaveBeenCalledWith("/admin");
+    await expect(Page(props)).rejects.toThrow("redirect"); expect(mocks.redirect).toHaveBeenCalledWith("/host/sign-in");
     expect(await duplicateEvent(input)).toMatchObject({ ok: false, message: expect.stringContaining("session") });
     expect(mocks.source).not.toHaveBeenCalled(); expect(mocks.copy).not.toHaveBeenCalled(); expect(mocks.revalidate).not.toHaveBeenCalled();
     expect(dynamic).toBe("force-dynamic"); expect(metadata.robots).toEqual({ index: false, follow: false }); expect(metadata.referrer).toBe("no-referrer");

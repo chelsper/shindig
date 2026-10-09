@@ -1,12 +1,12 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { isAdminAuthenticated } from "../../../../../lib/server/admin-session";
+import { isHostAuthenticated } from "../../../../../lib/server/host-access";
 import { saveDraftArtworkRecord } from "../../../../../lib/server/event-draft-artwork";
 import { isDraftId, isDraftRevision } from "../../../../../lib/event-drafts";
 import { validateDraftArtwork } from "../../../../../lib/event-draft-artwork";
 
 export async function saveDraftArtwork(input: unknown): Promise<{ ok: true; revision: number } | { ok: false; message: string; conflict?: boolean }> {
-  if (!(await isAdminAuthenticated())) return { ok: false, message: "Your host session has expired. Sign in again before saving." };
+  if (!(await isHostAuthenticated())) return { ok: false, message: "Your host session has expired. Sign in again before saving." };
   if (!input || typeof input !== "object") return { ok: false, message: "Please check the artwork settings." };
   const row = input as Record<string, unknown>;
   if (!isDraftId(row.id) || !isDraftRevision(row.revision)) return { ok: false, message: "Please reopen the artwork editor." };

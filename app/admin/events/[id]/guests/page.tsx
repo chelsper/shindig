@@ -7,7 +7,7 @@ import { HostUpdatesManager } from "../../../../../components/admin/host-updates
 import { HostPollsManager } from "../../../../../components/admin/host-polls-manager";
 import { PlaylistDeleteButton } from "../../../../../components/admin/playlist-delete-button";
 import { TrackDetails } from "../../../../../components/music/track-details";
-import { isAdminAuthenticated } from "../../../../../lib/server/admin-session";
+import { isHostAuthenticated } from "../../../../../lib/server/host-access";
 import { getAdminGuestEvent } from "../../../../../lib/server/admin-event-guests";
 import { eventStatus } from "../../../../../lib/event-lifecycle";
 import { isDraftId } from "../../../../../lib/event-drafts";
@@ -27,7 +27,7 @@ export const metadata = { title: "Event responses | Shindig", robots: { index: f
 const views = ["rsvps", "questions", "updates", "playlist", "polls", "potluck"] as const;
 const labels = { rsvps: "Guest responses", questions: "Ask the Host", updates: "Host Updates", playlist: "Playlist", polls: "Polls", potluck: "Bring something" };
 export default async function EventGuests({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ view?: string; filter?: string; q?: string; saved?: string }> }) {
-  if (!(await isAdminAuthenticated())) redirect("/admin");
+  if (!(await isHostAuthenticated())) redirect("/host/sign-in");
   const { id } = await params;
   if (!isDraftId(id)) notFound();
   const search = await searchParams;

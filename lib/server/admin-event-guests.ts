@@ -1,5 +1,5 @@
 import "server-only";
-import { isAdminAuthenticated } from "./admin-session";
+import { isHostAuthenticated } from "./host-access";
 import { getHostEventPublication } from "./event-publications";
 import { resolveHostEventScope } from "./event-scope";
 import { publicationEvent } from "../event-publication";
@@ -9,7 +9,7 @@ import { draftEventSlug } from "../event-routes";
 // Authenticate before resolving any event; a missing/forged locator never falls
 // back to the legacy event. These controls use published rules, not draft edits.
 export async function getAdminGuestEvent(id: string) {
-  if (!(await isAdminAuthenticated())) throw new Error("Host access required.");
+  if (!(await isHostAuthenticated())) throw new Error("Host access required.");
   if (!isDraftId(id)) return null;
   const slug = draftEventSlug(id);
   const [publication, scope] = await Promise.all([getHostEventPublication(slug), resolveHostEventScope(slug)]);

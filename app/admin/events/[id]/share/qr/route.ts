@@ -1,4 +1,4 @@
-import { isAdminAuthenticated } from "../../../../../../lib/server/admin-session";
+import { isHostAuthenticated } from "../../../../../../lib/server/host-access";
 import { getHostEventPublication } from "../../../../../../lib/server/event-publications";
 import { isDraftId } from "../../../../../../lib/event-drafts";
 import { draftEventSlug } from "../../../../../../lib/event-routes";
@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 const headers = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff", "X-Robots-Tag": "noindex, nofollow", "Content-Security-Policy": "default-src 'none'; sandbox", "Referrer-Policy": "no-referrer" };
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
-  if (!(await isAdminAuthenticated())) return new Response("Unauthorized", { status: 401, headers });
+  if (!(await isHostAuthenticated())) return new Response("Unauthorized", { status: 401, headers });
   const { id } = await context.params;
   const params = new URL(request.url).searchParams, target = params.get("target"), format = params.get("format") ?? "png";
   if (!isDraftId(id) || (target !== "invitation" && target !== "hub") || (format !== "png" && format !== "svg")) return new Response("Invalid QR request.", { status: 400, headers });

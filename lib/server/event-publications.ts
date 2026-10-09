@@ -1,7 +1,7 @@
 import "server-only";
 import { neon } from "@neondatabase/serverless";
 import { head } from "@vercel/blob";
-import { isAdminAuthenticated } from "./admin-session";
+import { isHostAuthenticated, requireHostPrincipal } from "./host-access";
 import { getEventDraft } from "./event-drafts";
 import { getDraftArtwork, draftImageStorageToken } from "./event-draft-artwork";
 import { getDraftSettings } from "./event-draft-settings";
@@ -50,11 +50,12 @@ export async function getEventPublication(slug: string): Promise<EventPublicatio
 }
 // Separate authenticated entry point: public callers cannot opt into inactive data.
 export async function getHostEventPublication(slug: string): Promise<EventPublication | null> {
-  if (!(await isAdminAuthenticated())) throw new Error("Host access required.");
+  const principal = await requireHostPrincipal();
   if (!validSlug(slug)) return null;
   const rows = await database()`SELECT event_id AS id, slug, snapshot, revision, published_at AS "publishedAt",
     source_revisions AS "sourceRevisions", visibility, rsvps_open AS "rsvpsOpen", public_alias AS "publicAlias"
-    FROM event_publications WHERE slug = ${slug} LIMIT 1`;
+    FROM event_publications WHERE slug = ${slug} AND EXISTS
+      (SELECT 1 FROM events e WHERE e.id = event_id AND e.owner_host_id IS NOT DISTINCT FROM ${principal.ownerId}::text) LIMIT 1`;
   return rows.length ? parsePublication(rows[0], slug) : null;
 }
 export async function getPublishedEvent(slug: string) {
@@ -73,20 +74,20 @@ export async function getPublishedEvent(slug: string) {
   return { ...event, rsvpAvailability: rsvpAvailability(publication.rsvpsOpen, limits, attending) };
 }
 export async function listHostPublications() {
-  if (!(await isAdminAuthenticated())) throw new Error("Host access required.");
+  const principal = await requireHostPrincipal();
   const rows = await database()`SELECT p.event_id AS id, p.slug, p.snapshot->'details'->>'title' AS title, p.published_at AS "publishedAt",
       p.visibility, p.rsvps_open AS "rsvpsOpen", p.source_revisions AS "sourceRevisions",
       e.revision AS details, coalesce(a.revision, 0) AS artwork, s.revision AS settings
     FROM event_publications p JOIN events e ON e.id = p.event_id
     JOIN event_draft_settings s ON s.event_id = p.event_id LEFT JOIN event_draft_artwork a ON a.event_id = p.event_id
-    ORDER BY p.published_at DESC`;
+    WHERE e.owner_host_id IS NOT DISTINCT FROM ${principal.ownerId}::text ORDER BY p.published_at DESC`;
   return rows.map((row) => ({ id: String(row.id), slug: String(row.slug), title: String(row.title), publishedAt: new Date(row.publishedAt).toISOString(),
     visibility: row.visibility as EventLifecycle["visibility"], rsvpsOpen: row.rsvpsOpen as boolean,
     hasUnpublishedChanges: hasUnpublishedChanges({ details: row.details, artwork: row.artwork, settings: row.settings }, row.sourceRevisions) }));
 }
 
 export async function changeEventLifecycleRecord(id: string, revision: number, action: LifecycleAction) {
-  if (!(await isAdminAuthenticated())) throw new Error("Host access required.");
+  const principal = await requireHostPrincipal();
   if (!isDraftId(id) || !isDraftRevision(revision) || revision < 1 || !isLifecycleAction(action)) throw new Error("Please refresh the event controls.");
   // Explicit desired states, never toggles. A stale page cannot reverse a newer
   // host decision; the same revision also protects the publish review.
@@ -97,6 +98,7 @@ export async function changeEventLifecycleRecord(id: string, revision: number, a
         WHEN ${action} = 'reopen-rsvps' THEN true ELSE rsvps_open END,
       revision = revision + 1
     WHERE event_id = ${id}::uuid AND revision = ${revision}
+      AND EXISTS (SELECT 1 FROM events e WHERE e.id = event_id AND e.owner_host_id IS NOT DISTINCT FROM ${principal.ownerId}::text)
       AND ((${action} = 'restore' AND visibility = 'archived') OR
         (${action} = 'archive' AND visibility IN ('published', 'unpublished')) OR
         (${action} = 'unpublish' AND visibility = 'published') OR
@@ -107,7 +109,7 @@ export async function changeEventLifecycleRecord(id: string, revision: number, a
 }
 
 export async function isEventAliasAvailable(id: string, input: unknown) {
-  if (!(await isAdminAuthenticated())) throw new Error("Host access required.");
+  if (!(await isHostAuthenticated())) throw new Error("Host access required.");
   const parsed = validateEventAlias(input);
   if (!isDraftId(id) || !parsed.ok) throw new EventAliasError(parsed.ok ? "Please refresh the event review." : parsed.message);
   if (!(await getEventDraft(id))) throw new Error("Event unavailable.");
@@ -119,7 +121,7 @@ export async function isEventAliasAvailable(id: string, input: unknown) {
 }
 
 export async function publishEventRecord(id: string, versions: PublicationVersions, coordinates: unknown, inputAlias?: unknown) {
-  if (!(await isAdminAuthenticated())) throw new Error("Host access required.");
+  const principal = await requireHostPrincipal();
   if (!isDraftId(id) || !versions || ![versions.details, versions.artwork, versions.settings, versions.publication].every(isDraftRevision) || versions.settings < 1) throw new Error("Please refresh the review.");
   const alias = validateEventAlias(inputAlias);
   if (!alias.ok) throw new EventAliasError(alias.message);
@@ -148,6 +150,7 @@ export async function publishEventRecord(id: string, versions: PublicationVersio
     LEFT JOIN event_draft_artwork a ON a.event_id = e.id
     LEFT JOIN event_publications p ON p.event_id = e.id
     WHERE e.id = ${id}::uuid AND e.status = 'draft' AND e.revision = ${versions.details}
+      AND e.owner_host_id IS NOT DISTINCT FROM ${principal.ownerId}::text
       AND s.revision = ${versions.settings} AND coalesce(a.revision, 0) = ${versions.artwork}
       AND coalesce(p.revision, 0) = ${versions.publication}
       AND p.visibility IS DISTINCT FROM 'archived'

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { notFound, redirect } from "next/navigation";
-import { isAdminAuthenticated } from "../../lib/server/admin-session";
+import { isHostAuthenticated } from "../../lib/server/host-access";
 import { getAdminGuestEvent } from "../../lib/server/admin-event-guests";
 import { getRsvpForAdmin } from "../../lib/server/rsvps";
 import { isDraftId } from "../../lib/event-drafts";
@@ -9,7 +9,7 @@ import { AdminGuestForm } from "./admin-guest-form";
 import { ContentShell } from "./content-shell";
 
 export async function EventGuestEditorPage({ id, guestId }: { id: string; guestId?: string }) {
-  if (!(await isAdminAuthenticated())) redirect("/admin");
+  if (!(await isHostAuthenticated())) redirect("/host/sign-in");
   if (!isDraftId(id) || (guestId !== undefined && !isDraftId(guestId))) notFound();
   let resolved, rsvp;
   try {

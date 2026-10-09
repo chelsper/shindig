@@ -1,7 +1,7 @@
 import "server-only";
 
 import { neon } from "@neondatabase/serverless";
-import { OYSTER_ROAST_SCOPE, eventScopeSlug, eventFeatureEnabled, type EventScope } from "./event-scope";
+import { OYSTER_ROAST_SCOPE, requireHostEventScope, eventScopeSlug, eventFeatureEnabled, type EventScope } from "./event-scope";
 import type { PublicHostUpdate } from "../updates";
 import type { UpdateInput } from "./event-content-validation";
 
@@ -35,6 +35,7 @@ export async function listPublicHostUpdates(scope: EventScope = OYSTER_ROAST_SCO
 }
 
 export async function listHostUpdatesForAdmin(scope: EventScope = OYSTER_ROAST_SCOPE): Promise<AdminHostUpdate[]> {
+  await requireHostEventScope(scope);
   const eventSlug = eventScopeSlug(scope);
   const sql = database();
   const rows = await sql`
@@ -46,6 +47,7 @@ export async function listHostUpdatesForAdmin(scope: EventScope = OYSTER_ROAST_S
 }
 
 export async function insertHostUpdate(id: string, input: UpdateInput, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<void> {
+  await requireHostEventScope(scope);
   const eventSlug = eventScopeSlug(scope);
   const sql = database();
   await sql`
@@ -56,6 +58,7 @@ export async function insertHostUpdate(id: string, input: UpdateInput, scope: Ev
 }
 
 export async function updateHostUpdate(id: string, input: UpdateInput, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<boolean> {
+  await requireHostEventScope(scope);
   const eventSlug = eventScopeSlug(scope);
   const sql = database();
   const rows = await sql`
@@ -67,6 +70,7 @@ export async function updateHostUpdate(id: string, input: UpdateInput, scope: Ev
 }
 
 export async function removeHostUpdate(id: string, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<void> {
+  await requireHostEventScope(scope);
   const eventSlug = eventScopeSlug(scope);
   const sql = database();
   await sql`DELETE FROM event_updates WHERE event_slug = ${eventSlug} AND id = ${id}::uuid`;

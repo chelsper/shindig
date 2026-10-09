@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { OYSTER_ROAST_EVENT } from "../../../lib/oyster-roast-event";
-import { isAdminAuthenticated } from "../../../lib/server/admin-session";
+import { isHostAuthenticated } from "../../../lib/server/host-access";
 import { isContentId, validateHostAnswer } from "../../../lib/server/event-content-validation";
 import { removeQuestion, saveQuestionAnswer } from "../../../lib/server/questions";
 import type { HostContentResult } from "../updates/actions";
@@ -14,7 +14,7 @@ function refreshQuestions() {
 }
 
 export async function answerGuestQuestion(id: string, input: unknown, eventSlug?: string): Promise<HostContentResult> {
-  if (!(await isAdminAuthenticated())) return { ok: false, message: "Your host session has expired. Please sign in again." };
+  if (!(await isHostAuthenticated())) return { ok: false, message: "Your host session has expired. Please sign in again." };
   if (!isContentId(id)) return { ok: false, message: "That question could not be found." };
   const validation = validateHostAnswer(input);
   if (!validation.success) return { ok: false, message: validation.message };
@@ -30,7 +30,7 @@ export async function answerGuestQuestion(id: string, input: unknown, eventSlug?
 }
 
 export async function deleteGuestQuestion(id: string, confirmed: boolean, eventSlug?: string): Promise<HostContentResult> {
-  if (!(await isAdminAuthenticated())) return { ok: false, message: "Your host session has expired. Please sign in again." };
+  if (!(await isHostAuthenticated())) return { ok: false, message: "Your host session has expired. Please sign in again." };
   if (!isContentId(id) || confirmed !== true) return { ok: false, message: "Please confirm which question to delete." };
   try {
     await removeQuestion(id, ...await hostScopeArgs(eventSlug));

@@ -1,6 +1,6 @@
 import "server-only";
 import { neon } from "@neondatabase/serverless";
-import { OYSTER_ROAST_SCOPE, eventScopeSlug, eventFeatureEnabled, requireEventFeature, type EventScope } from "./event-scope";
+import { OYSTER_ROAST_SCOPE, requireHostEventScope, eventScopeSlug, eventFeatureEnabled, requireEventFeature, type EventScope } from "./event-scope";
 import type { AdminPoll, PollInput, PollOption, PollResults, PublicPoll } from "../polls";
 import type { GuestPollState } from "../guest-interactions";
 
@@ -66,6 +66,7 @@ export async function setPollVote(key: string, selected: string[], hash: string,
 }
 
 export async function listPollsForAdmin(scope: EventScope = OYSTER_ROAST_SCOPE): Promise<AdminPoll[]> {
+  await requireHostEventScope(scope);
   const eventSlug = eventScopeSlug(scope);
   const sql = database();
   const rows = await sql`
@@ -81,6 +82,7 @@ export async function listPollsForAdmin(scope: EventScope = OYSTER_ROAST_SCOPE):
 }
 
 export async function savePoll(key: string, input: PollInput, create: boolean, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<boolean> {
+  await requireHostEventScope(scope);
   const eventSlug = eventScopeSlug(scope);
   const sql = database();
   const rows = await sql`SELECT shindig_save_poll(${eventSlug}, ${key}::uuid,
@@ -90,6 +92,7 @@ export async function savePoll(key: string, input: PollInput, create: boolean, s
 }
 
 export async function changePollStatus(key: string, status: "OPEN" | "CLOSED" | "ARCHIVED" | "DELETE_DRAFT", scope: EventScope = OYSTER_ROAST_SCOPE): Promise<boolean> {
+  await requireHostEventScope(scope);
   const eventSlug = eventScopeSlug(scope);
   const sql = database();
   const rows = await sql`SELECT shindig_poll_status(${eventSlug}, ${key}::uuid, ${status}) AS saved`;

@@ -2,6 +2,7 @@ import "server-only";
 
 import { neon } from "@neondatabase/serverless";
 import { cache } from "react";
+import { isAdminAuthenticated } from "./admin-session";
 import { OYSTER_ROAST_EVENT } from "../oyster-roast-event";
 import {
   DEFAULT_INVITATION_SETTINGS, resolveEventConfiguration, validateInvitationSettings,
@@ -25,6 +26,7 @@ export async function getInvitationSettings(): Promise<InvitationRecord> {
 }
 
 export async function saveInvitationSettings(settings: InvitationSettings, expectedRevision: number): Promise<number | null> {
+  if (!(await isAdminAuthenticated())) throw new Error("Host access required.");
   const validation = validateInvitationSettings(settings);
   if (!validation.success || !Number.isSafeInteger(expectedRevision) || expectedRevision < 0) throw new Error("Invalid invitation settings.");
   const sql = database();

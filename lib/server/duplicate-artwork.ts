@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { get, put } from "@vercel/blob";
+import { isHostAuthenticated, requireOwnedEvent, requireOwnedCopyReservation } from "./host-access";
 import { isAdminAuthenticated } from "./admin-session";
 import { draftImageStorageToken } from "./event-draft-artwork";
 import { DRAFT_IMAGE_LIMIT, EMPTY_DRAFT_ARTWORK, isDraftImagePath, validateDraftArtwork, type DraftArtwork, type DraftImageKind } from "../event-draft-artwork";
@@ -71,8 +72,12 @@ async function loadImage(source: CopyArtworkSource, kind: DraftImageKind, token:
 // Called only after a DB reservation has bound this new ID to this source/version.
 // Each copy lives under the destination ID; it never refers to the source file.
 export async function copyEventArtwork(id: string, source: CopyArtworkSource): Promise<DraftArtwork> {
-  if (!(await isAdminAuthenticated())) throw new Error("Host access required.");
+  if (!(await isHostAuthenticated())) throw new Error("Host access required.");
   if (!isDraftId(id) || !isDuplicationSource(source.key) || source.key === id) throw new Error("Invalid artwork copy.");
+  if (source.key === OYSTER_ROAST_EVENT.slug) {
+    if (!(await isAdminAuthenticated())) throw new Error("Event unavailable.");
+  } else await requireOwnedEvent(source.key);
+  await requireOwnedCopyReservation(id, source.key);
   const artwork = structuredClone(EMPTY_DRAFT_ARTWORK); Object.assign(artwork.header, source.crop);
   if (source.design) artwork.design = structuredClone(source.design);
   const token = draftImageStorageToken();

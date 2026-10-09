@@ -32,7 +32,7 @@ describe("domain separation", () => {
     vi.mocked(getEventConfiguration).mockRejectedValue(new Error("database unavailable"));
     const html = renderToStaticMarkup(await Home());
     expect(html).toContain("Good people.");
-    expect(html).toContain('href="/admin"');
+    expect(html).toContain('href="/host/sign-in"');
     expect(html).not.toMatch(/Oyster Roast|Belmont|Submit RSVP|guestName|DATABASE_URL|ADMIN_PASSWORD|Create an event/);
     expect(await generateMetadata()).toEqual({ title: SHINDIG_SITE.title, description: SHINDIG_SITE.description, alternates: { canonical: SHINDIG_SITE.url } });
     expect(getEventConfiguration).not.toHaveBeenCalled();

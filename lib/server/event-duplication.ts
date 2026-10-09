@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { neon } from "@neondatabase/serverless";
+import { isHostAuthenticated, requireHostPrincipal } from "./host-access";
 import { isAdminAuthenticated } from "./admin-session";
 import { getEventDraft } from "./event-drafts";
 import { getDraftArtwork } from "./event-draft-artwork";
@@ -24,11 +25,12 @@ function database() {
 }
 
 export async function getDuplicationSource(key: string): Promise<DuplicationSource | null> {
-  if (!(await isAdminAuthenticated())) throw new Error("Host access required.");
+  if (!(await isHostAuthenticated())) throw new Error("Host access required.");
   if (!isDuplicationSource(key)) return null;
   key = key.toLowerCase();
   let source: Omit<DuplicationSource, "fingerprint">, versions: unknown;
   if (key === OYSTER_ROAST_EVENT.slug) {
+    if (!(await isAdminAuthenticated())) return null;
     const [invitation, header] = await Promise.all([getInvitationSettings(), getEventHubHeaderSettings(true)]);
     const event = resolveEventConfiguration(invitation.settings);
     source = {
@@ -60,15 +62,17 @@ export async function getDuplicationSource(key: string): Promise<DuplicationSour
 
 type Receipt = { source: string; fingerprint: string; title: string; eventId: string | null };
 async function receipt(input: DuplicateEventInput) {
+  const principal = await requireHostPrincipal();
   const rows = await database()`SELECT source_key AS source, source_fingerprint AS fingerprint, requested_title AS title,
-    completed_event_id AS "eventId" FROM event_duplication_requests WHERE id = ${input.requestId}::uuid`;
+    completed_event_id AS "eventId" FROM event_duplication_requests WHERE id = ${input.requestId}::uuid
+      AND owner_host_id IS NOT DISTINCT FROM ${principal.ownerId}::text`;
   const saved = rows[0] as Receipt | undefined;
   if (saved && (saved.source !== input.source || saved.fingerprint !== input.fingerprint || saved.title !== input.title)) throw new EventDuplicationError("This copy request already has different details. Reopen Duplicate Event to start a separate copy.");
   return saved;
 }
 
 export async function duplicateEventRecord(value: unknown): Promise<string> {
-  if (!(await isAdminAuthenticated())) throw new Error("Host access required.");
+  const principal = await requireHostPrincipal();
   const input = validateDuplicateEventInput(value);
   if (!input) throw new EventDuplicationError("Please reopen Duplicate Event and confirm a name for the new draft.");
   const previous = await receipt(input);
@@ -78,8 +82,8 @@ export async function duplicateEventRecord(value: unknown): Promise<string> {
   if (source.fingerprint !== input.fingerprint) throw new EventDuplicationError("The source setup changed. Reopen Duplicate Event to review the latest saved version.");
   const sql = database();
   // Bind ID + source + version + requested name before touching private storage.
-  await sql`INSERT INTO event_duplication_requests (id, source_key, source_fingerprint, requested_title)
-    VALUES (${input.requestId}::uuid, ${input.source}, ${input.fingerprint}, ${input.title}) ON CONFLICT (id) DO NOTHING`;
+  await sql`INSERT INTO event_duplication_requests (id, source_key, source_fingerprint, requested_title, owner_host_id)
+    VALUES (${input.requestId}::uuid, ${input.source}, ${input.fingerprint}, ${input.title}, ${principal.ownerId}::text) ON CONFLICT (id) DO NOTHING`;
   const reserved = await receipt(input);
   if (!reserved) throw new Error("Copy reservation unavailable.");
   if (reserved.eventId) return reserved.eventId;
@@ -91,10 +95,11 @@ export async function duplicateEventRecord(value: unknown): Promise<string> {
   // Row locking serializes repeated clicks; no publication or guest table is read/written.
   const rows = await sql`WITH request AS (
       SELECT id FROM event_duplication_requests WHERE id = ${input.requestId}::uuid AND completed_event_id IS NULL
+        AND owner_host_id IS NOT DISTINCT FROM ${principal.ownerId}::text
         AND source_key = ${input.source} AND source_fingerprint = ${input.fingerprint} AND requested_title = ${input.title} FOR UPDATE
     ), created AS (
-      INSERT INTO events (id, status, title, description, host_name, venue, address, city_label, time_zone, starts_at, ends_at)
-      SELECT id, 'draft', ${f.title}, ${f.description}, ${f.hostName}, ${f.venue}, ${f.address}, ${f.cityLabel}, ${f.timeZone}, NULL, NULL FROM request
+      INSERT INTO events (id, status, title, description, host_name, venue, address, city_label, time_zone, starts_at, ends_at, owner_host_id)
+      SELECT id, 'draft', ${f.title}, ${f.description}, ${f.hostName}, ${f.venue}, ${f.address}, ${f.cityLabel}, ${f.timeZone}, NULL, NULL, ${principal.ownerId}::text FROM request
       ON CONFLICT (id) DO NOTHING RETURNING id
     ), artwork AS (
       INSERT INTO event_draft_artwork (event_id, settings) SELECT id, ${JSON.stringify(artwork)}::jsonb FROM created RETURNING event_id

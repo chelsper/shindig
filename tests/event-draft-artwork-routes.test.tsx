@@ -1,3 +1,4 @@
+vi.mock("server-only", () => ({}));
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), draft: vi.fn(), getSettings: vi.fn(), save: vi.fn(), token: vi.fn(), get: vi.fn(), put: vi.fn(), revalidate: vi.fn(), redirect: vi.fn(), notFound: vi.fn() }));

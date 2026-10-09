@@ -1,6 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { isAdminAuthenticated } from "../../../lib/server/admin-session";
+import { isHostAuthenticated } from "../../../lib/server/host-access";
 import { changePollStatus, savePoll } from "../../../lib/server/polls";
 import { validatePoll } from "../../../lib/server/poll-validation";
 import { isPublicKey, type InteractionResult } from "../../../lib/guest-interactions";
@@ -11,7 +11,7 @@ const expired = { ok: false as const, message: "Your host session has expired. P
 function refresh() { revalidatePath("/admin/polls"); revalidatePath(OYSTER_ROAST_EVENT.eventHub.path); }
 
 export async function saveHostPoll(key: unknown, input: unknown, create: unknown, eventSlug?: string): Promise<InteractionResult<null>> {
-  if (!(await isAdminAuthenticated())) return expired;
+  if (!(await isHostAuthenticated())) return expired;
   if (!isPublicKey(key) || typeof create !== "boolean") return { ok: false, message: "Please refresh and try again." };
   const validation = validatePoll(input);
   if (!validation.ok) return validation;
@@ -24,7 +24,7 @@ export async function saveHostPoll(key: unknown, input: unknown, create: unknown
 }
 
 export async function setHostPollStatus(key: unknown, status: unknown, confirmed = false, eventSlug?: string): Promise<InteractionResult<null>> {
-  if (!(await isAdminAuthenticated())) return expired;
+  if (!(await isHostAuthenticated())) return expired;
   if (!isPublicKey(key) || typeof status !== "string" || !["OPEN", "CLOSED", "ARCHIVED", "DELETE_DRAFT"].includes(status)) return { ok: false, message: "Please choose a valid poll action." };
   if (status === "DELETE_DRAFT" && confirmed !== true) return { ok: false, message: "Please confirm you want to delete this draft." };
   try {

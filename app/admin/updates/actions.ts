@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { OYSTER_ROAST_EVENT } from "../../../lib/oyster-roast-event";
-import { isAdminAuthenticated } from "../../../lib/server/admin-session";
+import { isHostAuthenticated } from "../../../lib/server/host-access";
 import { isContentId, validateHostUpdate } from "../../../lib/server/event-content-validation";
 import { insertHostUpdate, removeHostUpdate, updateHostUpdate } from "../../../lib/server/updates";
 import { hostScopeArgs, refreshHostEvent } from "../../../lib/server/host-event";
@@ -16,7 +16,7 @@ function refreshUpdates() {
 }
 
 export async function createHostUpdate(id: string, input: unknown, eventSlug?: string): Promise<HostContentResult> {
-  if (!(await isAdminAuthenticated())) return expired;
+  if (!(await isHostAuthenticated())) return expired;
   if (!isContentId(id)) return { ok: false, message: "Please refresh and try again." };
   const validation = validateHostUpdate(input);
   if (!validation.success) return { ok: false, message: validation.message };
@@ -32,7 +32,7 @@ export async function createHostUpdate(id: string, input: unknown, eventSlug?: s
 }
 
 export async function editHostUpdate(id: string, input: unknown, eventSlug?: string): Promise<HostContentResult> {
-  if (!(await isAdminAuthenticated())) return expired;
+  if (!(await isHostAuthenticated())) return expired;
   if (!isContentId(id)) return { ok: false, message: "That update could not be found." };
   const validation = validateHostUpdate(input);
   if (!validation.success) return { ok: false, message: validation.message };
@@ -48,7 +48,7 @@ export async function editHostUpdate(id: string, input: unknown, eventSlug?: str
 }
 
 export async function deleteHostUpdate(id: string, confirmed: boolean, eventSlug?: string): Promise<HostContentResult> {
-  if (!(await isAdminAuthenticated())) return expired;
+  if (!(await isHostAuthenticated())) return expired;
   if (!isContentId(id) || confirmed !== true) return { ok: false, message: "Please confirm which update to delete." };
   try {
     await removeHostUpdate(id, ...await hostScopeArgs(eventSlug));

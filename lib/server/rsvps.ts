@@ -2,7 +2,7 @@ import "server-only";
 
 import { neon } from "@neondatabase/serverless";
 
-import { OYSTER_ROAST_SCOPE, eventScopeSlug, eventFeatureEnabled, type EventScope } from "./event-scope";
+import { OYSTER_ROAST_SCOPE, requireHostEventScope, eventScopeSlug, eventFeatureEnabled, type EventScope } from "./event-scope";
 import type {
   ValidatedRsvp,
   ValidatedRsvpUpdate,
@@ -239,6 +239,7 @@ export async function updateRsvpForGuest(editTokenHash: string,
 }
 
 export async function getRsvpSummary(scope: EventScope = OYSTER_ROAST_SCOPE): Promise<RsvpSummary> {
+  await requireHostEventScope(scope);
   const eventSlug = eventScopeSlug(scope);
   const sql = neon(getDatabaseUrl());
   const rows = await sql`
@@ -261,6 +262,7 @@ export async function getRsvpSummary(scope: EventScope = OYSTER_ROAST_SCOPE): Pr
 }
 
 export async function listRsvps(filter: RsvpFilter = "all", scope: EventScope = OYSTER_ROAST_SCOPE, search = ""): Promise<AdminRsvp[]> {
+  await requireHostEventScope(scope);
   const eventSlug = eventScopeSlug(scope);
   const sql = neon(getDatabaseUrl());
   const attendanceFilter =
@@ -287,6 +289,7 @@ export async function listRsvps(filter: RsvpFilter = "all", scope: EventScope = 
 }
 
 export async function getRsvpForAdmin(id: string, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<AdminRsvp | null> {
+  await requireHostEventScope(scope);
   const eventSlug = eventScopeSlug(scope);
   const sql = neon(getDatabaseUrl());
   const rows = await sql`
@@ -312,6 +315,7 @@ export async function getRsvpForAdmin(id: string, scope: EventScope = OYSTER_ROA
 
 export async function createRsvpForAdmin(id: string,
   rsvp: ValidatedRsvpUpdate, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<void> {
+  await requireHostEventScope(scope);
   const eventSlug = eventScopeSlug(scope);
   rsvp = fieldsForEvent(rsvp, scope, true);
   if (eventSlug !== OYSTER_ROAST_SCOPE.slug) {
@@ -357,6 +361,7 @@ export async function createRsvpForAdmin(id: string,
 
 export async function updateRsvpForAdmin(id: string,
   rsvp: ValidatedRsvpUpdate, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<boolean> {
+  await requireHostEventScope(scope);
   const eventSlug = eventScopeSlug(scope);
   rsvp = fieldsForEvent(rsvp, scope, true);
   if (eventSlug !== OYSTER_ROAST_SCOPE.slug) return (await writeEventRsvp(scope, "host-update", id, null, rsvp)).status === "updated";
@@ -379,6 +384,7 @@ export async function updateRsvpForAdmin(id: string,
 }
 
 export async function deleteRsvpForAdmin(id: string, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<boolean> {
+  await requireHostEventScope(scope);
   const eventSlug = eventScopeSlug(scope);
   if (eventSlug !== OYSTER_ROAST_SCOPE.slug) return (await writeEventRsvp(scope, "host-delete", id, null)).status === "deleted";
   const sql = neon(getDatabaseUrl());

@@ -9,7 +9,7 @@ export function ShindigHome() {
       <div className="relative mx-auto max-w-6xl px-5 sm:px-8 lg:px-10">
         <header className="flex items-center justify-between gap-4 border-b border-[#202523]/15 py-6 sm:py-8">
           <Link href="/" aria-label="Shindig home" className={`font-serif text-3xl tracking-[-0.05em] sm:text-4xl ${focus}`}>Shindig<span className="text-[#355f9e]">.</span></Link>
-          <Link href="/admin" className={`inline-flex min-h-11 items-center rounded-full border border-[#202523]/20 bg-white/30 px-4 text-[0.65rem] font-bold uppercase tracking-[0.14em] transition hover:border-[#355f9e] hover:text-[#355f9e] sm:px-5 ${focus}`}>Host dashboard <span aria-hidden="true" className="ml-2">↗</span></Link>
+          <Link href="/host/sign-in" className={`inline-flex min-h-11 items-center rounded-full border border-[#202523]/20 bg-white/30 px-4 text-[0.65rem] font-bold uppercase tracking-[0.14em] transition hover:border-[#355f9e] hover:text-[#355f9e] sm:px-5 ${focus}`}>Host dashboard <span aria-hidden="true" className="ml-2">↗</span></Link>
         </header>
 
         <section aria-labelledby="home-heading" className="grid items-center gap-6 pb-12 pt-12 sm:gap-10 sm:pb-20 sm:pt-20 lg:grid-cols-[1.15fr_1fr] lg:gap-12 lg:py-24">
@@ -54,7 +54,7 @@ export function ShindigHome() {
             <h2 id="guest-heading" className="font-serif text-2xl tracking-[-0.02em]">Here for a Shindig?</h2>
             <p className="mt-2 max-w-md text-sm leading-6 text-[#202523]/65">Your host’s invitation link takes you straight to your event. Keep it handy for the RSVP and everything after.</p>
           </div>
-          <p className="max-w-xs text-sm leading-6 text-[#202523]/60">Already hosting? <Link href="/admin" className={`inline-flex min-h-11 items-center font-semibold text-[#355f9e] underline decoration-[#355f9e]/30 underline-offset-4 ${focus}`}>Open your dashboard →</Link></p>
+          <p className="max-w-xs text-sm leading-6 text-[#202523]/60">Already hosting? <Link href="/host/sign-in" className={`inline-flex min-h-11 items-center font-semibold text-[#355f9e] underline decoration-[#355f9e]/30 underline-offset-4 ${focus}`}>Open your dashboard →</Link></p>
         </section>
 
         <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-[#202523]/15 py-6 text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-[#202523]/50">

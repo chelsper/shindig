@@ -1,3 +1,4 @@
+vi.mock("server-only", () => ({}));
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), draft: vi.fn(), artwork: vi.fn(), get: vi.fn(), save: vi.fn(), publication: vi.fn(), revalidate: vi.fn(), redirect: vi.fn(), notFound: vi.fn() }));
@@ -38,7 +39,7 @@ describe("private draft settings page and server action", () => {
   it("checks the session before reading, rendering, or saving any settings", async () => {
     mocks.auth.mockResolvedValue(false);
     expect(await saveDraftSettings(input)).toMatchObject({ ok: false, message: expect.stringContaining("session") });
-    await expect(SettingsPage(context)).rejects.toThrow("redirect"); expect(mocks.redirect).toHaveBeenCalledWith("/admin");
+    await expect(SettingsPage(context)).rejects.toThrow("redirect"); expect(mocks.redirect).toHaveBeenCalledWith("/host/sign-in");
     for (const fn of [mocks.get, mocks.draft, mocks.artwork, mocks.save, mocks.publication]) expect(fn).not.toHaveBeenCalled();
   });
   it("saves validated choices and refreshes the private setup flow and event list", async () => {

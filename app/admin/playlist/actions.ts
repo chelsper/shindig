@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { OYSTER_ROAST_EVENT } from "../../../lib/oyster-roast-event";
-import { isAdminAuthenticated } from "../../../lib/server/admin-session";
+import { isHostAuthenticated } from "../../../lib/server/host-access";
 import { deletePlaylistSuggestion } from "../../../lib/server/playlist";
 import { hostScopeArgs, refreshHostEvent } from "../../../lib/server/host-event";
 
@@ -15,7 +15,7 @@ export async function deleteAdminPlaylistSuggestion(
   formData: FormData,
   eventSlug?: string,
 ): Promise<DeletePlaylistState> {
-  if (!(await isAdminAuthenticated())) {
+  if (!(await isHostAuthenticated())) {
     return { error: "Your host session has expired. Sign in again before deleting." };
   }
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {

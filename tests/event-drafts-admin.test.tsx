@@ -1,11 +1,13 @@
+vi.mock("server-only", () => ({}));
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 vi.mock("../lib/server/event-dashboard", () => ({ listHostEventCards: mocks.cards }));
 vi.mock("../lib/server/invitation-settings", () => ({ getEventConfiguration: mocks.legacy }));
-const mocks = vi.hoisted(() => ({ auth: vi.fn(), save: vi.fn(), get: vi.fn(), artwork: vi.fn(), settings: vi.fn(), list: vi.fn(), cards: vi.fn(), legacy: vi.fn(), revalidate: vi.fn(), redirect: vi.fn(), notFound: vi.fn(), replace: vi.fn() }));
+const mocks = vi.hoisted(() => ({ auth: vi.fn(), account: vi.fn(), save: vi.fn(), get: vi.fn(), artwork: vi.fn(), settings: vi.fn(), list: vi.fn(), cards: vi.fn(), legacy: vi.fn(), revalidate: vi.fn(), redirect: vi.fn(), notFound: vi.fn(), replace: vi.fn() }));
 vi.mock("../lib/server/event-draft-artwork", () => ({ getDraftArtwork: mocks.artwork }));
 vi.mock("../lib/server/event-draft-settings", () => ({ getDraftSettings: mocks.settings }));
 vi.mock("../lib/server/admin-session", () => ({ isAdminAuthenticated: mocks.auth }));
+vi.mock("../lib/server/host-auth", () => ({ getHostAccountSession: mocks.account }));
 vi.mock("../lib/server/event-drafts", () => ({ saveEventDraftRecord: mocks.save, getEventDraft: mocks.get, listEventDrafts: mocks.list }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect, notFound: mocks.notFound, useRouter: () => ({ replace: mocks.replace }) }));
@@ -54,7 +56,7 @@ describe("private event draft actions and pages", () => {
     mocks.auth.mockResolvedValue(false);
     expect(await saveEventDraft({ id, revision: 0, fields })).toMatchObject({ ok: false, message: expect.stringContaining("session") });
     for (const page of [() => EventsPage({}), () => EventsPage({ searchParams: Promise.resolve({ view: "archived" }) }), () => NewPage({}), () => EditPage(props)]) await expect(page()).rejects.toThrow("redirect");
-    expect(mocks.redirect).toHaveBeenCalledWith("/admin");
+    expect(mocks.redirect).toHaveBeenCalledWith("/host/sign-in");
     expect(mocks.get).not.toHaveBeenCalled(); expect(mocks.list).not.toHaveBeenCalled(); expect(mocks.save).not.toHaveBeenCalled();
     expect(mocks.cards).not.toHaveBeenCalled(); expect(mocks.legacy).not.toHaveBeenCalled();
     expect(mocks.artwork).not.toHaveBeenCalled(); expect(mocks.settings).not.toHaveBeenCalled();
@@ -139,6 +141,16 @@ describe("private event draft actions and pages", () => {
     const html = renderToStaticMarkup(await EventsPage({}));
     expect(html).toContain("Oyster Roast details couldn’t load"); expect(html).toContain("A saved draft");
     expect(html).not.toContain("private legacy detail"); expect(html).not.toContain(OYSTER_ROAST_EVENT.dateLabel);
+  });
+  it("keeps individual host cards separate from legacy tools and preserves sign-out", async () => {
+    mocks.auth.mockResolvedValue(false);
+    mocks.account.mockResolvedValue({ id: "host-one", name: "One", email: "one@example.test" });
+    mocks.cards.mockResolvedValue([card("Private party")]);
+    const html = renderToStaticMarkup(await EventsPage({}));
+    expect(html).toContain("one@example.test"); expect(html).toContain("Sign out"); expect(html).toContain("Private party");
+    expect(html).not.toContain("Manage Oyster Roast"); expect(mocks.legacy).not.toHaveBeenCalled();
+    mocks.cards.mockResolvedValue([]);
+    expect(renderToStaticMarkup(await EventsPage({}))).toContain("Room for your next good gathering");
   });
   it("starts a blank draft with a unique creation key without database writes", async () => {
     const first = await NewPage({}), second = await NewPage({});

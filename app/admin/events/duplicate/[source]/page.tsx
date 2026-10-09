@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { notFound, redirect } from "next/navigation";
 import { EventDuplicateForm } from "../../../../../components/admin/event-duplicate-form";
 import { ContentShell } from "../../../../../components/admin/content-shell";
-import { isAdminAuthenticated } from "../../../../../lib/server/admin-session";
+import { isHostAuthenticated } from "../../../../../lib/server/host-access";
 import { getDuplicationSource } from "../../../../../lib/server/event-duplication";
 import { isDuplicationSource } from "../../../../../lib/event-duplication";
 
@@ -12,7 +12,7 @@ export const maxDuration = 120;
 export const metadata = { title: "Duplicate Event | Shindig", robots: { index: false, follow: false }, referrer: "no-referrer" as const };
 
 export default async function DuplicateEventPage({ params }: { params: Promise<{ source: string }> }) {
-  if (!(await isAdminAuthenticated())) redirect("/admin");
+  if (!(await isHostAuthenticated())) redirect("/host/sign-in");
   const { source } = await params;
   if (!isDuplicationSource(source)) notFound();
   let data;

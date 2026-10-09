@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { ContentShell } from "../../../../../components/admin/content-shell";
 import { EventDraftFullPreview } from "../../../../../components/admin/event-draft-full-preview";
 import { isDraftId } from "../../../../../lib/event-drafts";
-import { isAdminAuthenticated } from "../../../../../lib/server/admin-session";
+import { isHostAuthenticated } from "../../../../../lib/server/host-access";
 import { getEventDraft } from "../../../../../lib/server/event-drafts";
 import { getDraftArtwork } from "../../../../../lib/server/event-draft-artwork";
 import { getDraftSettings } from "../../../../../lib/server/event-draft-settings";
@@ -17,7 +17,7 @@ export default async function DraftPreviewPage({ params, searchParams }: {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ view?: string }>;
 }) {
-  if (!(await isAdminAuthenticated())) redirect("/admin");
+  if (!(await isHostAuthenticated())) redirect("/host/sign-in");
   const { id } = await params;
   if (!isDraftId(id)) notFound();
   const view = (await searchParams).view === "hub" ? "hub" : "invitation";

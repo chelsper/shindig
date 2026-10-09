@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { get, put } from "@vercel/blob";
-import { isAdminAuthenticated } from "../../../../../../lib/server/admin-session";
+import { isHostAuthenticated } from "../../../../../../lib/server/host-access";
 import { getEventDraft } from "../../../../../../lib/server/event-drafts";
 import { draftImageStorageToken } from "../../../../../../lib/server/event-draft-artwork";
 import { DRAFT_IMAGE_LIMIT, DRAFT_IMAGE_TYPES, isDraftImageKind, isDraftImagePath } from "../../../../../../lib/event-draft-artwork";
@@ -24,7 +24,7 @@ function imageExtension(bytes: Uint8Array, type: string): string | null {
 }
 
 export async function POST(request: Request, context: Context) {
-  if (!(await isAdminAuthenticated())) return error("Host access required.", 401);
+  if (!(await isHostAuthenticated())) return error("Host access required.", 401);
   if (request.headers.get("origin") !== new URL(request.url).origin) return error("Please upload from the draft editor.", 403);
   const { id } = await context.params;
   if (!isDraftId(id)) return error("Draft not found.", 404);
@@ -59,7 +59,7 @@ export async function POST(request: Request, context: Context) {
 }
 
 export async function GET(request: Request, context: Context) {
-  if (!(await isAdminAuthenticated())) return error("Host access required.", 401);
+  if (!(await isHostAuthenticated())) return error("Host access required.", 401);
   const { id } = await context.params;
   const path = new URL(request.url).searchParams.get("path");
   if (!isDraftImagePath(id, path)) return error("Image not found.", 404);

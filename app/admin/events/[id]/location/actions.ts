@@ -1,6 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { isAdminAuthenticated } from "../../../../../lib/server/admin-session";
+import { isHostAuthenticated as isAdminAuthenticated } from "../../../../../lib/server/host-access";
 import { findDraftAddress, confirmDraftLocation } from "../../../../../lib/server/event-location";
 import { LocationError, LocationConflictError } from "../../../../../lib/server/address-search";
 import type { AddressMatch, ConfirmedEventLocation } from "../../../../../lib/event-location";

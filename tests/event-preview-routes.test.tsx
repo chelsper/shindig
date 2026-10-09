@@ -37,7 +37,7 @@ describe("guarded future event routes", () => {
 describe("full-page host preview", () => {
   it("authenticates before private reads and avoids indexable/cached static content", async () => {
     mocks.auth.mockResolvedValue(false); await expect(Preview(context())).rejects.toThrow("redirect");
-    expect(mocks.redirect).toHaveBeenCalledWith("/admin");
+    expect(mocks.redirect).toHaveBeenCalledWith("/host/sign-in");
     for (const fn of [mocks.draft, mocks.settings, mocks.artwork]) expect(fn).not.toHaveBeenCalled();
     expect(metadata.robots).toEqual({ index: false, follow: false }); expect(metadata.referrer).toBe("no-referrer"); expect(dynamic).toBe("force-dynamic");
   });

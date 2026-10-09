@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getHostPrincipal } from "../../lib/server/host-access";
 
 import { AdminDashboard } from "../../components/admin/admin-dashboard";
 import { AdminLoginForm } from "../../components/admin/admin-login-form";
@@ -54,12 +56,15 @@ function LoginScreen({ configured }: { configured: boolean }) {
             Host access isn’t configured. Add <code className="font-semibold">ADMIN_PASSWORD</code> to the server environment first.
           </p>
         )}
+        <Link href="/host/sign-in" className="mt-5 flex min-h-11 items-center justify-center text-sm font-semibold text-[#355f9e] underline underline-offset-4">Sign in with your host account →</Link>
       </section>
     </main>
   );
 }
 
 export default async function AdminPage({ searchParams }: AdminPageProps) {
+  const principal = await getHostPrincipal();
+  if (principal?.ownerId) redirect("/admin/events");
   const configured = isAdminConfigured();
 
   if (!configured || !(await isAdminAuthenticated())) {

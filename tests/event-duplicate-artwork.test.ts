@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), token: vi.fn(), get: vi.fn(), put: vi.fn(), fetch: vi.fn(), read: vi.fn() }));
 vi.mock("../lib/server/admin-session", () => ({ isAdminAuthenticated: mocks.auth }));
+vi.mock("../lib/server/host-access", () => ({ isHostAuthenticated: mocks.auth, requireOwnedEvent: async () => {}, requireOwnedCopyReservation: async () => {} }));
 vi.mock("../lib/server/event-draft-artwork", () => ({ draftImageStorageToken: mocks.token }));
 vi.mock("@vercel/blob", () => ({ get: mocks.get, put: mocks.put }));
 vi.mock("node:fs/promises", () => ({ readFile: mocks.read }));

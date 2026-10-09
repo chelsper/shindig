@@ -1,12 +1,12 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { isAdminAuthenticated } from "../../../../../lib/server/admin-session";
+import { isHostAuthenticated } from "../../../../../lib/server/host-access";
 import { saveDraftSettingsRecord } from "../../../../../lib/server/event-draft-settings";
 import { isDraftId, isDraftRevision } from "../../../../../lib/event-drafts";
 import { validateDraftSettings } from "../../../../../lib/event-draft-settings";
 
 export async function saveDraftSettings(input: unknown): Promise<{ ok: true; revision: number } | { ok: false; message: string; conflict?: boolean }> {
-  if (!(await isAdminAuthenticated())) return { ok: false, message: "Your host session has expired. Sign in again before saving." };
+  if (!(await isHostAuthenticated())) return { ok: false, message: "Your host session has expired. Sign in again before saving." };
   if (!input || typeof input !== "object" || Array.isArray(input)) return { ok: false, message: "Please check the RSVP and Event Hub settings." };
   const row = input as Record<string, unknown>;
   if (!isDraftId(row.id) || !isDraftRevision(row.revision)) return { ok: false, message: "Please reopen the settings editor." };

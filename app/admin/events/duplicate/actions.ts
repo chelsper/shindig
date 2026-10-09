@@ -1,11 +1,11 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { isAdminAuthenticated } from "../../../../lib/server/admin-session";
+import { isHostAuthenticated } from "../../../../lib/server/host-access";
 import { duplicateEventRecord } from "../../../../lib/server/event-duplication";
 import { EventDuplicationError, validateDuplicateEventInput } from "../../../../lib/event-duplication";
 
 export async function duplicateEvent(input: unknown): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
-  if (!(await isAdminAuthenticated())) return { ok: false, message: "Your host session has expired. Sign in again before copying." };
+  if (!(await isHostAuthenticated())) return { ok: false, message: "Your host session has expired. Sign in again before copying." };
   const parsed = validateDuplicateEventInput(input);
   if (!parsed) return { ok: false, message: "Please check the new event name and confirm that you want a private copy." };
   try {

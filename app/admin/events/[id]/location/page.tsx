@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ContentShell } from "../../../../../components/admin/content-shell";
 import { EventLocationEditor } from "../../../../../components/admin/event-location-editor";
-import { isAdminAuthenticated } from "../../../../../lib/server/admin-session";
+import { isHostAuthenticated as isAdminAuthenticated } from "../../../../../lib/server/host-access";
 import { getEventDraft } from "../../../../../lib/server/event-drafts";
 import { isDraftId } from "../../../../../lib/event-drafts";
 export const dynamic = "force-dynamic";

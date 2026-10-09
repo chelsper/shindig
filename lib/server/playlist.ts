@@ -3,7 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { neon } from "@neondatabase/serverless";
 
-import { OYSTER_ROAST_SCOPE, eventScopeSlug, eventFeatureEnabled, requireEventFeature, type EventScope } from "./event-scope";
+import { OYSTER_ROAST_SCOPE, requireHostEventScope, eventScopeSlug, eventFeatureEnabled, requireEventFeature, type EventScope } from "./event-scope";
 import type { CatalogSuggestion, PublicPlaylistSuggestion } from "../playlist";
 import { musicAttribution } from "./music";
 
@@ -71,6 +71,7 @@ export async function createPlaylistSuggestion(suggestion: CatalogSuggestion, sc
 }
 
 export async function listPlaylistSuggestionsForAdmin(scope: EventScope = OYSTER_ROAST_SCOPE): Promise<AdminPlaylistSuggestion[]> {
+  await requireHostEventScope(scope);
   const eventSlug = eventScopeSlug(scope);
   const sql = database();
   const rows = await sql`
@@ -90,6 +91,7 @@ export async function listPlaylistSuggestionsForAdmin(scope: EventScope = OYSTER
 }
 
 export async function deletePlaylistSuggestion(id: string, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<boolean> {
+  await requireHostEventScope(scope);
   const eventSlug = eventScopeSlug(scope);
   const sql = database();
   const rows = await sql`

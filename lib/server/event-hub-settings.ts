@@ -1,6 +1,7 @@
 import "server-only";
 
 import { neon } from "@neondatabase/serverless";
+import { isAdminAuthenticated } from "./admin-session";
 
 import {
   DEFAULT_EVENT_HUB_HEADER,
@@ -42,6 +43,7 @@ export async function getEventHubHeaderSettings(strict = false): Promise<EventHu
 export async function saveEventHubHeaderSettings(
   settings: EventHubHeaderSettings,
 ): Promise<void> {
+  if (!(await isAdminAuthenticated())) throw new Error("Host access required.");
   const sql = neon(getDatabaseUrl());
   await sql`
     INSERT INTO event_hub_settings (

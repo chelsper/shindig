@@ -210,7 +210,7 @@ still requires a separate explicit approval; no invitations are sent.
 1. Before deploying this version, apply
    [`021_confirmed_event_location.sql`](db/migrations/021_confirmed_event_location.sql)
    to the intended Neon database after migrations **001–019**. It is independent
-   of the unfinished host-accounts migration **020**; do not apply 020 just for
+   of the host-accounts migration **020**; 020 is not required just for
    location setup.
 2. Migration 021 adds the nullable confirmation, validation constraint and
    address-invalidation trigger. On its first application only, it preserves
@@ -418,7 +418,125 @@ RSVP fields and guest-module navigation. A browser-extension-added HTML attribut
 produced a development hydration warning; no application hydration mismatch was
 identified. Temporary visual QA routes were removed before production builds.
 
-## RSVP deadlines & event capacity (Step 10 — current)
+## Host accounts & event ownership (Step 11 — invite-only pilot)
+
+Hosts can sign in at `/host/sign-in` with Google, then create and manage **only
+their own events** in `/admin/events`. Guests never sign in. This is an invite-only
+pilot, not public registration or a paid launch. No payments, passwords to recover,
+email delivery, co-hosts, account deletion or ownership-transfer interface is added.
+
+- Better Auth manages the Google authorization-code/PKCE/state flow and server-side
+  sessions in Neon. Cookies are host-only, HttpOnly, SameSite=Lax, Secure on HTTPS,
+  and expire after 12 hours. Sessions are checked against the database, not a cached
+  client identity. Logout revokes the session and clears the browser's private
+  navigation cache. Origin checks, fixed return URLs, bounded request bodies and
+  database-backed login throttling protect the narrowly exposed auth endpoints.
+- Only verified, explicitly allowlisted Google email addresses can create/use an
+  account. `HOST_ALLOWED_EMAILS` is comma-separated, case-insensitive, exact matching;
+  empty means nobody, and `*` is not supported. Removing an address and redeploying
+  blocks its existing sessions at the Shindig authorization layer as well as new
+  sign-ins. Add an address to invite someone; there is no invitation email service.
+- Google is used for identity only (`openid email profile`). Access/refresh/ID tokens
+  are discarded after sign-in. No mail, contacts, calendar or offline access.
+- Each event and duplication receipt is bound to the server session's host ID on
+  creation. Owner IDs cannot be supplied or changed by the browser. Database triggers
+  prevent ownership reassignment. All private DAL reads/writes, publication,
+  moderation, artwork, duplication, CSV and QR routes enforce ownership. Public
+  event projections remain minimal; private host/email/ownership data is not exposed.
+- **Jasper Shucks and existing drafts stay in their original workspace.** NULL
+  ownership means the legacy administrator, not an unclaimed event. Keep your
+  existing `ADMIN_PASSWORD`. The old password does not grant
+  access to customer-owned events; Google accounts cannot claim or moderate Jasper.
+  The sign-in page includes **Existing site administrator** for `/admin`.
+  Choosing Google sign-in clears that browser's legacy admin cookie.
+
+### Enable host accounts in Neon, Google and Vercel
+
+1. In the intended Neon database, after migrations 001–019, run
+   [`020_host_accounts_ownership.sql`](db/migrations/020_host_accounts_ownership.sql).
+   It creates five `host_*` auth tables and nullable owner foreign keys/indexes on
+   `events` and `event_duplication_requests`. It is reapplicable and does not seed
+   accounts, claim existing events, publish anything or alter guest data. Test it
+   in a disposable database before applying it elsewhere. **Applied to production
+   on October 9, 2026.** All five auth tables, both ownership columns and both
+   immutable-owner triggers were verified. Existing event, publication and RSVP
+   digests were unchanged; 23 RSVPs and four song suggestions were preserved.
+2. In [Google Cloud Console](https://console.cloud.google.com/), select/create the
+   Shindig project. In **Google Auth Platform**, configure Branding (Shindig, support
+   and developer contact), Audience (**External**), and the basic identity scopes
+   only. Keep the pilot in Testing and add your pilot Google accounts under Test
+   users. Complete any domain/branding requirements shown by Google using real
+   information. Shindig's email allowlist remains the access gate regardless of
+   Google's publishing status.
+3. Under **Clients**, create an OAuth client of type **Web application**. Add this
+   exact authorized redirect URI:
+   `https://www.haveashindig.com/api/auth/callback/google`.
+   This server-redirect flow does not require a browser JavaScript client or Google
+   API keys. Copy the client ID and client secret directly into Vercel; do not put
+   them in chat, source, screenshots or Git. See
+   [Google's setup instructions](https://developers.google.com/identity/openid-connect/openid-connect)
+   and [Better Auth's Google integration](https://better-auth.com/docs/authentication/google).
+4. In **Vercel → Shindig → Settings → Environment Variables**, set these for
+   **Production**, server-only (never `NEXT_PUBLIC_`):
+
+   | Variable | Value |
+   | --- | --- |
+   | `BETTER_AUTH_URL` | `https://www.haveashindig.com` (no path) |
+   | `BETTER_AUTH_SECRET` | A new random secret, at least 32 characters; generate locally with `openssl rand -base64 32` |
+   | `GOOGLE_CLIENT_ID` | The Web application client ID |
+   | `GOOGLE_CLIENT_SECRET` | Its client secret |
+   | `HOST_ALLOWED_EMAILS` | Your approved full Google email addresses, comma-separated |
+   | `DATABASE_URL` | Existing server-only Neon connection string, for the migrated database |
+
+   Keep existing admin, Blob, music and weather settings unchanged. Host accounts
+   use a small `pg` pool (maximum three connections per instance); the existing
+   event DAL continues using Neon HTTP. Use the normal Neon pooled connection URL
+   with its required TLS parameters. No new database or external auth service is needed.
+5. Deploy this version only after migration 020 succeeds. Sign in at
+   `https://www.haveashindig.com/host/sign-in`. Verify with two allowed Google accounts:
+   each sees only its own draft, and a copied URL to the other account's editor,
+   CSV or private image is denied. Verify logout and an unapproved account. Finally
+   verify the existing `/admin` password still opens Jasper's tools. Real Google
+   login requires your credentials and has not yet been verified in production.
+
+For local development, use separate Google credentials and a disposable/migrated
+development database. Set `BETTER_AUTH_URL=http://localhost:3003` and register
+`http://localhost:3003/api/auth/callback/google` exactly. Do not mix localhost and
+127.0.0.1. Preview deployments must use their own stable HTTPS origin, callback,
+secret and non-production database, or leave host auth unconfigured. Unconfigured
+sign-in fails closed with a friendly unavailable message; legacy admin still works.
+Google OAuth is centralized on `BETTER_AUTH_URL`, not every invitation domain.
+
+**Rollback warning:** once customer accounts/events exist, do not deploy pre-020
+application code: its old shared-admin queries do not filter by owner. Pause host
+access by clearing `HOST_ALLOWED_EMAILS` and redeploy this ownership-aware version
+instead. Ownership transfers/data deletion require a separately reviewed migration,
+not ad-hoc reassignment. This application-level authorization is not PostgreSQL RLS;
+restrict direct database credentials to trusted operators.
+
+Packages added: `better-auth`, `pg`, development-only `@types/pg`. Next.js and its
+ESLint configuration were patched to 16.3.8 for the current security fixes.
+`public/google-sign-in.png` is the unmodified Android/Web 2x light pill button from
+[Google's approved branding assets](https://developers.google.com/identity/branding-guidelines),
+served locally with proportional sizing and an accessible text alternative.
+Tests include schema compatibility with the actual auth adapter, a simulated Google
+callback using synthetic keys (no network), cookie tampering/expiry/logout,
+allowlist enforcement, durable throttling and cross-account database isolation.
+Set `SHINDIG_TEST_PGLITE` to a temporary PGlite `dist/index.js` installation to run
+`tests/host-auth-postgres.test.ts` and `tests/host-ownership-postgres.test.ts` along
+with the existing SQL integration tests. They use fresh in-memory databases,
+never Neon, and do not replace the live Google two-account smoke test.
+
+Verification: lint and TypeScript passed, 1,493 tests passed (96 files), and the
+production webpack build passed. The existing independent-connection native
+PostgreSQL capacity race test remains skipped pending the local PostgreSQL test
+environment; the embedded PostgreSQL ownership/authentication suites passed,
+including cross-host Bring Something item/claim access and private-name isolation.
+The production dependency audit found zero known vulnerabilities. Browser review
+covered 320px/390px layouts, unconfigured sign-in, a friendly failed-sign-in state,
+and the retained legacy-admin entry. Live Google authorization was not performed.
+
+## RSVP deadlines & event capacity (Step 10)
 
 For new-style Shindig events, open **Your events → event → RSVP & Hub →
 A little room to plan**. Both controls default to **off**. Save the private draft,

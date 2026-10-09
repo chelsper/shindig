@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ContentShell } from "../../../../../components/admin/content-shell";
 import { EventDraftSettingsEditor } from "../../../../../components/admin/event-draft-settings-editor";
-import { isAdminAuthenticated } from "../../../../../lib/server/admin-session";
+import { isHostAuthenticated } from "../../../../../lib/server/host-access";
 import { getEventDraft } from "../../../../../lib/server/event-drafts";
 import { getDraftArtwork } from "../../../../../lib/server/event-draft-artwork";
 import { getDraftSettings } from "../../../../../lib/server/event-draft-settings";
@@ -15,7 +15,7 @@ import { savedWeatherCoordinates } from "../../../../../lib/event-readiness";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Draft RSVP & Hub Settings | Shindig", robots: { index: false, follow: false }, referrer: "no-referrer" };
 export default async function DraftSettingsPage({ params }: { params: Promise<{ id: string }> }) {
-  if (!(await isAdminAuthenticated())) redirect("/admin");
+  if (!(await isHostAuthenticated())) redirect("/host/sign-in");
   const { id } = await params;
   if (!isDraftId(id)) notFound();
   let data;

@@ -119,21 +119,21 @@ describe.skipIf(!socket && !embeddedModule)("real local publish → RSVP → hos
     state.authenticated = true;
     const adds = await Promise.allSettled([createEventGuest(ids[0], hostId, initial, form()), createEventGuest(ids[0], hostId, initial, form())]);
     for (const result of adds) expect(result.status === "rejected" && String(result.reason).includes("saved=create")).toBe(true);
-    expect((await getRsvpSummary(a)).totalResponses).toBe(3);
-    expect((await listRsvps("attending", a, "host a"))).toHaveLength(1);
-    expect((await listRsvps("all", a, "%"))).toHaveLength(0);
+    expect((await getRsvpSummary((await resolveHostEventScope(a.slug))!)).totalResponses).toBe(3);
+    expect((await listRsvps("attending", (await resolveHostEventScope(a.slug))!, "host a"))).toHaveLength(1);
+    expect((await listRsvps("all", (await resolveHostEventScope(a.slug))!, "%"))).toHaveLength(0);
     expect((await updateEventGuest(ids[1], responseId, initial, form())).error).toContain("could not be found");
     expect((await deleteEventGuest(ids[1], responseId, initial, form({ confirm: "delete" }))).error).toContain("could not be found");
     expect((await deleteEventGuest(ids[0], responseId, initial, form())).error).toContain("confirm");
-    const before = (await getRsvpForAdmin(responseId, a))!;
+    const before = (await getRsvpForAdmin(responseId, (await resolveHostEventScope(a.slug))!))!;
     await expect(updateEventGuest(ids[0], responseId, initial, form({ guestName: "Host Edited", attending: "false", partySize: "20" }))).rejects.toThrow("saved=update");
-    const after = (await getRsvpForAdmin(responseId, a))!;
+    const after = (await getRsvpForAdmin(responseId, (await resolveHostEventScope(a.slug))!))!;
     expect(after).toMatchObject({ attending: false, partySize: null, displayOnGuestList: false, comment: "Host note", createdAt: before.createdAt });
     expect(new Date(after.updatedAt).getTime()).toBeGreaterThan(new Date(before.updatedAt).getTime());
     expect((await getPublicGuestList(a)).totalGuestCount).toBe(5);
     expect((await getPublicGuestList(a)).guests.map((g) => g.guestName)).toEqual(["Host Added"]);
     expect(await getRsvpForGuest(hashRsvpEditToken(token), a)).toMatchObject({ guestName: "Host Edited", attending: false });
-    expect((await listRsvps("declined", a))).toHaveLength(1);
+    expect((await listRsvps("declined", (await resolveHostEventScope(a.slug))!))).toHaveLength(1);
     expect((await updateEventGuest(ids[0], responseId, initial, form({ partySize: "5" }))).error).toContain("between 1 and 4");
     state.authenticated = false;
     expect((await updateEventRsvp(slugs[0], { ...fields, partySize: 4, displayOnGuestList: false, editToken: token })).ok).toBe(true);
@@ -141,10 +141,10 @@ describe.skipIf(!socket && !embeddedModule)("real local publish → RSVP → hos
     state.authenticated = true;
     await expect(deleteEventGuest(ids[0], responseId, initial, form({ confirm: "delete" }))).rejects.toThrow("saved=delete");
     expect(await getRsvpForGuest(hashRsvpEditToken(token), a)).toBeNull();
-    expect((await getRsvpSummary(a)).totalResponses).toBe(2);
+    expect((await getRsvpSummary((await resolveHostEventScope(a.slug))!)).totalResponses).toBe(2);
     expect((await getPublicGuestList(a)).totalGuestCount).toBe(5);
     expect(await getRsvpSummary(OYSTER_ROAST_SCOPE)).toEqual(legacyBefore);
-    expect((await getRsvpSummary(b)).totalResponses).toBe(0);
+    expect((await getRsvpSummary((await resolveHostEventScope(b.slug))!)).totalResponses).toBe(0);
     // Saved draft changes cannot silently change the active guest rules.
     await saveDraftSettingsRecord(ids[0], 1, { ...snapshot.settings, rsvp: { ...snapshot.settings.rsvp, maxPartySize: 1 } });
     expect((await resolvePublicEventScope(slugs[0]))!.rsvp.maxPartySize).toBe(4);
@@ -155,15 +155,15 @@ describe.skipIf(!socket && !embeddedModule)("real local publish → RSVP → hos
     if (embedded) await embedded.exec(await readFile("db/migrations/015_event_lifecycle.sql", "utf8"));
     expect((await getPublishedEvent(slugs[0]))!.rsvpsOpen).toBe(false);
     expect((await getPublishedEvent(slugs[1]))!.rsvpsOpen).toBe(true);
-    const closedBefore = await listRsvps("all", a);
+    const closedBefore = await listRsvps("all", (await resolveHostEventScope(a.slug))!);
     state.authenticated = false;
     expect((await submitEventRsvp(slugs[0], { ...submit, submissionId: randomUUID() })).ok).toBe(false);
     expect((await updateEventRsvp(slugs[0], { ...fields, editToken: hiddenToken })).ok).toBe(false);
     // A scope captured before closure cannot bypass the locked SQL admission.
     await expect(saveRsvp({ ...fields, id: randomUUID(), eventSlug: slugs[0] }, hashRsvpEditToken("d".repeat(43)), a)).rejects.toThrow();
     await expect(updateRsvpForGuest(hashRsvpEditToken(hiddenToken), { ...fields, guestName: "Must not save" }, a)).rejects.toThrow("closed RSVPs");
-    expect(await listRsvps("all", a)).toEqual(closedBefore);
     state.authenticated = true;
+    expect(await listRsvps("all", (await resolveHostEventScope(a.slug))!)).toEqual(closedBefore);
     await expect(updateEventGuest(ids[0], hiddenId, initial, form({ guestName: "Hidden host edit", displayOnGuestList: "" }))).rejects.toThrow("saved=update");
     expect(await changeEventLifecycleRecord(ids[0], 2, "reopen-rsvps")).toBe(3);
     expect((await updateEventRsvp(slugs[0], { ...fields, editToken: hiddenToken })).ok).toBe(true);
@@ -178,7 +178,7 @@ describe.skipIf(!socket && !embeddedModule)("real local publish → RSVP → hos
     const privateScope = (await resolveHostEventScope(slugs[0]))!;
     expect(privateScope.access).toBe("host"); expect(privateScope.rsvp.maxPartySize).toBe(4);
     expect((await hostScopeArgs(slugs[0]))[0]?.slug).toBe(slugs[0]);
-    expect(await getRsvpSummary(privateScope)).toEqual(await getRsvpSummary(a));
+    expect(await getRsvpSummary(privateScope)).toEqual(await getRsvpSummary((await resolveHostEventScope(a.slug))!));
     await expect(createEventGuest(ids[0], randomUUID(), initial, form({ guestName: "Added while private" }))).rejects.toThrow("saved=create");
     const hiddenPublication = (await getHostEventPublication(slugs[0]))!;
     expect(hiddenPublication.visibility).toBe("unpublished"); expect(hiddenPublication.rsvpsOpen).toBe(false);
@@ -190,7 +190,7 @@ describe.skipIf(!socket && !embeddedModule)("real local publish → RSVP → hos
     expect((await getPublishedEvent(slugs[0]))!.websiteUrl).toBe(event.websiteUrl);
     expect((await getPublishedEvent(slugs[0]))!.rsvpsOpen).toBe(false);
     expect((await listHostPublications()).find((p) => p.id === ids[0])?.hasUnpublishedChanges).toBe(false);
-    expect((await getRsvpSummary(a)).totalResponses).toBe(3);
+    expect((await getRsvpSummary((await resolveHostEventScope(a.slug))!)).totalResponses).toBe(3);
     expect(await changeEventLifecycleRecord(ids[0], 6, "reopen-rsvps")).toBe(7);
     expect((await updateEventRsvp(slugs[0], { ...fields, partySize: 1, editToken: hiddenToken })).ok).toBe(true);
     const clicks = await Promise.all([changeEventLifecycleRecord(ids[0], 7, "close-rsvps"), changeEventLifecycleRecord(ids[0], 7, "close-rsvps")]);
@@ -201,8 +201,9 @@ describe.skipIf(!socket && !embeddedModule)("real local publish → RSVP → hos
     const contentScope = (await resolvePublicEventScope(slugs[0]))!;
     expect(await createPlaylistSuggestion({ provider: "spotify", providerTrackId: "a".repeat(22), songTitle: "Synthetic song", artist: "Test artist", album: null, artworkUrl: null, externalUrl: `https://open.spotify.com/track/${"a".repeat(22)}`, explicit: false, suggestedBy: "Synthetic guest" }, contentScope)).toBe("added");
     await insertGuestQuestion({ question: "Synthetic private question?", guestName: "Synthetic guest", requestToken: randomUUID() }, contentScope);
-    await insertHostUpdate(randomUUID(), { heading: null, message: "Synthetic host update." }, contentScope);
-    expect(await savePoll(randomUUID(), { question: "Synthetic poll?", eyebrow: null, allowMultiple: false, showResults: true, showClosedResults: true, sortOrder: 0, options: [{ key: randomUUID(), text: "One" }, { key: randomUUID(), text: "Two" }] }, true, contentScope)).toBe(true);
+    const contentHostScope = (await resolveHostEventScope(slugs[0]))!;
+    await insertHostUpdate(randomUUID(), { heading: null, message: "Synthetic host update." }, contentHostScope);
+    expect(await savePoll(randomUUID(), { question: "Synthetic poll?", eyebrow: null, allowMultiple: false, showResults: true, showClosedResults: true, sortOrder: 0, options: [{ key: randomUUID(), text: "One" }, { key: randomUUID(), text: "Two" }] }, true, contentHostScope)).toBe(true);
     async function retainedData() {
       const hostScope = (await resolveHostEventScope(slugs[0]))!;
       return {
@@ -259,7 +260,7 @@ describe.skipIf(!socket && !embeddedModule)("real local publish → RSVP → hos
     expect(await changeEventLifecycleRecord(ids[1], 2, "archive")).toBe(3);
     expect(await changeEventLifecycleRecord(ids[1], 3, "restore")).toBe(4);
     expect(await getHostEventPublication(slugs[1])).toMatchObject({ visibility: "unpublished", rsvpsOpen: false });
-    expect((await getRsvpSummary(b)).totalResponses).toBe(0);
+    expect((await getRsvpSummary((await resolveHostEventScope(b.slug))!)).totalResponses).toBe(0);
     expect((await getHostEventPublication(slugs[0]))!.revision).toBe(13);
     // Published aliases (including NULL for existing events) are immutable.
     await expect(query`UPDATE event_publications SET public_alias = 'changed-link' WHERE event_id = ${ids[0]}::uuid RETURNING revision`).rejects.toThrow();

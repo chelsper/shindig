@@ -1,6 +1,6 @@
 import "server-only";
 import { neon } from "@neondatabase/serverless";
-import { isAdminAuthenticated } from "./admin-session";
+import { requireHostPrincipal } from "./host-access";
 import { isDraftId, validateEventDraft } from "../event-drafts";
 import { draftImageUrl, EMPTY_DRAFT_ARTWORK, validateDraftArtwork } from "../event-draft-artwork";
 import { DEFAULT_DRAFT_SETTINGS, validateDraftSettings } from "../event-draft-settings";
@@ -21,7 +21,7 @@ const timestamp = (value: unknown) => {
 // One row per event, from one consistent query. No per-card database requests,
 // guest-table reads, writes, or cross-request cache of authenticated data.
 export async function listHostEventCards(): Promise<HostEventCard[]> {
-  if (!(await isAdminAuthenticated())) throw new Error("Host access required.");
+  const principal = await requireHostPrincipal();
   const url = process.env.DATABASE_URL?.trim();
   if (!url) throw new Error("Event storage is unavailable.");
   const rows = await neon(url)`SELECT e.id, e.title, e.description, e.host_name AS "hostName", e.venue, e.address,
@@ -35,7 +35,7 @@ export async function listHostEventCards(): Promise<HostEventCard[]> {
     LEFT JOIN event_draft_artwork a ON a.event_id = e.id
     LEFT JOIN event_draft_settings s ON s.event_id = e.id
     LEFT JOIN event_publications p ON p.event_id = e.id
-    WHERE e.status = 'draft'
+    WHERE e.status = 'draft' AND e.owner_host_id IS NOT DISTINCT FROM ${principal.ownerId}::text
     ORDER BY greatest(e.updated_at, a.updated_at, s.updated_at, p.published_at) DESC, e.id`;
   return rows.map((row) => {
     if (!isDraftId(row.id)) throw new Error("Invalid event.");

@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { ContentShell } from "../../../../../components/admin/content-shell";
 import { EventSetupOverview } from "../../../../../components/admin/event-setup-overview";
-import { isAdminAuthenticated } from "../../../../../lib/server/admin-session";
+import { isHostAuthenticated } from "../../../../../lib/server/host-access";
 import { getEventDraft } from "../../../../../lib/server/event-drafts";
 import { getDraftArtwork } from "../../../../../lib/server/event-draft-artwork";
 import { getDraftSettings } from "../../../../../lib/server/event-draft-settings";
@@ -17,7 +17,7 @@ export const metadata = { title: "Event Setup | Shindig", robots: { index: false
 export default async function EventSetupPage({ params, searchParams }: {
   params: Promise<{ id: string }>; searchParams?: Promise<{ saved?: string | string[]; copied?: string | string[] }>;
 }) {
-  if (!(await isAdminAuthenticated())) redirect("/admin");
+  if (!(await isHostAuthenticated())) redirect("/host/sign-in");
   const { id } = await params;
   if (!isDraftId(id)) notFound();
   let data;

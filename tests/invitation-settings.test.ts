@@ -1,3 +1,4 @@
+vi.mock("../lib/server/admin-session", () => ({ isAdminAuthenticated: async () => true }));
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_INVITATION_SETTINGS as defaults, fromEventLocalInput, toEventLocalInput, validateInvitationSettings, resolveEventConfiguration, isAllowedInvitationImage } from "../lib/invitation-settings";
 import { createOysterRoastIcs, getGoogleCalendarUrl, getOutlookCalendarUrl } from "../lib/calendar";

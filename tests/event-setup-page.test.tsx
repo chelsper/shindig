@@ -1,3 +1,4 @@
+vi.mock("server-only", () => ({}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), draft: vi.fn(), artwork: vi.fn(), settings: vi.fn(), publication: vi.fn(), redirect: vi.fn(), notFound: vi.fn() }));
@@ -23,7 +24,7 @@ describe("authenticated event setup route", () => {
   it("authenticates before any reads and disables indexing/static generation", async () => {
     mocks.auth.mockResolvedValue(false);
     await expect(Page(props)).rejects.toThrow("redirect");
-    expect(mocks.redirect).toHaveBeenCalledWith("/admin");
+    expect(mocks.redirect).toHaveBeenCalledWith("/host/sign-in");
     for (const fn of [mocks.draft, mocks.artwork, mocks.settings, mocks.publication]) expect(fn).not.toHaveBeenCalled();
     expect(dynamic).toBe("force-dynamic"); expect(metadata.robots).toEqual({ index: false, follow: false }); expect(metadata.referrer).toBe("no-referrer");
   });

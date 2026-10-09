@@ -1,7 +1,6 @@
 import "server-only";
 import { neon } from "@neondatabase/serverless";
-import { eventScopeSlug, type EventScope } from "./event-scope";
-import { isAdminAuthenticated } from "./admin-session";
+import { eventScopeSlug, requireHostEventScope, type EventScope } from "./event-scope";
 import { RSVP_CLOSED_MESSAGE } from "../event-lifecycle";
 import { RsvpAdmissionError, RSVP_CAPACITY_MESSAGE, RSVP_DEADLINE_MESSAGE } from "../rsvp-policy";
 import type { ValidatedRsvpUpdate } from "./rsvp-validation";
@@ -10,7 +9,7 @@ import type { SavedRsvp } from "./rsvps";
 type Operation = "guest-create" | "guest-update" | "host-create" | "host-update" | "host-delete";
 export async function writeEventRsvp(scope: EventScope, operation: Operation, id: string | null, editHash: string | null, fields?: ValidatedRsvpUpdate) {
   const slug = eventScopeSlug(scope);
-  if (operation.startsWith("host-") && (scope.access !== "host" || !(await isAdminAuthenticated()))) throw new Error("Host access required.");
+  if (operation.startsWith("host-")) await requireHostEventScope(scope);
   const url = process.env.DATABASE_URL?.trim();
   if (!url) throw new Error("RSVP storage unavailable.");
   const sql = neon(url);
