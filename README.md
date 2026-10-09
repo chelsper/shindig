@@ -1,5 +1,29 @@
 # Shindig
 
+## Consistent artwork and RSVP editing
+
+**Artwork & design** and **RSVP & Hub** now share the Details editor's mobile
+Edit/Preview switch and persistent save/review bar. Desktop keeps the form and
+preview side by side. Switching views preserves unsaved input, artwork framing,
+the selected preview screen and device size; it never saves or publishes.
+
+Save progress, validation errors, retry messages and stale-revision recovery
+remain visible even when the form is hidden behind Preview. The same validation
+used by the server also checks the client before submission, including image
+descriptions, capacity and deadline rules. Upload/save locks prevent repeated
+requests and leaving mid-request; failed saves retain edits.
+
+**Review & publish** remains a separate protected review step. Unsaved changes,
+active requests and conflicts disable the sticky review action. Suggested RSVP
+defaults must be saved once; optional artwork does not require a meaningless
+empty save. Existing navigation still warns before discarding edits.
+
+`EditorViewToggle` and `DraftEditorActionBar` are shared across all three editors.
+Guest pages, authentication, publishing and database behavior are unchanged.
+No migration, package or environment variable is added. Regression tests cover
+view switching, live choices, uploads, validation, repeated saves, failures,
+conflicts, initial defaults and review gating.
+
 ## Event editor — live private preview
 
 The event-details editor now previews typed wording, dates/timezone and location

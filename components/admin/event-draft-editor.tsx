@@ -13,6 +13,7 @@ import { DEFAULT_DRAFT_SETTINGS } from "../../lib/event-draft-settings";
 import type { EventEditorPreviewContext } from "../../lib/event-editor-preview";
 import { EventEditorPreview } from "./event-editor-preview";
 import { EventEditorActions } from "./event-editor-actions";
+import { EditorViewToggle } from "./editor-view-toggle";
 
 const panel = "rounded-[1.5rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 sm:p-7";
 const secondary = "inline-flex min-h-11 items-center justify-center rounded-full border border-[#355f9e]/25 bg-[#e9f2f8]/65 px-4 text-xs font-bold text-[#214e91] focus-visible:outline-2 focus-visible:outline-offset-4";
@@ -74,9 +75,7 @@ export function EventDraftEditor({ id, initialDraft, timeZones, justSaved = fals
         <p className="mt-3 max-w-xl text-sm leading-6 text-[#202523]/65">Start with a name and watch the invitation take shape. Save privately, then review when you’re ready. Nothing here publishes automatically.</p>
         {initialDraft && <EventSetupNavigation id={id} current="details" onNavigate={(event) => { if (!allowLeave()) event.preventDefault(); }} />}
       </section>
-      <div role="group" aria-label="Editor view" className="sticky top-0 z-20 -mx-4 mb-5 flex gap-2 border-b border-[#202523]/10 bg-[#f7f0e3]/95 px-4 py-3 backdrop-blur-sm lg:hidden">
-        {(["edit", "preview"] as const).map((view) => <button key={view} type="button" aria-pressed={mobileView === view} aria-controls={`event-${view}-panel`} onClick={() => setMobileView(view)} className={`${secondary} flex-1 ${mobileView === view ? "border-[#355f9e] bg-[#e9f2f8]" : "bg-[#fffaf1]"}`}>{view === "edit" ? "Edit details" : "Preview invitation"}</button>)}
-      </div>
+      <EditorViewToggle view={mobileView} onChange={setMobileView} editPanelId="event-edit-panel" previewPanelId="event-preview-panel" editLabel="Edit details" previewLabel="Preview invitation" />
       <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-start">
       <form id="event-details-form" aria-label="Event details" noValidate onSubmit={submit} className={`min-w-0 ${mobileView === "edit" ? "block" : "hidden lg:block"}`}>
         <div id="event-edit-panel">

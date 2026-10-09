@@ -27,6 +27,7 @@ vi.mock("../app/admin/events/actions", () => ({ saveEventDraft: harness.save }))
 import { EventDraftEditor } from "../components/admin/event-draft-editor";
 import { EventEditorActions } from "../components/admin/event-editor-actions";
 import { EventEditorPreview } from "../components/admin/event-editor-preview";
+import { EditorViewToggle } from "../components/admin/editor-view-toggle";
 
 const id = "5199b7de-d731-4bb1-8e55-3380e2f0e365";
 const draft: EventDraft = { ...EMPTY_EVENT_DRAFT, id, title: "Garden supper", status: "draft", revision: 2, createdAt: "2026-10-06T12:00:00Z", updatedAt: "2026-10-06T12:00:00Z" };
@@ -57,10 +58,10 @@ describe("event editor controller interactions", () => {
     change("title", "New garden party"); change("description", "Bring a friend.");
     expect(preview().fields).toMatchObject({ title: "New garden party", description: "Bring a friend." });
     expect(actions().dirty).toBe(true);
-    const toggle = find((node) => node.type === "button" && node.props["aria-controls"] === "event-preview-panel")!;
-    (toggle.props.onClick as () => void)(); render();
+    const toggle = find((node) => node.type === EditorViewToggle)!;
+    (toggle.props.onChange as (view: string) => void)("preview"); render();
     expect(find((node) => node.type === "form")!.props.className).toContain("hidden lg:block");
-    expect(find((node) => node.props["aria-controls"] === "event-preview-panel")!.props["aria-pressed"]).toBe(true);
+    expect(find((node) => node.type === EditorViewToggle)!.props.view).toBe("preview");
     expect(preview().fields).toMatchObject({ title: "New garden party" });
     expect(harness.save).not.toHaveBeenCalled();
   });

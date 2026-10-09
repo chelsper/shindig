@@ -57,7 +57,8 @@ describe("playground → protected event design handoff", () => {
   it("offers the requested style without automatically changing the saved draft", () => {
     const html = renderToStaticMarkup(<EventDraftArtworkEditor draft={draft} initial={{ settings: snapshot.artwork, revision: 0 }} uploadConfigured={false} requestedDesign="coastal" />);
     expect(html).toContain("Apply Coastal"); expect(html).toContain("does not save or publish");
-    expect((html.match(/<input\b[^>]*>/g) ?? []).find((input) => input.includes('value="original"'))).toContain('checked=""'); expect(html).toMatch(/disabled=""[^>]*>Save draft design/);
+    expect((html.match(/<input\b[^>]*>/g) ?? []).find((input) => input.includes('value="original"'))).toContain('checked=""');
+    expect((html.match(/<button\b[^>]*>/g) ?? []).find((button) => button.includes('aria-label="Save draft design &amp; artwork"'))).toContain('disabled=""');
     expect(snapshot.artwork.design).toBeUndefined();
   });
   it.each(["classic", "coastal", "after-dark"])("returns to %s after authenticated login", async (style) => {

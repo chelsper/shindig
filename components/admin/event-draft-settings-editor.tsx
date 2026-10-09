@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
 import type { EventDraft } from "../../lib/event-drafts";
 import type { DraftArtwork } from "../../lib/event-draft-artwork";
-import { DRAFT_HUB_MODULES, draftReadiness, type DraftSettings, type DraftSettingsRecord } from "../../lib/event-draft-settings";
+import { DRAFT_HUB_MODULES, draftReadiness, validateDraftSettings, type DraftSettings, type DraftSettingsRecord } from "../../lib/event-draft-settings";
 import { saveDraftSettings } from "../../app/admin/events/[id]/settings/actions";
 import { EventDraftPreview } from "./event-draft-preview";
 import { DraftHubPreview, DraftRsvpPreview } from "./event-draft-experience-preview";
@@ -11,6 +11,8 @@ import { EventSetupNavigation } from "./event-setup-navigation";
 import type { Coordinates } from "../../lib/event-publication";
 import { eventLocalInput, eventLocalToUtc } from "../../lib/event-date-time";
 import { MAX_EVENT_CAPACITY } from "../../lib/rsvp-policy";
+import { EditorViewToggle, type EditorView } from "./editor-view-toggle";
+import { DraftEditorActionBar } from "./draft-editor-action-bar";
 
 const panel = "rounded-[1.5rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 sm:p-6";
 const button = "inline-flex min-h-11 items-center justify-center rounded-full border border-[#355f9e]/25 bg-[#e9f2f8]/65 px-4 text-xs font-bold text-[#214e91] focus-visible:outline-2 focus-visible:outline-offset-4 disabled:opacity-40";
@@ -27,6 +29,7 @@ export function EventDraftSettingsEditor({ draft, artwork, initial, coordinates 
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
   const [view, setView] = useState<"invitation" | "hub">("invitation");
+  const [mobileView, setMobileView] = useState<EditorView>("edit");
   const busy = useRef(false);
   const base = `/admin/events/${draft.id}`;
   const readiness = draftReadiness(draft, artwork, settings, revision > 0 && !dirty, coordinates);
@@ -45,11 +48,14 @@ export function EventDraftSettingsEditor({ draft, artwork, initial, coordinates 
   }
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy.current || conflict) return;
+    if (busy.current || conflict || (!dirty && revision > 0)) return;
+    setSaved(false); setError(null);
     if (deadlineEnabled && !eventLocalToUtc(deadlineLocal, draft.timeZone)) {
       setError("Choose a valid RSVP deadline in the event’s timezone. Times skipped or repeated by daylight saving need a different time."); return;
     }
     if (capacityEnabled && settings.rsvp.capacity == null) { setError("Enter a total event capacity, or turn the limit off."); return; }
+    const validation = validateDraftSettings(settings);
+    if (!validation.ok) { setError(validation.message); return; }
     busy.current = true; setPending(true); setSaved(false); setError(null);
     try {
       const result = await saveDraftSettings({ id: draft.id, revision, settings });
@@ -58,9 +64,9 @@ export function EventDraftSettingsEditor({ draft, artwork, initial, coordinates 
     } catch { setError("We couldn’t confirm the save. Your choices are still here; please try again."); }
     finally { busy.current = false; setPending(false); }
   }
-  return <main className="relative min-h-screen bg-[#f7f0e3] px-4 py-6 text-[#202523] sm:px-6 sm:py-9">
+  return <main className="relative min-h-screen bg-[#f7f0e3] px-4 pt-6 pb-72 text-[#202523] sm:px-6 sm:pt-9">
     <div aria-hidden="true" className="page-texture" />
-    <div className="relative mx-auto max-w-5xl">
+    <div className="relative mx-auto max-w-6xl">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#202523]/12 pb-5"><Link href="/admin/events" onClick={leave} className="font-serif text-2xl">Shindig</Link><Link href="/admin/events" onClick={leave} className={button}>Back to your events</Link></header>
       <section className="py-7">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#355f9e]">Event setup · Private draft</p>
@@ -68,9 +74,10 @@ export function EventDraftSettingsEditor({ draft, artwork, initial, coordinates 
         <p className="mt-3 max-w-2xl break-words text-sm leading-6 text-[#202523]/65">RSVP &amp; Hub settings for {draft.title}. Keep it simple, or give your guests a few little ways to join in.</p>
         <EventSetupNavigation id={draft.id} current="settings" onNavigate={leave} />
       </section>
-      <div className="grid min-w-0 gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,390px)]">
-        <div className="min-w-0 space-y-5">
-          <form onSubmit={save}>
+      <EditorViewToggle view={mobileView} onChange={setMobileView} editPanelId="settings-edit-panel" previewPanelId="settings-preview-panel" editLabel="Edit settings" />
+      <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-start">
+        <div id="settings-edit-panel" className={`min-w-0 space-y-5 ${mobileView === "edit" ? "block" : "hidden lg:block"}`}>
+          <form id="event-settings-form" aria-label="RSVP and Hub settings" noValidate onSubmit={save}>
             <fieldset disabled={pending || conflict} className="min-w-0 space-y-5">
               <section className={panel} aria-labelledby="rsvp-settings-heading">
                 <h2 id="rsvp-settings-heading" className="font-serif text-2xl">The reply, your way</h2>
@@ -96,13 +103,6 @@ export function EventDraftSettingsEditor({ draft, artwork, initial, coordinates 
                 <p className="mt-2 text-xs leading-5 text-[#202523]/55">These choices stay private until you publish. Review provider setup before publishing. Photos and Potluck aren’t available yet.</p>
               </section>
             </fieldset>
-            <section className={`${panel} mt-5`} aria-label="Save private settings">
-              {error && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-sm leading-6 text-red-900">{error}</p>}
-              {conflict && <a href={`${base}/settings`} onClick={leave} className={`${button} mb-4`}>Reopen saved settings</a>}
-              {saved && <p role="status" className="mb-4 rounded-xl bg-[#e4eee1] p-3 text-sm leading-6 text-[#285630]">Choices saved to your private draft. Jasper Shucks and all live RSVPs are unchanged.</p>}
-              <button type="submit" className="primary-button w-full" disabled={pending || conflict || (!dirty && revision > 0)}>{pending ? "Saving choices…" : "Save draft settings"}</button>
-              <p className="mt-3 text-center text-xs leading-5 text-[#202523]/55">{dirty ? "You have unsaved choices." : revision === 0 ? "Suggested defaults. Save to confirm your choices." : "Your saved choices are up to date."}</p>
-            </section>
           </form>
           <section className={panel} aria-labelledby="readiness-heading">
             <p className="text-[0.65rem] font-bold uppercase tracking-widest text-[#355f9e]">Before it goes out</p><h2 id="readiness-heading" className="mt-2 font-serif text-2xl">Getting ready to gather</h2>
@@ -112,12 +112,16 @@ export function EventDraftSettingsEditor({ draft, artwork, initial, coordinates 
             <p className="mt-4 rounded-xl bg-[#e9f2f8]/60 p-3 text-xs leading-5 text-[#355f9e]">These draft choices stay private. Use Review & publish to apply them to guest pages; saving here never changes a live event.</p>
           </section>
         </div>
-        <section className="min-w-0 self-start md:sticky md:top-6" aria-label="Guest experience preview">
-          <h2 className="font-serif text-2xl">Try the guest’s view</h2><p className="mt-2 text-sm leading-6 text-[#202523]/60">Your current choices, with saved artwork and event details. Nothing here is live.</p>
+        <section id="settings-preview-panel" className={`min-w-0 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-12rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-2 ${mobileView === "preview" ? "block" : "hidden lg:block"}`} aria-label="Guest experience preview">
+          <h2 className="font-serif text-2xl">Try the guest’s view</h2><p className="mt-2 text-sm leading-6 text-[#202523]/60">{dirty ? "Includes unsaved choices" : revision === 0 ? "Suggested defaults" : "Private draft preview"} · Saved artwork and event details. Nothing here is live.</p>
           <div role="group" aria-label="Preview screen" className="mb-4 mt-3 flex flex-wrap gap-2">{(["invitation", "hub"] as const).map((screen) => <button key={screen} type="button" className={button} aria-pressed={view === screen} onClick={() => setView(screen)}>{screen === "invitation" ? "Invitation" : "Event Hub"}</button>)}</div>
           <EventDraftPreview draft={draft} artwork={artwork} view={view}>{view === "invitation" ? <DraftRsvpPreview settings={settings} timeZone={draft.timeZone} /> : <DraftHubPreview settings={settings} />}</EventDraftPreview>
         </section>
       </div>
     </div>
+    <DraftEditorActionBar formId="event-settings-form" saveLabel="Save settings" saveAccessibleLabel="Save draft settings" saveAllowed={dirty || revision === 0}
+      pendingLabel="Saving choices…" pending={pending} dirty={dirty} conflict={conflict} reviewReady={revision > 0} reviewHref={`${base}/publish`}
+      error={error} reopenHref={`${base}/settings`} reopenLabel="Reopen saved settings" onLeave={leave}
+      status={pending ? "Saving choices privately…" : conflict ? "Reopen the latest settings before saving or reviewing." : dirty ? "You have unsaved choices. Save before reviewing." : saved ? "Choices saved to your private draft. Jasper Shucks and all live RSVPs are unchanged." : revision === 0 ? "Suggested defaults. Save to confirm your choices." : "Your saved choices are up to date. Review does not publish."} />
   </main>;
 }
