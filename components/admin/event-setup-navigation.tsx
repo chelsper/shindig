@@ -6,7 +6,7 @@ import type { MouseEvent } from "react";
 const screens = [
   { id: "setup", label: "Overview", path: "/setup" },
   { id: "details", label: "Details", path: "" },
-  { id: "artwork", label: "Artwork", path: "/artwork" },
+  { id: "artwork", label: "Artwork & design", path: "/artwork" },
   { id: "settings", label: "RSVP & Hub", path: "/settings" },
   { id: "preview", label: "Private preview", path: "/preview" },
   { id: "publish", label: "Publish & share", path: "/publish" },

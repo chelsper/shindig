@@ -85,5 +85,5 @@ export function EventModules(props: EventModulesProps) {
     .map(({ render, ...module }) => ({ ...module, content: render(props) }));
 
   const eventSlug = props.event?.slug === "oyster-roast-2026" ? undefined : props.event?.slug;
-  return <GuestInteractionsProvider key={eventSlug ?? "legacy"} eventSlug={eventSlug} enabled={props.features.playlist || (props.features.polls && Boolean(props.polls?.length))}><HubNavigation modules={modules} /></GuestInteractionsProvider>;
+  return <GuestInteractionsProvider key={eventSlug ?? "legacy"} eventSlug={eventSlug} enabled={props.features.playlist || (props.features.polls && Boolean(props.polls?.length))}><HubNavigation modules={modules} eyebrow={eventSlug ? "Around the Shindig" : undefined} /></GuestInteractionsProvider>;
 }

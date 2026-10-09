@@ -21,6 +21,12 @@ beforeEach(() => {
   vi.stubGlobal("fetch", mocks.fetch);
 });
 describe("independently owned private artwork copies", () => {
+  it("preserves saved design and independent invitation crop when copying", async () => {
+    const design = { style: "after-dark" as const, invitationCrop: { x: 20, y: 70, zoom: 220 } };
+    const result = await copyEventArtwork(destinationId, { ...source, design, crop: { ...source.crop, zoomPercent: 240 } });
+    expect(result.design).toEqual(design); expect(result.design).not.toBe(design);
+    expect(result.header.zoomPercent).toBe(240); expect(result.invitation.path).not.toBe(path);
+  });
   it("copies validated bytes and crop settings into the new event's private namespace", async () => {
     const result = await copyEventArtwork(destinationId, source);
     expect(isDraftImagePath(destinationId, result.invitation.path, "invitation")).toBe(true);

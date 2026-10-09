@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { DesignedInvitation } from "./event-design/event-presentation";
 import Link from "next/link";
 import { FormEvent, useRef, useState, useTransition } from "react";
 
@@ -168,68 +169,7 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
     setEditToken(null);
   }
 
-  return (
-    <main className="min-h-screen overflow-hidden bg-[#f7f0e3] text-[#202523]">
-      <div aria-hidden="true" className="page-texture" />
-
-      <div className="relative mx-auto max-w-[1180px] px-4 py-5 sm:px-6 sm:py-8 lg:px-8 lg:py-12">
-        <header className="mb-5 flex flex-wrap items-center justify-between gap-3 sm:mb-7">
-          <p className="font-serif text-xl tracking-[-0.02em] sm:text-2xl">Shindig</p>
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="rounded-full border border-[#202523]/15 bg-white/40 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#202523]/65 sm:text-xs">
-              {oysterRoastEvent.cityLabel}
-            </p>
-            <EventHubLink href={oysterRoastEvent.eventHub.path} />
-          </div>
-        </header>
-
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.16fr)_minmax(370px,0.84fr)] lg:gap-10">
-          {oysterRoastEvent.invitation.imageUrl ? <section aria-label={legacy ? "Oyster roast invitation artwork" : "Invitation artwork"} className="relative">
-            <div className="hero-frame relative mx-auto max-w-[680px] overflow-hidden rounded-[1.75rem] bg-white shadow-[0_24px_70px_rgba(41,56,53,0.16)] sm:rounded-[2.25rem] lg:max-w-none">
-              <Image
-                src={oysterRoastEvent.invitation.imageUrl}
-                alt={oysterRoastEvent.invitation.imageAlt}
-                width={oysterRoastEvent.invitation.imageWidth}
-                height={oysterRoastEvent.invitation.imageHeight}
-                className="h-auto w-full"
-                priority
-                unoptimized={!legacy}
-                sizes="(min-width: 1024px) 57vw, 100vw"
-              />
-            </div>
-          </section> : <section className="rounded-[2rem] border border-[#355f9e]/15 bg-[#e9f2f8]/60 p-10 sm:p-16"><p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#355f9e]">A good gathering awaits</p><p className="mt-6 font-serif text-5xl leading-tight">Good people.<br />A little time together.</p></section>}
-
-          <section className="lg:sticky lg:top-8">
-            <div className="mb-6 px-1 sm:mb-7">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-[#355f9e]">
-                {oysterRoastEvent.invitation.eyebrow}
-              </p>
-              <h1 className="max-w-xl font-serif text-[2.65rem] leading-[0.98] tracking-[-0.045em] text-balance sm:text-6xl lg:text-[3.4rem]">
-                {oysterRoastEvent.title}
-              </h1>
-
-              <div className="mt-6 grid gap-3 border-y border-[#202523]/15 py-5 text-sm sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-                <div className="flex items-start gap-3">
-                  <CalendarIcon />
-                  <div>
-                    <p className="font-semibold">{oysterRoastEvent.dateLabel}</p>
-                    <p className="mt-0.5 text-[#202523]/62">{oysterRoastEvent.timeLabel} {oysterRoastEvent.invitation.timeNote}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <PinIcon />
-                  <div>
-                    <p className="font-semibold">{oysterRoastEvent.venue}</p>
-                    <p className="mt-0.5 text-[#202523]/62">{oysterRoastEvent.address}</p>
-                  </div>
-                </div>
-              </div>
-
-              <p className="mt-5 max-w-lg whitespace-pre-line text-[15px] leading-7 text-[#202523]/72 sm:text-base">
-                {oysterRoastEvent.description}
-              </p>
-            </div>
-
+  const responseContent = <>
             <div className="rounded-[1.75rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 shadow-[0_18px_50px_rgba(41,56,53,0.10)] backdrop-blur sm:p-7">
               {repliesClosed ? <RsvpsClosed deadlinePassed={oysterRoastEvent.rsvpAvailability === "deadline"} /> : submitted ? (
                 <div aria-live="polite" className="py-3 text-center sm:py-5">
@@ -446,6 +386,77 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
               <p>No new RSVP needed to visit.</p>
               <EventHubLink label="View Event Hub" href={oysterRoastEvent.eventHub.path} />
             </div>
+  </>;
+  if (!legacy && oysterRoastEvent.design) return <main><DesignedInvitation
+    appearance={oysterRoastEvent.design}
+    details={{ title: oysterRoastEvent.title, eyebrow: oysterRoastEvent.invitation.eyebrow, date: oysterRoastEvent.dateLabel, time: oysterRoastEvent.timeLabel, venue: oysterRoastEvent.venue, address: oysterRoastEvent.address, description: oysterRoastEvent.description }}
+    image={{ url: oysterRoastEvent.invitation.imageUrl, alt: oysterRoastEvent.invitation.imageAlt, crop: oysterRoastEvent.design.invitationCrop }}
+    actions={<EventHubLink href={oysterRoastEvent.eventHub.path} />}
+  >{responseContent}</DesignedInvitation></main>;
+
+  return (
+    <main className="min-h-screen overflow-hidden bg-[#f7f0e3] text-[#202523]">
+      <div aria-hidden="true" className="page-texture" />
+
+      <div className="relative mx-auto max-w-[1180px] px-4 py-5 sm:px-6 sm:py-8 lg:px-8 lg:py-12">
+        <header className="mb-5 flex flex-wrap items-center justify-between gap-3 sm:mb-7">
+          <p className="font-serif text-xl tracking-[-0.02em] sm:text-2xl">Shindig</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="rounded-full border border-[#202523]/15 bg-white/40 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#202523]/65 sm:text-xs">
+              {oysterRoastEvent.cityLabel}
+            </p>
+            <EventHubLink href={oysterRoastEvent.eventHub.path} />
+          </div>
+        </header>
+
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.16fr)_minmax(370px,0.84fr)] lg:gap-10">
+          {oysterRoastEvent.invitation.imageUrl ? <section aria-label={legacy ? "Oyster roast invitation artwork" : "Invitation artwork"} className="relative">
+            <div className="hero-frame relative mx-auto max-w-[680px] overflow-hidden rounded-[1.75rem] bg-white shadow-[0_24px_70px_rgba(41,56,53,0.16)] sm:rounded-[2.25rem] lg:max-w-none">
+              <Image
+                src={oysterRoastEvent.invitation.imageUrl}
+                alt={oysterRoastEvent.invitation.imageAlt}
+                width={oysterRoastEvent.invitation.imageWidth}
+                height={oysterRoastEvent.invitation.imageHeight}
+                className="h-auto w-full"
+                priority
+                unoptimized={!legacy}
+                sizes="(min-width: 1024px) 57vw, 100vw"
+              />
+            </div>
+          </section> : <section className="rounded-[2rem] border border-[#355f9e]/15 bg-[#e9f2f8]/60 p-10 sm:p-16"><p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#355f9e]">A good gathering awaits</p><p className="mt-6 font-serif text-5xl leading-tight">Good people.<br />A little time together.</p></section>}
+
+          <section className="lg:sticky lg:top-8">
+            <div className="mb-6 px-1 sm:mb-7">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-[#355f9e]">
+                {oysterRoastEvent.invitation.eyebrow}
+              </p>
+              <h1 className="max-w-xl font-serif text-[2.65rem] leading-[0.98] tracking-[-0.045em] text-balance sm:text-6xl lg:text-[3.4rem]">
+                {oysterRoastEvent.title}
+              </h1>
+
+              <div className="mt-6 grid gap-3 border-y border-[#202523]/15 py-5 text-sm sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                <div className="flex items-start gap-3">
+                  <CalendarIcon />
+                  <div>
+                    <p className="font-semibold">{oysterRoastEvent.dateLabel}</p>
+                    <p className="mt-0.5 text-[#202523]/62">{oysterRoastEvent.timeLabel} {oysterRoastEvent.invitation.timeNote}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <PinIcon />
+                  <div>
+                    <p className="font-semibold">{oysterRoastEvent.venue}</p>
+                    <p className="mt-0.5 text-[#202523]/62">{oysterRoastEvent.address}</p>
+                  </div>
+                </div>
+              </div>
+
+              <p className="mt-5 max-w-lg whitespace-pre-line text-[15px] leading-7 text-[#202523]/72 sm:text-base">
+                {oysterRoastEvent.description}
+              </p>
+            </div>
+
+            {responseContent}
           </section>
         </div>
 

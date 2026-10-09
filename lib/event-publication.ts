@@ -41,6 +41,7 @@ export function publicationEvent(id: string, snapshot: PublicationSnapshot, rsvp
   const format = (options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-US", { ...options, timeZone: d.timeZone }).format(new Date(d.startsAtUtc!));
   const image = (kind: "invitation" | "header") => `${paths.invitation}/artwork/${kind}`;
   return {
+    ...(art.design ? { design: art.design } : {}),
     slug, publicSlug: publicAlias ?? slug, title: d.title, hostTitle: d.title, description: d.description, venue: d.venue,
     address: d.address, cityLabel: d.cityLabel, coordinates, timeZone: d.timeZone,
     startsAtUtc: d.startsAtUtc!, endsAtUtc: d.endsAtUtc!,

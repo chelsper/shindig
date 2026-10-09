@@ -1,5 +1,6 @@
 import { OYSTER_ROAST_WEBSITE } from "./site";
 import type { RsvpLimits, RsvpAvailability } from "./rsvp-policy";
+import type { EventAppearance } from "./event-appearance";
 
 export type EventFeatures = {
   guestList: boolean;
@@ -70,6 +71,7 @@ type EditableText = "title" | "description" | "venue" | "address" | "cityLabel" 
   "dateLabel" | "shortDateLabel" | "timeLabel" | "startsAtUtc" | "endsAtUtc";
 export type EventConfiguration =
   Record<EditableText, string> & {
+    design?: EventAppearance;
     slug: string; publicSlug?: string; hostTitle: string; timeZone: string;
     calendarUid: string; calendarFilename: string; websiteUrl: string;
     features: EventFeatures;

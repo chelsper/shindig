@@ -1,0 +1,75 @@
+.surface { container: event-presentation / inline-size; width: 100%; min-width: 0; background: var(--design-background); color: var(--design-ink); --ink: var(--design-ink); --blue: var(--design-accent); }
+.page { max-width: 1180px; margin: auto; padding: 24px 16px; }
+.wordmark { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+.wordmark > span:first-child { font: 28px "Iowan Old Style", Baskerville, serif; letter-spacing: -.05em; }
+.wordmark > span:last-child:not(:first-child) { color: var(--design-muted); font-size: 12px; text-align: right; max-width: 140px; }
+.invitation { padding: 9px; background: var(--design-decoration); border: 1px solid var(--design-rule); border-radius: 18px; }
+.invitationInner { padding: 18px; border: 1px solid var(--design-rule); border-radius: 12px; background: var(--design-surface); }
+.identity, .content { min-width: 0; }
+.content { padding-top: 26px; }
+.content h1, .hubContent h1 { font: 42px/1.05 var(--design-heading-font); font-style: var(--design-heading-style); letter-spacing: -.04em; overflow-wrap: anywhere; margin: 12px 0 20px; }
+.eyebrow { color: var(--design-accent); text-transform: uppercase; letter-spacing: .18em; font-size: 11px; font-weight: 650; }
+.details { display: grid; gap: 18px; padding: 20px 0; margin: 22px 0; border-block: 1px solid var(--design-rule); font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.details dt { color: var(--design-accent); font-size: 10px; letter-spacing: .15em; text-transform: uppercase; margin-bottom: 5px; }
+.details dd + dd { color: var(--design-muted); }
+.description { margin-bottom: 24px; white-space: pre-line; overflow-wrap: anywhere; color: var(--design-muted); font-size: 15px; line-height: 1.8; }
+.image { position: relative; overflow: hidden; background: var(--design-decoration); }
+.image img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.invitationImage { aspect-ratio: 4/5; border-radius: 8px; }
+.hubImage { aspect-ratio: 16/9; }
+.typographicArt { display: flex; min-height: 220px; flex-direction: column; justify-content: center; text-align: center; color: var(--design-accent); font: 34px/1.2 var(--design-heading-font); }
+.typographicArt span { font-size: 64px; margin-bottom: 22px; }
+.footer { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--design-rule); text-align: center; font-size: 12px; color: var(--design-muted); }
+.hubPage { max-width: 1000px; }
+.hubHeader { border: 1px solid var(--design-rule); border-radius: 20px; background: var(--design-surface); overflow: hidden; }
+.hubContent { padding: 24px; }
+.hubIdentity { display: flex; align-items: center; justify-content: space-between; padding: 20px 28px; background: var(--design-decoration); font-size: 12px; text-transform: uppercase; letter-spacing: .1em; }
+.hubIdentity span { font-size: 54px; }
+.hosts { color: var(--design-muted); font-size: 13px; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.actions > * { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--design-rule); border-radius: 999px; padding: 10px 18px; font-size: 12px; font-weight: 650; color: var(--design-accent); }
+.modules { margin-top: 26px; }
+.surface[data-event-design="coastal"] .invitation, .surface[data-event-design="coastal"] .hubIdentity { background: repeating-linear-gradient(90deg, var(--design-background) 0 18px, var(--design-decoration) 18px 36px); }
+.surface[data-event-design="after-dark"] { color-scheme: dark; }
+
+/* Scoped bridge for the existing guest modules and RSVP controls. Their data,
+   interaction and semantic error colors stay intact; no global/Jasper styles
+   change. Solid token colors avoid low-contrast translucent text in dark mode. */
+.guestContent { min-width: 0; }
+.guestContent :global(.page-texture) { display: none; }
+.guestContent :is(h1,h2,h3,h4), .guestContent :global(.font-serif) { font-family: var(--design-heading-font); }
+.guestContent :is(h1,h2,h3,h4) { font-style: var(--design-heading-style); }
+.guestContent [class*="text-[#202523]"] { color: var(--design-ink); }
+.guestContent [class*="text-[#202523]/"] { color: var(--design-muted); }
+.guestContent :is([class*="text-[#355f9e]"], [class*="text-[#214e91]"]) { color: var(--design-accent); }
+.guestContent :is([class*="bg-[#fffaf1]"], [class*="bg-white"]) { background-color: var(--design-surface); }
+.guestContent :is([class*="bg-[#e9f2f8]"], [class*="bg-[#dceaf7]"], [class*="bg-[#f7f0e3]"]) { background-color: var(--design-background); }
+.guestContent :is([class*="border-[#202523]"], [class*="border-[#355f9e]"]) { border-color: var(--design-rule); }
+.guestContent :is([class~="bg-[#355f9e]"], [class~="bg-[#202523]"]) { background-color: var(--design-button); color: var(--design-buttonText); }
+.guestContent :is([class~="bg-[#355f9e]"], [class~="bg-[#202523]"]) * { color: inherit; }
+.guestContent :is(input,select,textarea) { accent-color: var(--design-accent); }
+.guestContent :global(.field-label) { color: var(--design-muted); }
+.guestContent :global(.field-input) { color: var(--design-ink); background: var(--design-surface); border-color: var(--design-rule); }
+.guestContent :global(.field-input):focus { color: var(--design-ink); background: var(--design-surface); border-color: var(--design-accent); }
+.guestContent :global(.field-input)::placeholder { color: var(--design-muted); }
+.guestContent :global(.choice-button) { color: var(--design-ink); background: var(--design-surface); border-color: var(--design-rule); }
+.guestContent :global(.choice-button-active) { color: var(--design-accent); background: var(--design-background); border-color: var(--design-accent); }
+.guestContent :global(.choice-dot) { box-shadow: inset 0 0 0 2px var(--design-surface); }
+.guestContent :global(.primary-button) { color: var(--design-buttonText); background: var(--design-button); border-color: var(--design-button); }
+.guestContent :global(.primary-button):hover:not(:disabled) { color: var(--design-buttonText); background: var(--design-button); }
+.guestContent :global(.primary-button):disabled { color: var(--design-buttonText); background: var(--design-button); border-color: var(--design-button); opacity: .45; }
+.guestContent :is([class*="text-[#843528]"], [class*="text-[#285630]"]) { border-radius: 8px; padding: 8px; background: var(--design-surface); }
+.surface[data-event-design="after-dark"] .guestContent [class*="text-[#843528]"] { color: #ffb4a6; }
+.surface[data-event-design="after-dark"] .guestContent [class*="text-[#285630]"] { color: #addcaa; }
+.surface :is(a,button,input,select,textarea):focus-visible { outline: 2px solid var(--design-accent); outline-offset: 3px; }
+@container event-presentation (min-width: 700px) {
+  .page { padding: 32px; }
+  .invitationInner { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; padding: 28px; }
+  .identity { align-self: start; }
+  .content { padding-top: 0; }
+  .content h1, .hubContent h1 { font-size: 50px; }
+  .hubImage { aspect-ratio: 3; }
+  .hubContent { display: grid; grid-template-columns: 1fr 1fr; gap: 22px 32px; padding: 32px; }
+  .hubContent .details { margin: 0; padding: 0 0 0 28px; border: 0; border-left: 1px solid var(--design-rule); }
+  .actions { grid-column: 1/-1; }
+}

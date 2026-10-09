@@ -1,5 +1,5 @@
-// The curated visual vocabulary for the design prototype. No event data,
-// persistence, external fonts, or global stylesheet changes are involved.
+// Canonical visual tokens shared by the public playground and opt-in saved
+// event designs. No event data, arbitrary CSS or external fonts live here.
 export type EventDesign = {
   id: "classic" | "coastal" | "after-dark";
   name: string;

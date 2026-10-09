@@ -6,7 +6,7 @@ import styles from "./design-studio.module.css";
 
 // One fixed-width canvas, fitted to the available space without horizontal
 // scrolling. Container queries respond to the canvas, not the host browser.
-export function PreviewFrame({ device, children }: { device: DesignPreviewDevice; children: ReactNode }) {
+export function PreviewFrame({ device, children, label = "Sample event" }: { device: DesignPreviewDevice; children: ReactNode; label?: string }) {
   const area = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLDivElement>(null);
   const [fit, setFit] = useState(() => fitDesignPreview(device, DESIGN_PREVIEW_WIDTHS[device], 0));
@@ -27,7 +27,7 @@ export function PreviewFrame({ device, children }: { device: DesignPreviewDevice
     <div className={styles.frameBar} aria-hidden="true">
       <span className={styles.frameDots}><i /><i /><i /></span>
       <span>{device === "phone" ? "Phone" : "Desktop"} · {DESIGN_PREVIEW_WIDTHS[device]} px</span>
-      <span>Sample event</span>
+      <span>{label}</span>
     </div>
     <div ref={area} className={styles.fitArea}>
       <div className={styles.fitSpace} style={{ width: fit.width, height: fit.height || undefined }}>

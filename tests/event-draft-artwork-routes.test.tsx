@@ -108,7 +108,7 @@ describe("host-only artwork actions, page and image routes", () => {
   it("renders an honest storage setup state and separate preview controls", async () => {
     mocks.token.mockReturnValue(undefined);
     const html = renderToStaticMarkup(await ArtworkPage(context));
-    for (const copy of ["Set the scene", "Invitation artwork", "Event Hub header", "Mobile artwork preview", "Save draft artwork", "EVENT_DRAFT_BLOB_READ_WRITE_TOKEN"]) expect(html).toContain(copy);
+    for (const copy of ["Set the scene", "Invitation artwork", "Event Hub header", "Design and artwork preview", "Save draft design &amp; artwork", "EVENT_DRAFT_BLOB_READ_WRITE_TOKEN"]) expect(html).toContain(copy);
     expect(html).toContain(`href="/admin/events/${id}"`); expect(html).not.toMatch(/server-private-token|Publish invitation|Submit RSVP/);
     expect(renderToStaticMarkup(<EventDraftArtworkEditor draft={draft} initial={{ settings: EMPTY_DRAFT_ARTWORK, revision: 0 }} uploadConfigured />)).not.toContain("Uploads need a private");
   });

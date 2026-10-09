@@ -1,10 +1,12 @@
 import { isDraftId } from "./event-drafts";
+import { parseEventAppearance, type EventAppearance } from "./event-appearance";
 
 export const DRAFT_IMAGE_LIMIT = 4 * 1024 * 1024;
 export const DRAFT_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"] as const;
 export type DraftImageKind = "invitation" | "header";
 export type DraftImage = { path: string | null; alt: string };
 export type DraftArtwork = {
+  design?: EventAppearance;
   invitation: DraftImage;
   header: DraftImage & { focalX: number; focalY: number; zoomPercent: number };
 };
@@ -29,6 +31,8 @@ export function draftImageUrl(id: string, path: string) {
 export function validateDraftArtwork(id: string, input: unknown): { ok: true; settings: DraftArtwork } | { ok: false; message: string } {
   if (!isDraftId(id) || !input || typeof input !== "object" || Array.isArray(input)) return { ok: false, message: "Please check the artwork settings." };
   const source = input as Record<string, unknown>;
+  const design = source.design === undefined ? undefined : parseEventAppearance(source.design);
+  if (design === null) return { ok: false, message: "Choose an available style and valid invitation framing." };
   const images: Partial<Record<DraftImageKind, DraftImage>> = {};
   for (const kind of ["invitation", "header"] as const) {
     const image = source[kind] as Record<string, unknown> | undefined;
@@ -37,10 +41,11 @@ export function validateDraftArtwork(id: string, input: unknown): { ok: true; se
     images[kind] = { path: image.path as string | null, alt: image.path ? image.alt.trim() : "" };
   }
   const header = source.header as Record<string, unknown>;
-  for (const [key, min, max] of [["focalX", 0, 100], ["focalY", 0, 100], ["zoomPercent", 100, 200]] as const) {
+  for (const [key, min, max] of [["focalX", 0, 100], ["focalY", 0, 100], ["zoomPercent", 100, design ? 250 : 200]] as const) {
     if (typeof header[key] !== "number" || !Number.isInteger(header[key]) || header[key] < min || header[key] > max) return { ok: false, message: "Please check the header position and zoom." };
   }
   return { ok: true, settings: {
+    ...(design ? { design } : {}),
     invitation: images.invitation!,
     header: { ...images.header!, focalX: header.focalX as number, focalY: header.focalY as number, zoomPercent: header.zoomPercent as number },
   } };

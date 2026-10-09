@@ -43,6 +43,7 @@ export async function getDuplicationSource(key: string): Promise<DuplicationSour
     if (!draft || !artwork || !settings) return null;
     source = {
       key, details: draft, settings: settings.settings, settingsSaved: settings.revision > 0,
+      ...(artwork.settings.design ? { design: artwork.settings.design } : {}),
       images: {
         invitation: artwork.settings.invitation.path ? { locator: artwork.settings.invitation.path, alt: artwork.settings.invitation.alt } : null,
         header: artwork.settings.header.path ? { locator: artwork.settings.header.path, alt: artwork.settings.header.alt } : null,

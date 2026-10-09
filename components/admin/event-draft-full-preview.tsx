@@ -15,6 +15,7 @@ export function EventDraftFullPreview({ draft, artwork, record, view }: {
   const id = draft.id;
   const base = `/admin/events/${id}`;
   const paths = eventPaths(draftEventSlug(id));
+  const actions = <div className="flex flex-wrap gap-2" aria-label="Event actions preview"><button className={`${button} opacity-50`} type="button" disabled>Add to Calendar</button><button className={`${button} opacity-50`} type="button" disabled>Get Directions</button></div>;
 
   return <main className="relative min-h-screen bg-[#f7f0e3] px-4 py-6 text-[#202523] sm:px-6 sm:py-9">
     <div aria-hidden="true" className="page-texture" />
@@ -30,15 +31,12 @@ export function EventDraftFullPreview({ draft, artwork, record, view }: {
           <Link className={button} href="/admin/events">All events</Link>
         </nav>
       </header>
-      <EventDraftPreview draft={draft} artwork={artwork} view={view} fullPage>
+      <EventDraftPreview draft={draft} artwork={artwork} view={view} fullPage actions={view === "hub" && artwork.design ? actions : undefined}>
         {view === "invitation" ? <>
           <DraftRsvpPreview settings={record.settings} timeZone={draft.timeZone} />
           <Link className={`${button} w-full`} href={`${base}/preview?view=hub`}>View Event Hub preview →</Link>
         </> : <>
-          <div className="flex flex-wrap gap-2" aria-label="Event actions preview">
-            <button className={`${button} opacity-50`} type="button" disabled>Add to Calendar</button>
-            <button className={`${button} opacity-50`} type="button" disabled>Get Directions</button>
-          </div>
+          {!artwork.design && actions}
           <DraftHubPreview settings={record.settings} />
           <Link className={`${button} w-full`} href={`${base}/preview`}>Return to invitation preview</Link>
         </>}

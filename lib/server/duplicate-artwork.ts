@@ -11,6 +11,7 @@ import { OYSTER_ROAST_EVENT } from "../oyster-roast-event";
 import { EventDuplicationError, isDuplicationSource } from "../event-duplication";
 
 export type CopyArtworkSource = {
+  design?: DraftArtwork["design"];
   key: string;
   images: Record<DraftImageKind, { locator: string; alt: string } | null>;
   crop: Pick<DraftArtwork["header"], "focalX" | "focalY" | "zoomPercent">;
@@ -73,6 +74,7 @@ export async function copyEventArtwork(id: string, source: CopyArtworkSource): P
   if (!(await isAdminAuthenticated())) throw new Error("Host access required.");
   if (!isDraftId(id) || !isDuplicationSource(source.key) || source.key === id) throw new Error("Invalid artwork copy.");
   const artwork = structuredClone(EMPTY_DRAFT_ARTWORK); Object.assign(artwork.header, source.crop);
+  if (source.design) artwork.design = structuredClone(source.design);
   const token = draftImageStorageToken();
   if ((source.images.invitation || source.images.header) && !token) throw new EventDuplicationError("Copying artwork needs the private image store. Check EVENT_DRAFT_BLOB_READ_WRITE_TOKEN, then retry this copy.");
   for (const kind of ["invitation", "header"] as const) {

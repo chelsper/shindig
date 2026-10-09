@@ -1,4 +1,5 @@
 "use client";
+import { EventDesignSurface, EventGuestContent } from "../event-design/event-presentation";
 
 import Link from "next/link";
 import { FormEvent, useRef, useState, useTransition } from "react";
@@ -86,7 +87,7 @@ export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT 
     });
   }
 
-  return (
+  const content = (
     <main className="relative min-h-screen overflow-hidden bg-[#f7f0e3] px-4 py-5 text-[#202523] sm:px-6 sm:py-8">
       <div className="page-texture" />
       <div className="relative mx-auto max-w-2xl">
@@ -289,4 +290,5 @@ export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT 
       </div>
     </main>
   );
+  return !legacy && event.design ? <EventDesignSurface appearance={event.design}><EventGuestContent>{content}</EventGuestContent></EventDesignSurface> : content;
 }

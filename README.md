@@ -13,7 +13,8 @@ resets the selection. There is no save, publish, real RSVP, upload or data reque
 The route requires no Google setup, admin password or database. It is available
 in production as a noindex, fictional design preview. No navigation,
 artwork, global styles or saved appearance of Jasper Shucks or any other real
-event has changed. This is design work for review, not yet a saved event setting.
+event has changed. The playground remains unsaved; real event design settings
+are edited separately in the protected draft workflow below.
 
 `lib/event-design.ts` is the single preset/token definition; the picker, sample
 invitation and sample Hub share it. `lib/design-preview.ts` contains the one
@@ -32,7 +33,7 @@ when viewed on a phone. Captions explicitly identify the scaled preview.
 `PreviewFrame`. The Hub includes only a fictional guest list and host note.
 Sample RSVP, calendar and directions controls are visual only; nothing submits,
 downloads or navigates. No live Hub components or data layers are imported.
-Saved design settings remain separate future work.
+Saved design settings live in the protected event artwork editor, not this playground.
 
 ### Artwork & framing — Step 3 (preview-only)
 
@@ -96,6 +97,53 @@ Keep the unfinished host-account rollout out of any Design Studio deployment.
 The isolated Step 2 release passed lint, typecheck, 1,095 tests and a webpack
 production build, with the same one native concurrency test skipped. The release
 contains only Design Studio components, its fictional fixture, tests and docs.
+
+## Saved event designs — Design Step 4
+
+Open **Your events → event → Artwork & design**. Choose **Classic**, **Coastal**,
+or **After Dark**, upload private artwork, and adjust independent invitation/Hub
+crops. Phone/Desktop previews use the same presentation and image geometry as
+published pages. The invitation is 4:5; the Hub is 16:9 on phones and 3:1 at
+700px and wider, with one shared focal point across sizes. Zoom is 100–250%.
+Use drag or the labeled keyboard sliders; reset affects only the selected crop.
+
+**Save draft design & artwork → Preview saved draft → Review & publish.** Saving
+does not change the live event. The existing artwork revision protects against
+stale saves and publish reviews; publishing copies the complete design and crops
+into the reviewed snapshot. Changing a style later requires another explicit
+publication. The publish review names the chosen style. Duplicate Event retains
+the saved style/crops while copying image bytes to the new event’s private paths.
+
+- Existing records with no design keep **Original layout**, including an
+  uncropped invitation. Choosing Original layout explicitly removes the curated
+  style/invitation crop and caps the original header zoom at its existing 200%.
+- Jasper Shucks’ legacy routes/settings are not migrated or restyled. The public
+  `/design` playground remains fictional and browser-local; it does not upload
+  or save images to an event automatically.
+- The server accepts only the three canonical style IDs and bounded integer
+  crops, never CSS, URLs or arbitrary theme tokens. Existing authenticated image
+  routes, private Blob verification and public snapshot projections stay intact.
+- Guest pages, optional Hub modules and private RSVP updates inherit scoped
+  palette/typography tokens. RSVP rules, guest-list privacy, moderation and other
+  interaction data are unchanged.
+- No migration, new package or new environment variable. Design is optional
+  validated JSON inside the existing `event_draft_artwork.settings` and publication
+  snapshot. Uploads retain the existing 4 MB JPG/PNG/WebP/AVIF limits and private
+  `EVENT_DRAFT_BLOB_READ_WRITE_TOKEN`; text-only styles do not require Blob access.
+- Keep the pending host-account rollout separate when deploying this milestone;
+  it works with the current password-protected admin and migrations 001–019.
+
+Verification: lint, typecheck and webpack production build passed in both the
+working tree and isolated release. The working tree passed 1,223 tests; the
+release without host-account work passed 1,177. Both retain the same one skipped
+native PostgreSQL concurrency test. New disposable in-memory PostgreSQL tests
+exercise save/reload, snapshot-only public rendering, stale saves/reviews,
+explicit republish, auth rejection, invalid/cross-draft data and duplication.
+Browser checks used fictional local data: style/device switching, 320px/390px
+layouts without overflow, actual 4:5 / 16:9 / 3:1 artwork frames, readable dark
+RSVP fields and guest-module navigation. A browser-extension-added HTML attribute
+produced a development hydration warning; no application hydration mismatch was
+identified. Temporary visual QA routes were removed before production builds.
 
 ## RSVP deadlines & event capacity (Step 10 — current)
 

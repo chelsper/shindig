@@ -2,12 +2,22 @@
 import type { EventDraft } from "../../lib/event-drafts";
 import { draftImageUrl, type DraftArtwork } from "../../lib/event-draft-artwork";
 import type { ReactNode } from "react";
+import { DesignedHub, DesignedInvitation } from "../event-design/event-presentation";
 
-export function EventDraftPreview({ draft, artwork, view, children, fullPage = false }: { draft: EventDraft; artwork: DraftArtwork; view: "invitation" | "hub"; children?: ReactNode; fullPage?: boolean }) {
+export function EventDraftPreview({ draft, artwork, view, children, actions, fullPage = false }: { draft: EventDraft; artwork: DraftArtwork; view: "invitation" | "hub"; children?: ReactNode; actions?: ReactNode; fullPage?: boolean }) {
   const header = artwork.header.path ? artwork.header : artwork.invitation;
   const image = view === "hub" ? header : artwork.invitation;
   const date = draft.startsAtUtc ? new Intl.DateTimeFormat("en-US", { timeZone: draft.timeZone, weekday: "long", month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(new Date(draft.startsAtUtc)) : "Date & time to come";
   const Heading = fullPage ? "h1" : "h3";
+  if (artwork.design) {
+    const Presentation = view === "hub" ? DesignedHub : DesignedInvitation;
+    const local = (options: Intl.DateTimeFormatOptions) => draft.startsAtUtc ? new Intl.DateTimeFormat("en-US", { ...options, timeZone: draft.timeZone }).format(new Date(draft.startsAtUtc)) : "";
+    return <Presentation appearance={artwork.design} preview actions={actions}
+      details={{ title: draft.title, eyebrow: draft.hostName ? `Hosted by ${draft.hostName}` : "You’re invited", date: local({ dateStyle: "full" }) || "Date & time to come", time: local({ hour: "numeric", minute: "2-digit", timeZoneName: "short" }), venue: draft.venue || "Location to come", address: draft.address, description: draft.description }}
+      image={{ url: image.path ? draftImageUrl(draft.id, image.path) : "", alt: image.alt, crop: view === "invitation" ? artwork.design.invitationCrop : { x: artwork.header.focalX, y: artwork.header.focalY, zoom: artwork.header.zoomPercent } }}>
+      {children ?? <p className="text-sm leading-6">Private preview · Configure the guest experience in RSVP &amp; Hub settings. No response can be submitted here.</p>}
+    </Presentation>;
+  }
   return <div className={`mx-auto w-full overflow-hidden rounded-[1.75rem] border border-[#202523]/15 bg-[#f7f0e3] shadow-[0_16px_45px_rgb(32_37_35_/_0.08)] ${fullPage ? (view === "invitation" ? "grid max-w-6xl lg:grid-cols-2" : "max-w-4xl") : "max-w-[390px]"}`}>
     <div className={`border-b border-[#202523]/10 px-5 py-4 ${fullPage ? "lg:col-span-2" : ""}`}><span className="font-serif text-xl">Shindig</span><span className="float-right mt-1 text-[0.6rem] font-bold uppercase tracking-widest text-[#355f9e]">Private preview</span></div>
     {image.path ? <div className={view === "hub" ? `relative aspect-[16/9] overflow-hidden bg-[#dceaf7] ${fullPage ? "sm:aspect-[16/5]" : ""}` : `min-w-0 p-4 pb-0 ${fullPage ? "lg:p-6" : ""}`}>
