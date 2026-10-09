@@ -4,6 +4,7 @@ import { artworkAspect, defaultArtworkCrop, type ArtworkCrop as Crop } from "../
 import { draftImageUrl, type DraftArtwork } from "../../lib/event-draft-artwork";
 import type { DesignPreviewDevice, DesignPreviewPage } from "../../lib/design-preview";
 import { ArtworkCrop } from "../design-studio/artwork-crop";
+import { EventAppearanceControls } from "./event-appearance-controls";
 
 export function DraftDesignControls({ id, settings, onChange, view, onViewChange, device, disabled }: {
   id: string; settings: DraftArtwork; onChange: (next: DraftArtwork) => void;
@@ -30,6 +31,7 @@ export function DraftDesignControls({ id, settings, onChange, view, onViewChange
         </label>)}
       </div>
     </fieldset>
+    {design ? <EventAppearanceControls appearance={design} disabled={disabled} onChange={(next) => onChange({ ...settings, design: next })} /> : <p className="mt-3 text-xs leading-5 text-[#202523]/65">Choose Classic, Coastal or After Dark to customize colors and type. Original layout stays exactly as it is.</p>}
     {design && <fieldset disabled={disabled} className="mt-6 min-w-0"><legend className="text-xs font-semibold">Frame your artwork</legend>
       <div className="my-3 flex flex-wrap gap-2">{([ ["invitation", "Invitation crop"], ["hub", "Hub crop"] ] as const).map(([value, label]) => <button key={value} type="button" className="min-h-11 rounded-full border border-[#355f9e]/25 px-4 text-xs font-semibold text-[#214e91] aria-pressed:bg-[#e9f2f8]" aria-pressed={view === value} onClick={() => onViewChange(value)}>{label}</button>)}</div>
       {image.path ? <>

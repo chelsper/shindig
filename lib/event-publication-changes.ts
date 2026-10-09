@@ -1,6 +1,7 @@
 import type { PublicationSnapshot } from "./event-publication";
 import { draftImageUrl, isDraftImagePath } from "./event-draft-artwork";
 import { getEventDesign } from "./event-design";
+import { appearanceChoices, appearanceSummary, resolveEventAppearance } from "./event-appearance";
 import { DRAFT_HUB_MODULES } from "./event-draft-settings";
 import { isDraftId } from "./event-drafts";
 
@@ -48,7 +49,18 @@ export function compareEventPublication(id: string, before: PublicationSnapshot,
   const art = group("artwork", "Design & artwork", "/artwork");
   const oldArt = before.artwork, newArt = after.artwork;
   art("style", "Invitation & Hub style", oldArt.design?.style ?? null, newArt.design?.style ?? null,
-    value(oldArt.design ? getEventDesign(oldArt.design.style).name : "Original layout"), value(newArt.design ? getEventDesign(newArt.design.style).name : "Original layout"));
+    value(oldArt.design ? getEventDesign(oldArt.design.style).name : "Original layout"), value(newArt.design ? getEventDesign(newArt.design.style).name : "Original layout"),
+    { note: newArt.design ? appearanceSummary(newArt.design) : undefined });
+  // A preset change already describes the resulting look above. Within one
+  // preset, compare resolved choices so legacy/default values are equivalent.
+  if (oldArt.design && newArt.design && oldArt.design.style === newArt.design.style) {
+    const old = appearanceChoices(oldArt.design), next = appearanceChoices(newArt.design);
+    const oldDesign = resolveEventAppearance(oldArt.design), nextDesign = resolveEventAppearance(newArt.design);
+    art("palette", "Color palette", old.palette, next.palette, value(oldDesign.paletteLabel), value(nextDesign.paletteLabel));
+    art("typography", "Font pairing", old.typography, next.typography, value(oldDesign.typographyLabel), value(nextDesign.typographyLabel));
+    art("titleWeight", "Title weight", old.titleWeight, next.titleWeight, value(old.titleWeight === "bold" ? "Bold" : "Regular"), value(next.titleWeight === "bold" ? "Bold" : "Regular"));
+    art("titleStyle", "Title style", old.titleStyle, next.titleStyle, value(old.titleStyle === "italic" ? "Italic" : "Upright"), value(next.titleStyle === "italic" ? "Italic" : "Upright"));
+  }
   const image = (path: string | null, alt: string, caption: string): ChangeValue => {
     if (!path) return value(caption);
     if (!isDraftImagePath(id, path)) throw new Error("Invalid comparison artwork.");

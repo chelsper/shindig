@@ -1,4 +1,4 @@
-.surface { container: event-presentation / inline-size; width: 100%; min-width: 0; background: var(--design-background); color: var(--design-ink); --ink: var(--design-ink); --blue: var(--design-accent); }
+.surface { container: event-presentation / inline-size; width: 100%; min-width: 0; background: var(--design-background); color: var(--design-ink); font-family: var(--design-body-font); --ink: var(--design-ink); --blue: var(--design-accent); }
 .page { max-width: 1180px; margin: auto; padding: 24px 16px; }
 .wordmark { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
 .wordmark > span:first-child { font: 28px "Iowan Old Style", Baskerville, serif; letter-spacing: -.05em; }
@@ -7,7 +7,7 @@
 .invitationInner { padding: 18px; border: 1px solid var(--design-rule); border-radius: 12px; background: var(--design-surface); }
 .identity, .content { min-width: 0; }
 .content { padding-top: 26px; }
-.content h1, .hubContent h1 { font: 42px/1.05 var(--design-heading-font); font-style: var(--design-heading-style); letter-spacing: -.04em; overflow-wrap: anywhere; margin: 12px 0 20px; }
+.content h1, .hubContent h1 { font: 42px/1.05 var(--design-heading-font); font-style: var(--design-title-style); font-weight: var(--design-title-weight); letter-spacing: -.04em; overflow-wrap: anywhere; margin: 12px 0 20px; }
 .eyebrow { color: var(--design-accent); text-transform: uppercase; letter-spacing: .18em; font-size: 11px; font-weight: 650; }
 .details { display: grid; gap: 18px; padding: 20px 0; margin: 22px 0; border-block: 1px solid var(--design-rule); font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
 .details dt { color: var(--design-accent); font-size: 10px; letter-spacing: .15em; text-transform: uppercase; margin-bottom: 5px; }
@@ -30,7 +30,8 @@
 .actions > * { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--design-rule); border-radius: 999px; padding: 10px 18px; font-size: 12px; font-weight: 650; color: var(--design-accent); }
 .modules { margin-top: 26px; }
 .surface[data-event-design="coastal"] .invitation, .surface[data-event-design="coastal"] .hubIdentity { background: repeating-linear-gradient(90deg, var(--design-background) 0 18px, var(--design-decoration) 18px 36px); }
-.surface[data-event-design="after-dark"] { color-scheme: dark; }
+.surface[data-color-scheme="dark"] { color-scheme: dark; }
+.surface[data-color-scheme="light"] { color-scheme: light; }
 
 /* Scoped bridge for the existing guest modules and RSVP controls. Their data,
    interaction and semantic error colors stay intact; no global/Jasper styles
@@ -59,8 +60,8 @@
 .guestContent :global(.primary-button):hover:not(:disabled) { color: var(--design-buttonText); background: var(--design-button); }
 .guestContent :global(.primary-button):disabled { color: var(--design-buttonText); background: var(--design-button); border-color: var(--design-button); opacity: .45; }
 .guestContent :is([class*="text-[#843528]"], [class*="text-[#285630]"]) { border-radius: 8px; padding: 8px; background: var(--design-surface); }
-.surface[data-event-design="after-dark"] .guestContent [class*="text-[#843528]"] { color: #ffb4a6; }
-.surface[data-event-design="after-dark"] .guestContent [class*="text-[#285630]"] { color: #addcaa; }
+.surface[data-color-scheme="dark"] .guestContent [class*="text-[#843528]"] { color: #ffb4a6; }
+.surface[data-color-scheme="dark"] .guestContent [class*="text-[#285630]"] { color: #addcaa; }
 .surface :is(a,button,input,select,textarea):focus-visible { outline: 2px solid var(--design-accent); outline-offset: 3px; }
 @container event-presentation (min-width: 700px) {
   .page { padding: 32px; }

@@ -82,6 +82,19 @@ describe("Artwork & Design editor safeguards", () => {
     load("artwork"); change("Invitation image description", " "); toggle("preview"); await submit(); render();
     expect(bar().error).toContain("description"); expect(harness.artwork).not.toHaveBeenCalled(); expect(bar().dirty).toBe(true);
   });
+  it("retains custom type/colors across mobile previews and retries a failed save without publishing", async () => {
+    load("artwork");
+    const next: DraftArtwork = { ...art, design: { ...art.design!, palette: "fern", typography: "modern", titleWeight: "bold", titleStyle: "italic" } };
+    design(next); toggle("preview"); toggle("edit");
+    harness.artwork.mockResolvedValueOnce({ ok: false, message: "Please try again." });
+    await submit(); render();
+    expect(bar().dirty).toBe(true);
+    expect(find(el => el.type === EventDraftPreview)!.props.artwork).toEqual(next);
+    expect(harness.artwork).toHaveBeenLastCalledWith({ id: draft.id, revision: 2, settings: next });
+    await submit(); render();
+    expect(bar().dirty).toBe(false); expect(bar().status).toContain("Nothing has been published");
+    expect(find(el => el.type === DraftDesignControls)!.props.settings).toEqual(next);
+  });
   it("locks rapid saves, confirms success, advances revision, and does not resave clean artwork", async () => {
     load("artwork"); change("Invitation image description", "Fresh flowers");
     let finish!: (value: unknown) => void; harness.artwork.mockReturnValue(new Promise(resolve => { finish = resolve; }));

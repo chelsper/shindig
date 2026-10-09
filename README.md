@@ -314,6 +314,26 @@ contains only Design Studio components, its fictional fixture, tests and docs.
 
 ## Saved event designs — Design Step 4
 
+### Colors & type
+
+In **Your events → event → Artwork & design**, choose a style, then customize
+its six coordinated palettes, five system-font pairings, and regular/bold/italic
+event title. The live invitation and Hub previews use the same presentation as
+published pages. These controls affect page text, not lettering in uploaded images.
+System fonts have cross-platform fallbacks and make no external font requests.
+
+**Reset colors & type** restores the selected style's defaults without changing
+artwork or crops. Choosing another style also restores its colors/type defaults.
+Original layout and previously saved designs keep their existing appearance.
+The public `/design` playground still demonstrates the three starting styles;
+personalization happens in the protected editor.
+
+Use **Save draft → Review & publish** to make changes live. The review detects
+palette, font and title-emphasis edits; duplication retains them. Server-side
+validation accepts only curated IDs and emphasis values, never arbitrary CSS.
+Settings use the existing artwork JSON and publication snapshots: no migration,
+environment variable or dependency is needed.
+
 Open **Your events → event → Artwork & design**. Choose **Classic**, **Coastal**,
 or **After Dark**, upload private artwork, and adjust independent invitation/Hub
 crops. Phone/Desktop previews use the same presentation and image geometry as

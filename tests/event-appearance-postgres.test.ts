@@ -48,6 +48,21 @@ describe.skipIf(!modulePath)("saved style → preview → explicit publication P
     expect(live?.design).toEqual(f.artwork.design); expect(live?.eventHub.headerImage.zoomPercent).toBe(230);
     expect(JSON.stringify(live)).not.toContain("event-drafts/");
   });
+  it("saves custom colors/type privately, flags changes, duplicates them and publishes only the reviewed version", async () => {
+    const f = await fixture(); await saveDraftArtworkRecord(f.id, 0, f.artwork); await publishEventRecord(f.id, f.versions, null);
+    const changed: DraftArtwork = { ...f.artwork, design: { ...f.artwork.design!, palette: "fern", typography: "modern", titleWeight: "bold", titleStyle: "italic" } };
+    expect(await saveDraftArtworkRecord(f.id, 1, changed)).toBe(2);
+    expect((await getDraftArtwork(f.id))?.settings).toEqual(changed);
+    expect((await getPublishedEvent(f.slug))?.design).toEqual(f.artwork.design);
+    expect((await listHostEventCards()).find(({ id }) => id === f.id)?.hasUnpublishedChanges).toBe(true);
+    expect((await getDuplicationSource(f.id))?.design).toEqual(changed.design);
+    await expect(saveDraftArtworkRecord(f.id, 2, { ...changed, design: { ...changed.design, palette: "url(evil)" } })).rejects.toThrow("Invalid draft artwork");
+    expect(await saveDraftArtworkRecord(f.id, 1, f.artwork)).toBeNull();
+    expect(await publishEventRecord(f.id, { ...f.versions, publication: 1 }, null)).toBeNull();
+    expect(await publishEventRecord(f.id, { ...f.versions, artwork: 2, publication: 1 }, null)).toBe(2);
+    expect((await getPublishedEvent(f.slug))?.design).toEqual(changed.design);
+    expect((await listHostEventCards()).find(({ id }) => id === f.id)?.hasUnpublishedChanges).toBe(false);
+  });
   it("reviews persisted changes without changing the live snapshot; stale review stays rejected", async () => {
     const f = await fixture(); await saveDraftArtworkRecord(f.id, 0, f.artwork); await publishEventRecord(f.id, f.versions, null);
     const old = await getHostEventPublication(f.slug);

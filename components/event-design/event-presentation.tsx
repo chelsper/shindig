@@ -1,8 +1,8 @@
 /* eslint-disable @next/next/no-img-element -- Draft images require host cookies; published images use our guarded route, never the image optimizer. */
 import type { ReactNode } from "react";
-import { eventDesignVariables, getEventDesign } from "../../lib/event-design";
+import { eventDesignVariables } from "../../lib/event-design";
 import { artworkImageStyle, type ArtworkCrop } from "../../lib/design-artwork";
-import type { EventAppearance } from "../../lib/event-appearance";
+import { resolveEventAppearance, type EventAppearance } from "../../lib/event-appearance";
 import styles from "./event-presentation.module.css";
 
 export type PresentationDetails = { title: string; eyebrow: string; date: string; time: string; venue: string; address: string; description: string };
@@ -10,7 +10,8 @@ type Image = { url: string; alt: string; crop: ArtworkCrop };
 type Props = { appearance: EventAppearance; details: PresentationDetails; image: Image; children?: ReactNode; actions?: ReactNode; preview?: boolean };
 
 export function EventDesignSurface({ appearance, children, fullHeight = false }: { appearance: EventAppearance; children: ReactNode; fullHeight?: boolean }) {
-  return <div className={styles.surface} data-event-design={appearance.style} style={{ ...eventDesignVariables(getEventDesign(appearance.style)), ...(fullHeight ? { minHeight: "100svh" } : {}) }}>{children}</div>;
+  const design = resolveEventAppearance(appearance);
+  return <div className={styles.surface} data-event-design={appearance.style} data-color-scheme={design.colorScheme} style={{ ...eventDesignVariables(design), ...(fullHeight ? { minHeight: "100svh" } : {}) }}>{children}</div>;
 }
 export function EventGuestContent({ children }: { children: ReactNode }) {
   return <div className={styles.guestContent}>{children}</div>;

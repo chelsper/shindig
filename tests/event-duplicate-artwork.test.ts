@@ -22,7 +22,7 @@ beforeEach(() => {
 });
 describe("independently owned private artwork copies", () => {
   it("preserves saved design and independent invitation crop when copying", async () => {
-    const design = { style: "after-dark" as const, invitationCrop: { x: 20, y: 70, zoom: 220 } };
+    const design = { style: "after-dark" as const, palette: "rose" as const, typography: "storybook" as const, titleWeight: "bold" as const, titleStyle: "normal" as const, invitationCrop: { x: 20, y: 70, zoom: 220 } };
     const result = await copyEventArtwork(destinationId, { ...source, design, crop: { ...source.crop, zoomPercent: 240 } });
     expect(result.design).toEqual(design); expect(result.design).not.toBe(design);
     expect(result.header.zoomPercent).toBe(240); expect(result.invitation.path).not.toBe(path);
