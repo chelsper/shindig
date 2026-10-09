@@ -12,6 +12,8 @@ import { UpdatesModule } from "./updates-module";
 import { PollsModule } from "./polls-module";
 import type { PublicPoll } from "../../lib/polls";
 import { GuestInteractionsProvider } from "../guest-interactions-provider";
+import { PotluckModule } from "./potluck-module";
+import type { PublicPotluckItem } from "../../lib/potluck";
 
 type EventModulesProps = {
   event?: OysterRoastEvent;
@@ -25,6 +27,8 @@ type EventModulesProps = {
   updates?: PublicHostUpdate[];
   updatesUnavailable?: boolean;
   polls?: PublicPoll[];
+  potluckItems?: PublicPotluckItem[];
+  potluckUnavailable?: boolean;
 };
 
 type ModuleDefinition = Omit<HubModule, "content"> & {
@@ -59,6 +63,10 @@ const moduleRegistry: ModuleDefinition[] = [
     ),
   },
   {
+    id: "potluck", label: "Bring something", icon: "potluck",
+    render: ({ event, potluckItems = [], potluckUnavailable }) => <PotluckModule items={potluckItems} eventSlug={event!.slug} unavailable={potluckUnavailable} />,
+  },
+  {
     id: "polls", label: "Important Research", icon: "polls",
     render: ({ polls = [] }) => <PollsModule polls={polls} />,
   },
@@ -81,6 +89,7 @@ const moduleRegistry: ModuleDefinition[] = [
 export function EventModules(props: EventModulesProps) {
   const modules = moduleRegistry
     .filter((module) => props.features[module.id])
+    .filter((module) => module.id !== "potluck" || Boolean(props.event && props.event.slug !== "oyster-roast-2026"))
     .filter((module) => module.id !== "polls" || Boolean(props.polls?.length))
     .map(({ render, ...module }) => ({ ...module, content: render(props) }));
 

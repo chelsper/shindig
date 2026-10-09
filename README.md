@@ -1,5 +1,44 @@
 # Shindig
 
+## Bring something — optional signups
+
+Before deploying this feature, apply `db/migrations/022_bring_something.sql` to
+the same Neon database used by `DATABASE_URL`. It adds `potluck_items`,
+`potluck_claims`, transactional write functions and support for the existing
+`potluck` feature flag. It preserves existing data, is reapplicable, and does
+not create items or enable the module for any event. No new environment
+variables, dependencies, email service or guest accounts are needed.
+
+For an editable event, enable **Bring something** in **RSVP & Hub**, save, then
+review and publish. Under **Responses → Bring something**, add an item, a short
+note and the number needed. Hosts can edit, close/reopen items and release a
+signup with confirmation. These item/claim changes take effect immediately for
+an enabled published event; they are not private event-draft changes. Closing
+keeps existing claims and permits guests to cancel. There is no destructive
+item deletion. The original hard-coded Jasper event remains unchanged.
+
+The public Hub exposes only item descriptions and aggregate availability.
+Guest names are host-only. Each guest receives a 256-bit private bearer link
+to change quantity/name or cancel that individual signup; only its
+purpose-separated SHA-256 hash is stored. The link does not change an RSVP,
+and no email/text is sent. Guests must save their link; anyone with it can
+manage that signup. Canceled links remain usable to sign up again. Disabling
+the module or unpublishing/archiving the event blocks guest access entirely.
+
+All writes validate on the server. Publication-row locks serialize capacity
+checks, optimistic revisions prevent stale edits, and stable request tokens
+deduplicate repeated clicks/lost-response retries. Fresh claims have a basic
+database-backed limit of 10 per event/requester bucket/minute; raw IPs are not
+stored. This is basic abuse protection, not guest identity verification.
+Private-link pages disable indexing, caching and referrers. Host data access
+uses the existing authenticated, event-scoped authorization boundary.
+
+Tests exercise the SQL and migration replay in disposable embedded PostgreSQL,
+public projection, cross-event denial, quantity limits, retries, cancellation,
+host authorization, feature/lifecycle gates, UI states and database failures.
+Independent native-Postgres lock-wait tests require a disposable PostgreSQL
+server; embedded PostgreSQL alone does not prove connection interleavings.
+
 ## Mobile event setup navigation
 
 On phones, the seven-section setup navigation becomes a compact current-section

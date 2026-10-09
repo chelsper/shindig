@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../app/event/playlist-actions", () => ({ submitPlaylistSuggestion: vi.fn() }));
 vi.mock("../app/event/question-actions", () => ({ submitGuestQuestion: vi.fn() }));
+vi.mock("../app/event/potluck-actions", () => ({ saveGuestPotluckClaim: vi.fn() }));
 vi.mock("../app/event/interaction-actions", () => ({ loadGuestInteractions: vi.fn(), applaudSong: vi.fn(), voteInPoll: vi.fn() }));
 
 import { EventModules } from "../components/event-hub/event-modules";

@@ -20,10 +20,12 @@ import { listPlaylistSuggestionsForAdmin } from "../../../../../lib/server/playl
 import { guestListQuery } from "../../../../../lib/admin-guests";
 import { EventGuestList } from "../../../../../components/admin/event-guest-list";
 import { rsvpDeadlineLabel } from "../../../../../lib/rsvp-policy";
+import { HostPotluckManager } from "../../../../../components/admin/host-potluck-manager";
+import { listHostPotluckItems } from "../../../../../lib/server/potluck";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Event responses | Shindig", robots: { index: false, follow: false }, referrer: "no-referrer" as const };
-const views = ["rsvps", "questions", "updates", "playlist", "polls"] as const;
-const labels = { rsvps: "Guest responses", questions: "Ask the Host", updates: "Host Updates", playlist: "Playlist", polls: "Polls" };
+const views = ["rsvps", "questions", "updates", "playlist", "polls", "potluck"] as const;
+const labels = { rsvps: "Guest responses", questions: "Ask the Host", updates: "Host Updates", playlist: "Playlist", polls: "Polls", potluck: "Bring something" };
 export default async function EventGuests({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ view?: string; filter?: string; q?: string; saved?: string }> }) {
   if (!(await isAdminAuthenticated())) redirect("/admin");
   const { id } = await params;
@@ -39,7 +41,11 @@ export default async function EventGuests({ params, searchParams }: { params: Pr
   const { event, scope, publication } = data;
   const failed = <p role="alert">This section couldn’t load. Please refresh and try again.</p>;
   let content;
-    if (view === "questions") {
+    if (view === "potluck") {
+      const items = await listHostPotluckItems(slug).catch(() => null);
+      content = items ? <HostPotluckManager initial={items} /> : failed;
+    }
+    else if (view === "questions") {
       const questions = await listQuestionsForAdmin(scope).catch(() => null);
       content = questions ? <HostQuestionsManager questions={questions} /> : failed;
     }

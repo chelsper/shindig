@@ -8,6 +8,7 @@ vi.mock("../app/admin/updates/actions", () => ({ createHostUpdate: vi.fn(), edit
 
 import { QuestionsModule } from "../components/event-hub/questions-module";
 import { UpdatesModule } from "../components/event-hub/updates-module";
+vi.mock("../app/event/potluck-actions", () => ({ saveGuestPotluckClaim: vi.fn() }));
 import { EventModules } from "../components/event-hub/event-modules";
 import { HostQuestionsManager } from "../components/admin/host-questions-manager";
 import { HostUpdatesManager } from "../components/admin/host-updates-manager";

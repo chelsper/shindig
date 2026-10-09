@@ -26,7 +26,7 @@ describe("draft RSVP and Hub settings", () => {
   it.each([null, [], {}, { ...DEFAULT_DRAFT_SETTINGS, published: true }, { ...DEFAULT_DRAFT_SETTINGS, rsvp: { ...DEFAULT_DRAFT_SETTINGS.rsvp, secret: true } }, { ...DEFAULT_DRAFT_SETTINGS, rsvp: { ...DEFAULT_DRAFT_SETTINGS.rsvp, allowComments: "false" } }, { ...DEFAULT_DRAFT_SETTINGS, rsvp: { ...DEFAULT_DRAFT_SETTINGS.rsvp, guestListDefaultVisible: 1 } }, { ...DEFAULT_DRAFT_SETTINGS, features: { ...DEFAULT_DRAFT_SETTINGS.features, unknown: true } }, { ...DEFAULT_DRAFT_SETTINGS, features: [] }, { ...DEFAULT_DRAFT_SETTINGS, features: { guestList: true } }])("rejects malformed or extra settings: %j", (input) => {
     expect(validateDraftSettings(input).ok).toBe(false);
   });
-  it.each(["photos", "potluck"])("cannot enable unimplemented feature %s", (id) => {
+  it.each(["photos"])("cannot enable unimplemented feature %s", (id) => {
     expect(validateDraftSettings({ ...DEFAULT_DRAFT_SETTINGS, features: { ...DEFAULT_DRAFT_SETTINGS.features, [id]: true } }).ok).toBe(false);
   });
   it.each(DRAFT_HUB_MODULES)("supports only boolean values for $id", ({ id }) => {
@@ -58,7 +58,7 @@ describe("private previews and readiness", () => {
     let html = renderToStaticMarkup(<DraftHubPreview settings={settings} />);
     for (const { id } of DRAFT_HUB_MODULES) expect(html).toContain(`hub-tab-${id}`);
     expect(html).toContain("No weather data is requested"); expect(html).toContain("only when a poll is open");
-    expect(html).not.toMatch(/Around the roast|172 Belmont|<form|src=|oyster-roast|hub-tab-photos|hub-tab-potluck/);
+    expect(html).not.toMatch(/Around the roast|172 Belmont|<form|src=|oyster-roast|hub-tab-photos/);
     for (const { id } of DRAFT_HUB_MODULES) settings.features[id] = false;
     html = renderToStaticMarkup(<DraftHubPreview settings={settings} />);
     expect(html).not.toContain("hub-tab-"); expect(html).toContain("no optional modules are selected");

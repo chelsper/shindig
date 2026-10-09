@@ -53,7 +53,7 @@ BEGIN
     '[]'::jsonb, '{}'::jsonb, 'null'::jsonb,
     flags - 'guestList', flags || '{"unknown":true}'::jsonb,
     jsonb_set(flags, '{guestList}', 'null'), jsonb_set(flags, '{weather}', '"true"'),
-    jsonb_set(flags, '{photos}', 'true'), jsonb_set(flags, '{potluck}', 'true')
+    jsonb_set(flags, '{photos}', 'true'), jsonb_set(flags, '{potluck}', '"true"')
   ] LOOP
     BEGIN
       UPDATE event_draft_settings SET features = malformed WHERE event_id = draft_id;

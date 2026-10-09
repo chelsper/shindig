@@ -7,14 +7,16 @@ import type { EventFeatures } from "../../lib/oyster-roast-event";
 export type HubModule = {
   id: keyof EventFeatures;
   label: string;
-  icon: "guests" | "weather" | "playlist" | "questions" | "updates" | "polls";
+  icon: "guests" | "weather" | "playlist" | "questions" | "updates" | "polls" | "potluck";
   content: ReactNode;
 };
 
 function ModuleIcon({ icon }: { icon: HubModule["icon"] }) {
   return (
     <svg aria-hidden="true" className="size-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      {icon === "polls" ? (
+      {icon === "potluck" ? (
+        <><path d="M3 9h18l-2 11H5L3 9Zm5 0 4-7 4 7M9 13v3m6-3v3" /></>
+      ) : icon === "polls" ? (
         <><path d="M5 19V9m7 10V4m7 15v-7M3 21h18" /></>
       ) : icon === "guests" ? (
         <>

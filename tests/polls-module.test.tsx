@@ -6,6 +6,7 @@ vi.mock("../app/event/question-actions", () => ({ submitGuestQuestion: vi.fn() }
 vi.mock("../app/admin/polls/actions", () => ({ saveHostPoll: vi.fn(), setHostPollStatus: vi.fn() }));
 import { PollsModule } from "../components/event-hub/polls-module";
 import { PollResults } from "../components/event-hub/poll-results";
+vi.mock("../app/event/potluck-actions", () => ({ saveGuestPotluckClaim: vi.fn() }));
 import { EventModules } from "../components/event-hub/event-modules";
 import { PollEditor } from "../components/admin/poll-editor";
 import { HostPollsManager } from "../components/admin/host-polls-manager";

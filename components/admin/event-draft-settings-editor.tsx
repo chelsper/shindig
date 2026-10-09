@@ -100,7 +100,7 @@ export function EventDraftSettingsEditor({ draft, artwork, initial, coordinates 
                 <h2 id="hub-settings-heading" className="font-serif text-2xl">A little more Shindig</h2>
                 <p className="mt-2 text-sm leading-6 text-[#202523]/60">Choose what belongs on your Event Hub. Turn everything off for just the event details.</p>
                 <div className="mt-3 divide-y divide-[#202523]/10">{DRAFT_HUB_MODULES.map((module) => <label key={module.id} className="flex min-h-20 cursor-pointer items-center gap-4 py-4"><input type="checkbox" className="size-5 shrink-0 accent-[#355f9e]" checked={settings.features[module.id]} onChange={(event) => { change({ ...settings, features: { ...settings.features, [module.id]: event.target.checked } }); setView("hub"); }} /><span className="min-w-0"><span className="block text-sm font-semibold">{module.label}</span><span className="mt-1 block text-xs leading-5 text-[#202523]/60">{module.description}</span></span></label>)}</div>
-                <p className="mt-2 text-xs leading-5 text-[#202523]/55">These choices stay private until you publish. Review provider setup before publishing. Photos and Potluck aren’t available yet.</p>
+                <p className="mt-2 text-xs leading-5 text-[#202523]/55">These choices stay private until you publish. Review provider setup before publishing. Photos aren’t available yet. Manage bring-something items in event responses after publishing.</p>
               </section>
             </fieldset>
           </form>

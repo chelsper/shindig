@@ -10,10 +10,12 @@ import { EventModules } from "./event-modules";
 import { DesignedHub } from "../event-design/event-presentation";
 import { calendarPath } from "../../lib/calendar";
 import Link from "next/link";
+import { listPublicPotluckItems } from "../../lib/server/potluck";
 
 export async function PublishedEventHub({ event, scope }: { event: EventConfiguration; scope: EventScope }) {
-  const [guests, playlist, questions, updates, polls] = await Promise.allSettled([
+  const [guests, playlist, questions, updates, polls, potluck] = await Promise.allSettled([
     getPublicGuestList(scope), listPublicPlaylistSuggestions(scope), listPublicQuestions(scope), listPublicHostUpdates(scope), listPublicPolls(scope),
+    event.features.potluck ? listPublicPotluckItems(scope) : Promise.resolve([]),
   ]);
   const image = event.eventHub.headerImage;
   const modules = <EventModules event={event} features={event.features}
@@ -21,7 +23,8 @@ export async function PublishedEventHub({ event, scope }: { event: EventConfigur
         playlistSuggestions={playlist.status === "fulfilled" ? playlist.value : []} playlistUnavailable={playlist.status === "rejected"}
         questions={questions.status === "fulfilled" ? questions.value : []} questionsUnavailable={questions.status === "rejected"}
         updates={updates.status === "fulfilled" ? updates.value : []} updatesUnavailable={updates.status === "rejected"}
-        polls={polls.status === "fulfilled" ? polls.value : []} />;
+        polls={polls.status === "fulfilled" ? polls.value : []}
+        potluckItems={potluck.status === "fulfilled" ? potluck.value : []} potluckUnavailable={potluck.status === "rejected"} />;
   if (event.design) return <main><DesignedHub appearance={event.design}
     details={{ title: event.title, eyebrow: event.invitation.eyebrow, date: event.dateLabel, time: event.timeLabel, venue: event.venue, address: event.address, description: event.description }}
     image={{ url: image.url, alt: image.alt, crop: { x: image.focalX, y: image.focalY, zoom: image.zoomPercent } }}

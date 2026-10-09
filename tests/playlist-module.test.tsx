@@ -6,6 +6,7 @@ vi.mock("../app/event/question-actions", () => ({ submitGuestQuestion: vi.fn() }
 vi.mock("../app/event/interaction-actions", () => ({ loadGuestInteractions: vi.fn(), applaudSong: vi.fn(), voteInPoll: vi.fn() }));
 
 import { PlaylistModule } from "../components/event-hub/playlist-module";
+vi.mock("../app/event/potluck-actions", () => ({ saveGuestPotluckClaim: vi.fn() }));
 import { EventModules } from "../components/event-hub/event-modules";
 import { OYSTER_ROAST_EVENT } from "../lib/oyster-roast-event";
 import { MusicSearch, MusicSearchResults } from "../components/music/music-search";
