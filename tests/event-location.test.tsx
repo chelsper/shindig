@@ -11,12 +11,18 @@ import { findEventAddress, saveEventLocation } from "../app/admin/events/[id]/lo
 import Page, { dynamic, metadata } from "../app/admin/events/[id]/location/page";
 import { EventLocationEditor } from "../components/admin/event-location-editor";
 import { parseEventLocation, locationNumbers } from "../lib/event-location";
-import { LocationError } from "../lib/server/address-search";
+import { LocationError, LocationConflictError } from "../lib/server/address-search";
 import { draft } from "./fixtures/publication";
 const location = { address: draft.address, matchedAddress: "123 EXAMPLE LANE", latitude: 30, longitude: -81, source: "census" as const };
 beforeEach(() => { vi.resetAllMocks(); mocks.auth.mockResolvedValue(true); mocks.draft.mockResolvedValue(draft); mocks.redirect.mockImplementation(() => { throw Error("redirect"); }); mocks.notFound.mockImplementation(() => { throw Error("not found"); }); });
 
 describe("host location boundary and display", () => {
+  it("keeps the editor mounted across saved revision revalidation", async () => {
+    const before = await Page({ params: Promise.resolve({ id: draft.id }) });
+    mocks.draft.mockResolvedValue({ ...draft, revision: draft.revision + 1, location });
+    const after = await Page({ params: Promise.resolve({ id: draft.id }) });
+    expect(before.key).toBe(draft.id); expect(after.key).toBe(before.key);
+  });
   it("requires authentication before page reads and lookup/save actions", async () => {
     mocks.auth.mockResolvedValue(false);
     await expect(Page({ params: Promise.resolve({ id: draft.id }) })).rejects.toThrow("redirect");
@@ -53,7 +59,9 @@ describe("host location boundary and display", () => {
     expect(html).toContain("Find address"); expect(html).toContain("sends the saved address"); expect(html).toContain("U.S. Census");
     expect(html).toContain("Enter coordinates manually"); expect(html).toContain(draft.timeZone);
     expect(html).toContain("sm:grid-cols-2"); expect(html).toContain("min-h-11");
-    expect(html).not.toContain("Confirm &amp; save location");
+    expect(html).toContain('aria-label="Confirm &amp; save location"');
+    expect(html).toMatch(/type="submit"[^>]*disabled=""/); expect(html).toContain('form="event-location-form"');
+    expect(html).toContain("Continue setup"); expect(html).toContain("safe-area-inset-bottom");
     expect(mocks.find).not.toHaveBeenCalled(); expect(mocks.save).not.toHaveBeenCalled();
   });
   it("renders saved confirmation without publishing or borrowing another event location", () => {
@@ -70,5 +78,12 @@ describe("host location boundary and display", () => {
     expect(parseEventLocation(location, "Changed")).toBeNull();
     for (const [lat, lon] of [["", "0"], ["0", " "], ["NaN", "0"], ["91", "0"]]) expect(locationNumbers(lat, lon)).toBeNull();
     expect(locationNumbers("0", "0")).toEqual({ latitude: 0, longitude: 0 });
+  });
+  it("marks stale revision failures for recovery, without changing other friendly failures", async () => {
+    const error = new LocationConflictError("This draft changed. Reopen the saved location.");
+    mocks.find.mockRejectedValue(error); mocks.save.mockRejectedValue(error);
+    expect(await findEventAddress(draft.id, 2)).toEqual({ ok: false, conflict: true, message: error.message });
+    expect(await saveEventLocation(draft.id, 2, location, true)).toEqual({ ok: false, conflict: true, message: error.message });
+    expect(mocks.revalidate).not.toHaveBeenCalled();
   });
 });

@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { parseEventLocation, type AddressMatch } from "../event-location";
 
 export class LocationError extends Error {}
+export class LocationConflictError extends LocationError {}
 const cache = new Map<string, { until: number; matches: AddressMatch[] }>();
 const pending = new Map<string, Promise<AddressMatch[]>>();
 let windowStart = 0, requests = 0, cooldown = 0;

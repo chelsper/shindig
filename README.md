@@ -1,5 +1,26 @@
 # Shindig
 
+## Mobile event setup navigation
+
+On phones, the seven-section setup navigation becomes a compact current-section
+menu with Back/Next controls. The menu supports keyboard navigation and Escape
+to close/refocus. Larger screens retain the full section links. These are normal
+event-scoped links, not required wizard steps: they do not save, look up addresses
+or publish. Existing editor leave guards also protect the new navigation.
+
+**See what’s left in your setup** returns to the existing readiness checklist;
+there is no separate progress/completion calculation or extra database query.
+Location's persistent **Save location / Continue setup** bar uses the same status,
+error and recovery presentation as the other editors. It requires a valid choice
+and explicit location confirmation, locks repeated requests, and warns before
+leaving unsaved choices. Search remains explicit and server-side.
+
+Successful saves retain their acknowledgment across server revalidation. Failed
+saves retain input; stale revisions offer **Reopen saved location** instead of
+retrying stale data. Saving is still private and publication remains a separate
+explicit action. Guest pages and authentication are unchanged. No migration,
+dependency or environment changes are required.
+
 ## Consistent artwork and RSVP editing
 
 **Artwork & design** and **RSVP & Hub** now share the Details editor's mobile

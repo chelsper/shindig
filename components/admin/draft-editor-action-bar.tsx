@@ -1,9 +1,9 @@
 import Link from "next/link";
 import type { MouseEvent } from "react";
 
-export function DraftEditorActionBar({ formId, saveLabel, saveAccessibleLabel, pendingLabel = "Saving draft…", saveAllowed, reviewReady, reviewHref, pending, dirty, conflict, status, error, reopenHref, reopenLabel, onLeave }: {
+export function DraftEditorActionBar({ formId, saveLabel, saveAccessibleLabel, pendingLabel = "Saving draft…", saveAllowed, reviewReady, reviewHref, reviewLabel = "Review & publish", pending, dirty, conflict, status, error, reopenHref, reopenLabel, onLeave }: {
   formId: string; saveLabel: string; saveAccessibleLabel?: string; pendingLabel?: string; saveAllowed: boolean;
-  reviewReady: boolean; reviewHref: string; pending: boolean; dirty: boolean; conflict: boolean;
+  reviewReady: boolean; reviewHref: string; reviewLabel?: string; pending: boolean; dirty: boolean; conflict: boolean;
   status: string; error: string | null; reopenHref: string; reopenLabel: string;
   onLeave: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
@@ -17,7 +17,7 @@ export function DraftEditorActionBar({ formId, saveLabel, saveAccessibleLabel, p
         <p role="status" className="text-xs leading-5 text-[#202523]/65">{status}</p>
         <div className="grid grid-cols-2 gap-2 sm:min-w-80">
           <button type="submit" form={formId} aria-label={pending ? undefined : saveAccessibleLabel} className="primary-button min-h-12 px-4 text-xs" disabled={pending || conflict || !saveAllowed}>{pending ? pendingLabel : saveLabel}</button>
-          {canReview ? <Link href={reviewHref} className={reviewClass} onClick={onLeave}>Review &amp; publish</Link> : <button type="button" className={reviewClass} disabled>Review &amp; publish</button>}
+          {canReview ? <Link href={reviewHref} className={reviewClass} onClick={onLeave}>{reviewLabel}</Link> : <button type="button" className={reviewClass} disabled>{reviewLabel}</button>}
         </div>
       </div>
     </div>

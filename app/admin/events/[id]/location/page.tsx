@@ -15,5 +15,7 @@ export default async function LocationPage({ params }: { params: Promise<{ id: s
   try { draft = await getEventDraft(id); }
   catch { return <ContentShell title="Location is temporarily unavailable" contextLabel="Event setup" description="Your live event has not changed. Check migration 021 is installed, then try again." dashboardHref="/admin/events"><Link className="primary-button inline-flex" href={`/admin/events/${id}/setup`}>Back to setup</Link></ContentShell>; }
   if (!draft) notFound();
-  return <ContentShell title="Set the scene" contextLabel="Event location" description="Confirm the place once, so Weather is ready when you publish." dashboardHref="/admin/events"><EventLocationEditor key={draft.revision} draft={draft} /></ContentShell>;
+  // Keep the save acknowledgment mounted across the action's cache revalidation.
+  // Stale edits still require an explicit reopen; never silently replace inputs.
+  return <EventLocationEditor key={draft.id} draft={draft} />;
 }

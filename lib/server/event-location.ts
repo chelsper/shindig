@@ -3,12 +3,12 @@ import { neon } from "@neondatabase/serverless";
 import { getEventDraft } from "./event-drafts";
 import { isDraftId, isDraftRevision } from "../event-drafts";
 import { parseEventLocation, type ConfirmedEventLocation } from "../event-location";
-import { LocationError, searchAddress } from "./address-search";
+import { LocationError, LocationConflictError, searchAddress } from "./address-search";
 
 async function currentDraft(id: string, revision: number) {
   // getEventDraft protects the data layer (and ownership when configured).
   const draft = await getEventDraft(id);
-  if (!isDraftId(id) || !isDraftRevision(revision) || !draft || draft.revision !== revision) throw new LocationError("This draft has changed. Reload the location page before continuing.");
+  if (!isDraftId(id) || !isDraftRevision(revision) || !draft || draft.revision !== revision) throw new LocationConflictError("This draft has changed. Reload the location page before continuing.");
   if (!draft.address.trim()) throw new LocationError("Add and save the event address in Details first.");
   return draft;
 }
@@ -39,6 +39,6 @@ export async function confirmDraftLocation(id: string, revision: number, input: 
     revision = revision + 1, updated_at = now()
     WHERE id = ${id}::uuid AND status = 'draft' AND revision = ${revision} AND address = ${draft.address}
     RETURNING revision`;
-  if (!rows.length) throw new LocationError("This draft changed while you were confirming. Reload the location page and try again.");
+  if (!rows.length) throw new LocationConflictError("This draft changed while you were confirming. Reload the location page and try again.");
   return { revision: rows[0].revision as number, location };
 }
