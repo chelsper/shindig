@@ -25,7 +25,7 @@ export async function createHostUpdate(id: string, input: unknown, eventSlug?: s
     await refreshHostEvent(eventSlug);
   } catch {
     console.error("Host update creation failed.");
-    return { ok: false, message: "We couldn’t publish your update. Please try again." };
+    return { ok: false, message: "We couldn’t save your update. Please try again." };
   }
   refreshUpdates();
   return { ok: true };

@@ -174,6 +174,35 @@ semantic comparisons, timezone/DST and cleared values, artwork/fallback/crops,
 RSVP and feature flags, authentication/privacy, unchanged resaves, and an isolated
 PostgreSQL save → compare → stale rejection → publish → retry flow.
 
+## Hub Content during event setup
+
+`/admin/events/[id]/content` is an ownership-protected setup step, available even
+before first publication. Links appear in setup navigation, the overview, RSVP &
+Hub settings, and publish review. Existing event-response managers remain usable.
+
+- **Bring something:** prepare items, quantities and notes; edit or close them.
+- **Polls:** save questions/options privately, then choose **Make ready for guests**.
+  Draft polls stay hidden even after event publication.
+- **Host Updates:** save notes before publication. Prepared notes and active items
+  appear when the event is explicitly published with their features enabled.
+- **Ask the Host:** review incoming questions and answer/approve them after guests
+  submit them. Names and unanswered/unapproved questions remain private. This does
+  not add host-authored FAQs or custom RSVP questions.
+
+This step manages existing event content, not a second versioned content system.
+For already-published enabled modules, saved content edits are immediate, clearly
+labeled **This section is live**. Details/artwork/feature switches still require
+Review & publish. Private or disabled modules are labeled private. Public readers
+check actual publication visibility and feature flags, not draft settings.
+
+Apply **`db/migrations/023_draft_hub_content.sql` after 022 before deploying**.
+It permits host item preparation for registered private drafts and serializes all
+potluck writers on the stable event identity before the publication row. Guest
+claims still require a published event and enabled module. It does not seed data,
+publish events, change owners, or alter existing items/claims. Replay-safe. No new
+environment variables or dependencies. Host actions resolve ownership on each call;
+private draft scopes are never issued by the public event resolver.
+
 ## Saved event locations & publishing
 
 Host event setup now includes **Location**. Save the address in Details, choose

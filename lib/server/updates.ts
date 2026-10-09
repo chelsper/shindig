@@ -29,6 +29,10 @@ export async function listPublicHostUpdates(scope: EventScope = OYSTER_ROAST_SCO
     SELECT heading, message, published_at AS "publishedAt"
     FROM event_updates
     WHERE event_slug = ${eventSlug} AND published_at IS NOT NULL
+      AND (event_slug = 'oyster-roast-2026' OR EXISTS (
+        SELECT 1 FROM event_publications p WHERE p.slug = event_updates.event_slug
+          AND p.visibility = 'published' AND p.snapshot #>> '{settings,features,updates}' = 'true'
+      ))
     ORDER BY published_at DESC, id DESC
   `;
   return rows.map(publicUpdate);

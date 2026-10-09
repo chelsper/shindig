@@ -47,11 +47,11 @@ function UpdateEditor({ update, onSaved, onCancel }: { update?: AdminHostUpdate;
         <legend className="sr-only">{update ? "Edit update" : "Write an update"}</legend>
         <label className="field-label">Heading (optional)<input className="field-input" maxLength={UPDATE_LIMITS.heading} name="heading" onChange={(event) => setHeading(event.target.value)} value={heading} /></label>
         <label className="field-label">Message<textarea className="field-input min-h-32 resize-y" maxLength={UPDATE_LIMITS.message} name="message" onChange={(event) => setMessage(event.target.value)} required rows={4} value={message} /></label>
-        <p className="text-xs leading-5 text-[#202523]/60">{update ? "Changes appear immediately. The original published date stays the same." : "This update will appear publicly on the Event Hub."}</p>
+        <p className="text-xs leading-5 text-[#202523]/60">{!hostEvent.contentLive ? "Saved for your event. This note stays private until the event is published with Host Updates enabled." : update ? "Changes appear immediately. The original published date stays the same." : "This update will appear publicly on the Event Hub."}</p>
         {error ? <p className="text-sm text-[#843528]" role="alert">{error}</p> : null}
-        {saved ? <p className="text-sm text-[#285630]" role="status">{update ? "Update saved." : "Your update is published!"}</p> : null}
+        {saved ? <p className="text-sm text-[#285630]" role="status">{!hostEvent.contentLive ? "Update saved for your event." : update ? "Update saved." : "Your update is published!"}</p> : null}
         <div className="flex flex-wrap items-center gap-3">
-          <button className="primary-button" disabled={pending} type="submit">{pending ? "Saving…" : update ? "Save changes" : "Publish update"}</button>
+          <button className="primary-button" disabled={pending} type="submit">{pending ? "Saving…" : update ? "Save changes" : hostEvent.contentLive ? "Publish update" : "Save update"}</button>
           {onCancel ? <button className="min-h-11 px-4 text-sm text-[#355f9e] underline underline-offset-4" onClick={onCancel} type="button">Cancel</button> : null}
         </div>
       </fieldset>
@@ -65,7 +65,7 @@ function HostUpdateCard({ update }: { update: AdminHostUpdate }) {
   const [saved, setSaved] = useState(false);
   return (
     <li className="rounded-2xl border border-[#202523]/10 bg-[#fffaf1]/85 p-5 sm:p-6">
-      <p className="mb-3 text-xs text-[#355f9e]">Published {new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: hostEvent.timeZone }).format(new Date(update.publishedAt))}</p>
+      <p className="mb-3 text-xs text-[#355f9e]">{hostEvent.contentLive ? "Posted" : "Prepared"} {new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: hostEvent.timeZone }).format(new Date(update.publishedAt))}</p>
       {editing ? <UpdateEditor update={update} onCancel={() => setEditing(false)} onSaved={() => { setEditing(false); setSaved(true); }} /> : (
         <>
           {update.heading ? <h2 className="break-words font-serif text-2xl">{update.heading}</h2> : null}
@@ -82,13 +82,14 @@ function HostUpdateCard({ update }: { update: AdminHostUpdate }) {
 }
 
 export function HostUpdatesManager({ updates }: { updates: AdminHostUpdate[] }) {
+  const { contentLive } = useHostEvent();
   return (
     <div className="space-y-6">
       <section aria-label="Write an update" className="rounded-[1.75rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 sm:p-7">
         <h2 className="mb-5 font-serif text-2xl">A little note for your guests</h2>
         <UpdateEditor />
       </section>
-      {updates.length === 0 ? <p className="py-5 text-center font-serif text-2xl text-[#202523]/65">No updates published yet.</p> : <ol aria-label="Published updates" className="space-y-4">{updates.map((update) => <HostUpdateCard key={update.id} update={update} />)}</ol>}
+      {updates.length === 0 ? <p className="py-5 text-center font-serif text-2xl text-[#202523]/65">{contentLive ? "No updates published yet." : "No notes yet. Prepare a welcome or a parking tip."}</p> : <ol aria-label={contentLive ? "Published updates" : "Prepared updates"} className="space-y-4">{updates.map((update) => <HostUpdateCard key={update.id} update={update} />)}</ol>}
     </div>
   );
 }

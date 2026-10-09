@@ -60,11 +60,11 @@ describe("guided event readiness", () => {
 });
 
 describe("private setup navigation and publication states", () => {
-  it.each(["setup", "details", "location", "artwork", "settings", "preview", "publish"] as const)("uses the same event-scoped navigation on %s", (current) => {
+  it.each(["setup", "details", "location", "artwork", "settings", "content", "preview", "publish"] as const)("uses the same event-scoped navigation on %s", (current) => {
     const html = renderToStaticMarkup(<EventSetupNavigation id={id} current={current} />);
     expect(html.match(/aria-current="page"/g)).toHaveLength(1);
     const links = [...html.matchAll(/href="([^"]+)"/g)].map((match) => match[1]);
-    expect([...new Set(links)].sort()).toEqual([`${base}/setup`, base, `${base}/location`, `${base}/artwork`, `${base}/settings`, `${base}/preview`, `${base}/publish`].sort());
+    expect([...new Set(links)].sort()).toEqual([`${base}/setup`, base, `${base}/location`, `${base}/artwork`, `${base}/settings`, `${base}/content`, `${base}/preview`, `${base}/publish`].sort());
     expect(html).toContain("min-h-11"); expect(html).toContain("flex-wrap");
     expect(html).toContain('aria-expanded="false"'); expect(html).toContain("Choose setup section");
     expect(html.includes('aria-label="Back:')).toBe(current !== "setup");

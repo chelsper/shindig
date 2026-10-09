@@ -6,7 +6,7 @@ import { POTLUCK_LIMITS, type HostPotluckItem, type PotluckItemInput, type Potlu
 const blank = (): PotluckItemInput => ({ key: "", title: "", note: "", needed: 1, revision: 0, archived: false });
 const button = "inline-flex min-h-11 items-center rounded-full border border-[#355f9e]/25 px-4 text-sm font-semibold text-[#355f9e] disabled:opacity-40";
 export function HostPotluckManager({ initial }: { initial: HostPotluckItem[] }) {
-  const { slug } = useHostEvent(), [items, setItems] = useState(initial), [editing, setEditing] = useState<PotluckItemInput | null>(null);
+  const { slug, contentLive } = useHostEvent(), [items, setItems] = useState(initial), [editing, setEditing] = useState<PotluckItemInput | null>(null);
   const [error, setError] = useState(""), [message, setMessage] = useState(""), [releaseId, setReleaseId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition(), busy = useRef(false), createKey = useRef<string | null>(null);
   function run(action: () => Promise<PotluckResult<HostPotluckItem[]>>, success: string) {
@@ -17,7 +17,7 @@ export function HostPotluckManager({ initial }: { initial: HostPotluckItem[] }) 
     finally { busy.current = false; } });
   }
   return <section aria-label="Manage bring-something signups">
-    <p className="text-sm leading-6 text-[#202523]/65">Name each item and the quantity needed, like “Bags of ice” or “A side dish for 6.” Guest names stay host-only. Saved item changes appear immediately when this feature is enabled on the published Hub.</p>
+    <p className="text-sm leading-6 text-[#202523]/65">Name each item and the quantity needed, like “Bags of ice” or “A side dish for 6.” Guest names stay host-only. {contentLive ? "Saved item changes appear immediately when this feature is enabled on the published Hub." : "Items stay private until you publish the event with Bring something enabled."}</p>
     <p className="mt-2 text-xs leading-5 text-[#202523]/60">Closing an item hides it and stops new signups; existing commitments stay here until canceled or released. No messages are sent.</p>
     <button type="button" className={`${button} mt-4`} disabled={pending || Boolean(editing) || items.length >= POTLUCK_LIMITS.items} onClick={() => { setEditing(blank()); createKey.current = null; setError(""); setMessage(""); }}>+ Add something to bring</button>
     {editing && <form className="mt-5 rounded-2xl border border-[#202523]/15 bg-[#fffaf1] p-5" onSubmit={e => { e.preventDefault(); if (!slug) return; createKey.current ??= crypto.randomUUID(); run(() => savePotluckItem({ ...editing, key: editing.key || createKey.current! }, slug), "Item saved."); }}>

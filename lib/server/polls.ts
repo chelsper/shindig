@@ -33,6 +33,10 @@ export async function listPublicPolls(scope: EventScope = OYSTER_ROAST_SCOPE): P
         THEN jsonb_build_object('responses', t.responses, 'options', t.counts) ELSE NULL END AS results
     FROM polls p JOIN shindig_poll_totals t ON t.poll_id = p.id
     WHERE p.event_slug = ${eventSlug}
+      AND (p.event_slug = 'oyster-roast-2026' OR EXISTS (
+        SELECT 1 FROM event_publications e WHERE e.slug = p.event_slug
+          AND e.visibility = 'published' AND e.snapshot #>> '{settings,features,polls}' = 'true'
+      ))
       AND (p.status = 'OPEN' OR (p.status = 'CLOSED' AND p.show_closed_results))
     ORDER BY CASE WHEN p.status = 'OPEN' THEN 0 ELSE 1 END, p.sort_order, p.created_at DESC, p.id
   `;
@@ -51,6 +55,10 @@ export async function listGuestPollStates(hash: string, scope: EventScope = OYST
         THEN jsonb_build_object('responses', t.responses, 'options', t.counts) ELSE NULL END AS results
     FROM polls p JOIN shindig_poll_totals t ON t.poll_id = p.id
     WHERE p.event_slug = ${eventSlug}
+      AND (p.event_slug = 'oyster-roast-2026' OR EXISTS (
+        SELECT 1 FROM event_publications e WHERE e.slug = p.event_slug
+          AND e.visibility = 'published' AND e.snapshot #>> '{settings,features,polls}' = 'true'
+      ))
       AND (p.status = 'OPEN' OR (p.status = 'CLOSED' AND p.show_closed_results))
       AND EXISTS (SELECT 1 FROM poll_votes v WHERE v.poll_id = p.id AND v.voter_token_hash = ${hash})
   `;

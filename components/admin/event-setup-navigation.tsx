@@ -9,6 +9,7 @@ const screens = [
   { id: "location", label: "Location", path: "/location" },
   { id: "artwork", label: "Artwork & design", path: "/artwork" },
   { id: "settings", label: "RSVP & Hub", path: "/settings" },
+  { id: "content", label: "Hub Content", path: "/content" },
   { id: "preview", label: "Private preview", path: "/preview" },
   { id: "publish", label: "Publish & share", path: "/publish" },
 ] as const;

@@ -32,6 +32,10 @@ export async function listPublicQuestions(scope: EventScope = OYSTER_ROAST_SCOPE
       AND is_published = true
       AND answer IS NOT NULL AND char_length(btrim(answer)) > 0
       AND published_at IS NOT NULL
+      AND (event_slug = 'oyster-roast-2026' OR EXISTS (
+        SELECT 1 FROM event_publications p WHERE p.slug = event_questions.event_slug
+          AND p.visibility = 'published' AND p.snapshot #>> '{settings,features,questions}' = 'true'
+      ))
     ORDER BY published_at DESC, id DESC
   `;
   // Private names, pending records, IDs, and timestamps never enter public props.

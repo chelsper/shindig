@@ -69,9 +69,9 @@ export default async function EventGuests({ params, searchParams }: { params: Pr
     }
       }
   return <ContentShell title={labels[view]} contextLabel={event.title} description="Only this event’s responses and content. Guest names on private questions stay here." dashboardHref={`/admin/events/${id}/publish`}>
-    <p className="mb-5 text-sm text-[#202523]/65">{eventStatus(publication)} · Host management remains available.</p>
+    <p className="mb-5 text-sm text-[#202523]/65">{eventStatus(publication)} · Host management remains available. <Link className="inline-flex min-h-11 items-center text-[#355f9e] underline" href={`/admin/events/${id}/content`}>Hub Content &amp; event setup →</Link></p>
     <nav className="mb-6 flex flex-wrap gap-2" aria-label="Manage this event">{views.map((v) => <Link key={v} href={`/admin/events/${id}/guests?view=${v}`} aria-current={v === view ? "page" : undefined} className={`inline-flex min-h-11 items-center rounded-full border border-[#355f9e]/25 px-4 text-sm ${v === view ? "bg-[#e9f2f8]" : ""}`}>{labels[v]}</Link>)}</nav>
     {view !== "rsvps" && !event.features[view] && <p className="mb-5 rounded-xl bg-[#fff4d8] p-4 text-sm">This feature is currently hidden on the public Hub. Existing content remains manageable here.</p>}
-    <HostEventProvider slug={slug} timeZone={event.timeZone}>{content}</HostEventProvider>
+    <HostEventProvider slug={slug} timeZone={event.timeZone} contentLive={publication.visibility === "published" && view !== "rsvps" && event.features[view]}>{content}</HostEventProvider>
   </ContentShell>;
 }
