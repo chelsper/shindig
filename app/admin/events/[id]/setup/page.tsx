@@ -10,6 +10,8 @@ import { isDraftId } from "../../../../../lib/event-drafts";
 import { draftEventSlug } from "../../../../../lib/event-routes";
 import { hasUnpublishedChanges } from "../../../../../lib/event-lifecycle";
 import { savedWeatherCoordinates } from "../../../../../lib/event-readiness";
+import { getHostHubPreview } from "../../../../../lib/server/host-hub-preview";
+import { unavailableHubPreview } from "../../../../../lib/event-hub-preview";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Event Setup | Shindig", robots: { index: false, follow: false }, referrer: "no-referrer" as const };
@@ -27,9 +29,11 @@ export default async function EventSetupPage({ params, searchParams }: {
   }
   const [draft, artwork, settings, publication] = data;
   if (!draft || !artwork || !settings) notFound();
+  const content = await getHostHubPreview(id).catch(() => unavailableHubPreview());
+  if (!content) notFound();
   const live = publication ? { visibility: publication.visibility, rsvpsOpen: publication.rsvpsOpen, hasUnpublishedChanges: hasUnpublishedChanges({ details: draft.revision, artwork: artwork.revision, settings: settings.revision }, publication.sourceRevisions) } : null;
   const query = await searchParams;
   return <ContentShell title="Bring your gathering together" contextLabel="Event setup" dashboardHref="/admin/events" description="A little guidance, from the first idea to the invitation. Pick up wherever you left off.">
-    <EventSetupOverview draft={draft} artwork={artwork} settings={settings} coordinates={savedWeatherCoordinates(draft)} live={live} justSaved={query?.saved === "1"} justCopied={query?.copied === "1" && !publication} />
+    <EventSetupOverview draft={draft} artwork={artwork} settings={settings} coordinates={savedWeatherCoordinates(draft)} live={live} content={content} justSaved={query?.saved === "1"} justCopied={query?.copied === "1" && !publication} />
   </ContentShell>;
 }

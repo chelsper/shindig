@@ -4,13 +4,17 @@ import type { DraftArtwork } from "../../lib/event-draft-artwork";
 import type { DraftSettingsRecord } from "../../lib/event-draft-settings";
 import { draftEventSlug, eventPaths } from "../../lib/event-routes";
 import { EventDraftPreview } from "./event-draft-preview";
-import { DraftHubPreview, DraftRsvpPreview } from "./event-draft-experience-preview";
+import { DraftRsvpPreview } from "./event-draft-experience-preview";
 import { EventSetupNavigation } from "./event-setup-navigation";
+import { SavedHubPreview } from "./saved-hub-preview";
+import { HubContentReadiness } from "./hub-content-readiness";
+import { unavailableHubPreview, type HubContentPreview } from "../../lib/event-hub-preview";
 
 const button = "inline-flex min-h-11 items-center justify-center rounded-full border border-[#202523]/20 px-4 py-2 text-xs font-semibold text-[#355f9e]";
 
-export function EventDraftFullPreview({ draft, artwork, record, view }: {
+export function EventDraftFullPreview({ draft, artwork, record, view, content = unavailableHubPreview() }: {
   draft: EventDraft; artwork: DraftArtwork; record: DraftSettingsRecord; view: "invitation" | "hub";
+  content?: HubContentPreview;
 }) {
   const id = draft.id;
   const base = `/admin/events/${id}`;
@@ -22,7 +26,7 @@ export function EventDraftFullPreview({ draft, artwork, record, view }: {
     <div className="relative mx-auto max-w-6xl">
       <header className="mb-6 rounded-2xl border border-[#355f9e]/20 bg-[#e9f2f8] p-4 sm:p-5">
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#355f9e]">Host-only draft preview · Not published automatically</p>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-[#202523]/70">Your saved event, at full size. Switch between the invitation and Hub to review the experience. Responses and other guest actions are disabled here.</p>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-[#202523]/70">Your saved event, at full size. Switch between the invitation and Hub to review the experience. Responses and other guest actions are disabled here. Details, artwork and feature switches use your saved draft; Hub content marked live is already visible on the published event.</p>
         {record.revision === 0 && <p className="mt-2 text-sm text-[#765319]">RSVP &amp; Hub choices are still suggested defaults. Save them in settings before your final review.</p>}
         <EventSetupNavigation id={id} current="preview" />
         <nav aria-label="Preview screens" className="mt-4 flex flex-wrap gap-2">
@@ -31,13 +35,14 @@ export function EventDraftFullPreview({ draft, artwork, record, view }: {
           <Link className={button} href="/admin/events">All events</Link>
         </nav>
       </header>
+      {view === "hub" && <div className="mb-6"><HubContentReadiness id={id} content={content} features={record.settings.features} compact /></div>}
       <EventDraftPreview draft={draft} artwork={artwork} view={view} fullPage actions={view === "hub" && artwork.design ? actions : undefined}>
         {view === "invitation" ? <>
           <DraftRsvpPreview settings={record.settings} timeZone={draft.timeZone} />
           <Link className={`${button} w-full`} href={`${base}/preview?view=hub`}>View Event Hub preview →</Link>
         </> : <>
           {!artwork.design && actions}
-          <DraftHubPreview settings={record.settings} />
+          <SavedHubPreview settings={record.settings} content={content} timeZone={draft.timeZone} />
           <Link className={`${button} w-full`} href={`${base}/preview`}>Return to invitation preview</Link>
         </>}
       </EventDraftPreview>

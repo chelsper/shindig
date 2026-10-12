@@ -1,15 +1,17 @@
 vi.mock("server-only", () => ({}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-const mocks = vi.hoisted(() => ({ auth: vi.fn(), draft: vi.fn(), artwork: vi.fn(), settings: vi.fn(), publication: vi.fn(), redirect: vi.fn(), notFound: vi.fn() }));
+const mocks = vi.hoisted(() => ({ auth: vi.fn(), draft: vi.fn(), artwork: vi.fn(), settings: vi.fn(), publication: vi.fn(), content: vi.fn(), redirect: vi.fn(), notFound: vi.fn() }));
 vi.mock("../lib/server/admin-session", () => ({ isAdminAuthenticated: mocks.auth }));
 vi.mock("../lib/server/event-drafts", () => ({ getEventDraft: mocks.draft }));
 vi.mock("../lib/server/event-draft-artwork", () => ({ getDraftArtwork: mocks.artwork }));
 vi.mock("../lib/server/event-draft-settings", () => ({ getDraftSettings: mocks.settings }));
 vi.mock("../lib/server/event-publications", () => ({ getHostEventPublication: mocks.publication }));
+vi.mock("../lib/server/host-hub-preview", () => ({ getHostHubPreview: mocks.content }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect, notFound: mocks.notFound }));
 import Page, { metadata, dynamic } from "../app/admin/events/[id]/setup/page";
 import { draft, snapshot, eventId as id, publication } from "./fixtures/publication";
+import { unavailableHubPreview } from "../lib/event-hub-preview";
 
 const props = { params: Promise.resolve({ id }) };
 beforeEach(() => {
@@ -17,6 +19,7 @@ beforeEach(() => {
   mocks.artwork.mockResolvedValue({ settings: snapshot.artwork, revision: 0 });
   mocks.settings.mockResolvedValue({ settings: snapshot.settings, revision: 3 });
   mocks.publication.mockResolvedValue(null);
+  mocks.content.mockResolvedValue(unavailableHubPreview());
   mocks.redirect.mockImplementation(() => { throw new Error("redirect"); }); mocks.notFound.mockImplementation(() => { throw new Error("not found"); });
 });
 
@@ -25,7 +28,7 @@ describe("authenticated event setup route", () => {
     mocks.auth.mockResolvedValue(false);
     await expect(Page(props)).rejects.toThrow("redirect");
     expect(mocks.redirect).toHaveBeenCalledWith("/host/sign-in");
-    for (const fn of [mocks.draft, mocks.artwork, mocks.settings, mocks.publication]) expect(fn).not.toHaveBeenCalled();
+    for (const fn of [mocks.draft, mocks.artwork, mocks.settings, mocks.publication, mocks.content]) expect(fn).not.toHaveBeenCalled();
     expect(dynamic).toBe("force-dynamic"); expect(metadata.robots).toEqual({ index: false, follow: false }); expect(metadata.referrer).toBe("no-referrer");
   });
   it("checks malformed IDs before reading, and resolves only the requested event", async () => {
@@ -69,5 +72,12 @@ describe("authenticated event setup route", () => {
     expect(renderToStaticMarkup(await Page(props))).not.toContain("Confirm the event’s weather location");
     mocks.draft.mockResolvedValue({ ...draft, address: "A new address", revision: 3 });
     expect(renderToStaticMarkup(await Page(props))).toContain("Confirm the event’s weather location");
+  });
+  it("shows advisory content-read failures separately from publication requirements", async () => {
+    mocks.content.mockRejectedValue(Error("secret"));
+    const html = renderToStaticMarkup(await Page(props));
+    expect(html).toContain("Couldn’t check"); expect(html).toContain("Ready for your final review");
+    expect(html).toContain(`content?view=updates`); expect(html).not.toContain("secret");
+    mocks.content.mockResolvedValue(null); await expect(Page(props)).rejects.toThrow("not found");
   });
 });

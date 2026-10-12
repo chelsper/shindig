@@ -7,11 +7,14 @@ import { publicationIssues } from "../../lib/event-readiness";
 import { eventStatus, type EventLifecycle } from "../../lib/event-lifecycle";
 import { EventSetupNavigation } from "./event-setup-navigation";
 import { duplicateEventPath } from "../../lib/event-duplication";
+import { HubContentReadiness } from "./hub-content-readiness";
+import type { HubContentPreview } from "../../lib/event-hub-preview";
 
 export type SetupPublication = EventLifecycle & { hasUnpublishedChanges: boolean };
-export function EventSetupOverview({ draft, artwork, settings, coordinates, live, justSaved = false, justCopied = false }: {
+export function EventSetupOverview({ draft, artwork, settings, coordinates, live, content, justSaved = false, justCopied = false }: {
   draft: EventDraft; artwork: DraftArtworkRecord; settings: DraftSettingsRecord;
   coordinates: Coordinates | null; live: SetupPublication | null; justSaved?: boolean; justCopied?: boolean;
+  content?: HubContentPreview;
 }) {
   const base = `/admin/events/${draft.id}`;
   const issues = publicationIssues({ details: draft, artwork: artwork.settings, settings: settings.settings, coordinates });
@@ -41,7 +44,8 @@ export function EventSetupOverview({ draft, artwork, settings, coordinates, live
     <section aria-label="Publication status" className="rounded-3xl border border-[#355f9e]/20 bg-[#e9f2f8]/65 p-5 sm:p-7">
       <p className="text-xs font-bold uppercase tracking-wider text-[#355f9e]">{eventStatus(live)}</p>
       <h2 className="mt-2 break-words font-serif text-3xl">{draft.title}</h2>
-      <p className="mt-3 text-sm leading-6 text-[#202523]/75">{archived ? "Private and safely retained. Restore from Publish & share when you need this gathering again; restoring does not publish it." : published ? live.hasUnpublishedChanges ? "Unpublished changes. Guests still see your last published version. Saving in the editors does not update live pages." : "Your saved draft matches the live version. Any new edits stay private until you publish again." : live ? "This event is unpublished. Shared links are unavailable. Review and publish to make it live again." : "Only you can see this draft. Saving details, artwork or settings never makes them public."}</p>
+      <p className="mt-3 text-sm leading-6 text-[#202523]/75">{archived ? "Private and safely retained. Restore from Publish & share when you need this gathering again; restoring does not publish it." : published ? live.hasUnpublishedChanges ? "Unpublished changes. Guests still see your last published version of the details, artwork and settings. Saving those editors does not update live pages." : "Your saved draft matches the live version. New edits to details, artwork and settings stay private until you publish again." : live ? "This event is unpublished. Shared links are unavailable. Review and publish to make it live again." : "Only you can see this draft. Saving details, artwork or settings never makes them public."}</p>
+      <p className="mt-2 text-xs leading-5 text-[#202523]/65">Hub Content is managed separately: edits to already-live sections take effect immediately. Private preview never submits or publishes anything.</p>
       {live && <Link href={`${base}/guests`} className={`${link} mt-2`}>Manage saved guests &amp; content →</Link>}
     </section>
     {!archived && <section aria-labelledby="setup-next-heading" className="px-1">
@@ -50,6 +54,7 @@ export function EventSetupOverview({ draft, artwork, settings, coordinates, live
       {missing.length ? <ul className="mt-2 space-y-1">{missing.map(({ message, href }) => <li key={message}><Link href={href} className={link}>{message}</Link></li>)}</ul> : <p className="mt-2 text-sm leading-6 text-[#202523]/65">The saved essentials are ready. Nothing publishes automatically.</p>}
       <Link className="primary-button mt-4 inline-flex min-h-12 items-center px-5 text-sm" href={missing[0]?.href ?? `${base}/publish${published && !live.hasUnpublishedChanges ? "#share-event" : ""}`}>{missing.length ? "Continue setup →" : published && !live.hasUnpublishedChanges ? "Share your event →" : "Review & publish →"}</Link>
     </section>}
+    {content && <HubContentReadiness id={draft.id} content={content} features={settings.settings.features} />}
     <ol aria-label="Event setup checklist" className="divide-y divide-[#202523]/10 rounded-3xl border border-[#202523]/10 bg-[#fffaf1]/90 px-5 sm:px-7">
       {steps.map((step, index) => <li key={step.title} className="py-6">
         <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-serif text-2xl"><span className="mr-3 font-sans text-xs text-[#355f9e]">0{index + 1}</span>{step.title}</h2><span className={`rounded-full px-3 py-1 text-xs font-semibold ${step.status === "Ready" ? "bg-[#e4eee1] text-[#285630]" : step.status === "Needs attention" ? "bg-[#fff4d8] text-[#765319]" : "bg-[#e9f2f8] text-[#355f9e]"}`}>{step.status}</span></div>

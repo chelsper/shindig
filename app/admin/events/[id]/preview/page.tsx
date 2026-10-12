@@ -8,6 +8,8 @@ import { isHostAuthenticated } from "../../../../../lib/server/host-access";
 import { getEventDraft } from "../../../../../lib/server/event-drafts";
 import { getDraftArtwork } from "../../../../../lib/server/event-draft-artwork";
 import { getDraftSettings } from "../../../../../lib/server/event-draft-settings";
+import { getHostHubPreview } from "../../../../../lib/server/host-hub-preview";
+import { unavailableHubPreview } from "../../../../../lib/event-hub-preview";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Private Event Preview | Shindig", robots: { index: false, follow: false }, referrer: "no-referrer" };
@@ -28,5 +30,7 @@ export default async function DraftPreviewPage({ params, searchParams }: {
   }
   const [draft, artwork, record] = data;
   if (!draft || !artwork || !record) notFound();
-  return <EventDraftFullPreview draft={draft} artwork={artwork.settings} record={record} view={view} />;
+  const content = view === "hub" ? await getHostHubPreview(id).catch(() => unavailableHubPreview()) : undefined;
+  if (content === null) notFound();
+  return <EventDraftFullPreview draft={draft} artwork={artwork.settings} record={record} view={view} content={content} />;
 }

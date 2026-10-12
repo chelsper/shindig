@@ -203,6 +203,28 @@ publish events, change owners, or alter existing items/claims. Replay-safe. No n
 environment variables or dependencies. Host actions resolve ownership on each call;
 private draft scopes are never issued by the public event resolver.
 
+### Read-only saved Hub preview
+
+Private preview → Event Hub now renders saved active bring-something items,
+guest-ready polls (open or closed with results enabled), host updates newest first,
+and answered/approved Q&A in the guest layout. Poll drafts, archived items,
+unapproved questions, guest names and tokens are excluded by the server reader.
+Update timestamps use the saved event timezone. Guest list, playlist and weather
+remain explicitly labeled layout previews; no provider calls run in this preview.
+
+The host-only reader checks event ownership before reading content, respects saved
+feature flags, and returns minimal display fields. It does not change public data
+access or publish anything. Preview controls cannot submit signups, votes or
+questions and do not initialize guest-interaction cookies. A failed section shows
+an unavailable message, not a misleading empty list.
+
+Setup overview and preview include advisory **Hub content check** links. Empty
+optional modules do not block publishing; Ask the Host can be ready without any
+questions. Labels distinguish prepared private content from already-live content
+using the actual published feature settings. This is not versioned content:
+editing an already-live section still updates it immediately. No new migration,
+dependency or environment variable is required.
+
 ## Saved event locations & publishing
 
 Host event setup now includes **Location**. Save the address in Details, choose

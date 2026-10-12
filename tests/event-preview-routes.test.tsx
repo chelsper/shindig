@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-const mocks = vi.hoisted(() => ({ auth: vi.fn(), draft: vi.fn(), artwork: vi.fn(), settings: vi.fn(), redirect: vi.fn(), notFound: vi.fn() }));
+const mocks = vi.hoisted(() => ({ auth: vi.fn(), draft: vi.fn(), artwork: vi.fn(), settings: vi.fn(), content: vi.fn(), redirect: vi.fn(), notFound: vi.fn() }));
 vi.mock("server-only", () => ({}));
 vi.mock("../lib/server/admin-session", () => ({ isAdminAuthenticated: mocks.auth }));
 vi.mock("../lib/server/event-drafts", () => ({ getEventDraft: mocks.draft }));
 vi.mock("../lib/server/event-draft-artwork", () => ({ getDraftArtwork: mocks.artwork }));
 vi.mock("../lib/server/event-draft-settings", () => ({ getDraftSettings: mocks.settings }));
+vi.mock("../lib/server/host-hub-preview", () => ({ getHostHubPreview: mocks.content }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect, notFound: mocks.notFound }));
 import Preview, { metadata, dynamic } from "../app/admin/events/[id]/preview/page";
 import Invitation from "../app/e/[slug]/page";
@@ -14,6 +15,7 @@ import { DEFAULT_DRAFT_SETTINGS } from "../lib/event-draft-settings";
 import { EMPTY_EVENT_DRAFT } from "../lib/event-drafts";
 import { EMPTY_DRAFT_ARTWORK } from "../lib/event-draft-artwork";
 import { draftEventSlug } from "../lib/event-routes";
+import { unavailableHubPreview } from "../lib/event-hub-preview";
 const id = "5199b7de-d731-4bb1-8e55-3380e2f0e365";
 const draft = { ...EMPTY_EVENT_DRAFT, title: "Garden supper", id, status: "draft", revision: 1, createdAt: "2026-10-06T12:00:00Z", updatedAt: "2026-10-06T12:00:00Z", address: "123 Example Lane", startsAtUtc: "2026-11-07T22:00:00.000Z" };
 const context = (view?: string) => ({ params: Promise.resolve({ id }), searchParams: Promise.resolve({ view }) });
@@ -21,6 +23,7 @@ beforeEach(() => {
   vi.resetAllMocks(); mocks.auth.mockResolvedValue(true); mocks.draft.mockResolvedValue(draft);
   mocks.artwork.mockResolvedValue({ settings: EMPTY_DRAFT_ARTWORK, revision: 0 });
   mocks.settings.mockResolvedValue({ settings: DEFAULT_DRAFT_SETTINGS, revision: 1 });
+  mocks.content.mockResolvedValue(unavailableHubPreview());
   mocks.redirect.mockImplementation(() => { throw new Error("redirect"); }); mocks.notFound.mockImplementation(() => { throw new Error("not found"); });
 });
 describe("guarded future event routes", () => {
@@ -38,7 +41,7 @@ describe("full-page host preview", () => {
   it("authenticates before private reads and avoids indexable/cached static content", async () => {
     mocks.auth.mockResolvedValue(false); await expect(Preview(context())).rejects.toThrow("redirect");
     expect(mocks.redirect).toHaveBeenCalledWith("/host/sign-in");
-    for (const fn of [mocks.draft, mocks.settings, mocks.artwork]) expect(fn).not.toHaveBeenCalled();
+    for (const fn of [mocks.draft, mocks.settings, mocks.artwork, mocks.content]) expect(fn).not.toHaveBeenCalled();
     expect(metadata.robots).toEqual({ index: false, follow: false }); expect(metadata.referrer).toBe("no-referrer"); expect(dynamic).toBe("force-dynamic");
   });
   it("shows only saved draft details, event-local time and disabled RSVP controls", async () => {
@@ -49,11 +52,13 @@ describe("full-page host preview", () => {
     expect(html).not.toMatch(/<form|172 Belmont|Oyster Roast|spotify.com|action=/);
     expect(html).toContain(`href="/admin/events/${id}/preview?view=hub"`);
     expect(html).not.toContain(`href="/e/event-${id}`);
+    expect(mocks.content).not.toHaveBeenCalled();
   });
   it("keeps all preview navigation private and respects enabled module choices", async () => {
     const html = renderToStaticMarkup(await Preview(context("hub")));
     expect(html).toContain("Who’s Coming"); expect(html).not.toContain("Ask the Host");
-    expect(html).toContain("No guest data, songs, questions, polls or weather are loaded");
+    expect(html).toContain("Guest lists, songs and weather remain layout previews");
+    expect(mocks.content).toHaveBeenCalledWith(id);
     expect(html).toContain(`href="/admin/events/${id}/preview"`);
     expect(html).toContain(`href="/admin/events/${id}/settings"`);
     expect(html).toMatch(/disabled=""[^>]*>Add to Calendar/); expect(html).toMatch(/disabled=""[^>]*>Get Directions/);
@@ -80,5 +85,13 @@ describe("full-page host preview", () => {
   it("rejects missing and malformed event IDs", async () => {
     await expect(Preview({ ...context(), params: Promise.resolve({ id: "bad" }) })).rejects.toThrow("not found"); expect(mocks.draft).not.toHaveBeenCalled();
     mocks.draft.mockResolvedValue(null); await expect(Preview(context())).rejects.toThrow("not found");
+  });
+  it("contains content failures without inventing an empty state or falling back to another event", async () => {
+    mocks.settings.mockResolvedValue({ settings: { ...DEFAULT_DRAFT_SETTINGS, features: { ...DEFAULT_DRAFT_SETTINGS.features, potluck: true } }, revision: 1 });
+    mocks.content.mockRejectedValue(Error("postgresql://secret"));
+    const html = renderToStaticMarkup(await Preview(context("hub")));
+    expect(html).toContain("Saved content couldn’t load"); expect(html).toContain("Couldn’t check");
+    expect(html).not.toMatch(/secret|Nothing needed just yet|Content already live/);
+    mocks.content.mockResolvedValue(null); await expect(Preview(context("hub"))).rejects.toThrow("not found");
   });
 });
