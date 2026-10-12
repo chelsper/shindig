@@ -41,5 +41,5 @@ export default async function HubContentPage({ params, searchParams }: { params:
     const questions = await listQuestionsForAdmin(scope).catch(() => null);
     content = questions ? <><p className="mb-5 text-sm leading-6 text-[#202523]/65">Guests send questions from your published Event Hub. Answer them here, then choose whether to share the question and answer. Unanswered questions and guest names stay private. This is not a custom RSVP questionnaire.</p><HostQuestionsManager questions={questions} /></> : failed;
   }
-  return <EventHubContent id={id} title={draft.title} timeZone={draft.timeZone} slug={slug} view={view} enabled={settings.settings.features[view]} features={settings.settings.features} live={Boolean(live)} publishedBefore={Boolean(publication)}>{content}</EventHubContent>;
+  return <EventHubContent id={id} title={draft.title} timeZone={draft.timeZone} slug={slug} view={view} enabled={settings.settings.features[view]} features={settings.settings.features} live={Boolean(live)} publishedBefore={Boolean(publication)} revision={settings.revision} archived={publication?.visibility === "archived"} liveFeatures={publication?.visibility === "published" ? publication.snapshot.settings.features : null}>{content}</EventHubContent>;
 }

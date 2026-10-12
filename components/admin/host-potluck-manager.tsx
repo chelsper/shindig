@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState, useTransition } from "react";
 import { useHostEvent } from "./host-event-context";
+import { HubContentNextStep } from "./hub-content-next-step";
 import { savePotluckItem, releasePotluckSignup } from "../../app/admin/potluck/actions";
 import { POTLUCK_LIMITS, type HostPotluckItem, type PotluckItemInput, type PotluckResult } from "../../lib/potluck";
 const blank = (): PotluckItemInput => ({ key: "", title: "", note: "", needed: 1, revision: 0, archived: false });
@@ -29,7 +30,7 @@ export function HostPotluckManager({ initial }: { initial: HostPotluckItem[] }) 
       </fieldset>
     </form>}
     {error && <p role="alert" className="mt-4 text-sm leading-6 text-[#843528]">{error} Reload this page if another host tab changed the list.</p>}
-    {message && <p role="status" className="mt-4 text-sm text-[#285630]">{message}</p>}
+    {message && <><p role="status" className="mt-4 text-sm text-[#285630]">{message}</p><HubContentNextStep /></>}
     {!items.length && <p className="py-8 font-serif text-xl">Start with a few things that would make hosting easier.</p>}
     <ul className="mt-5 space-y-4">{items.map(item => <li key={item.key} className="rounded-2xl border border-[#202523]/10 bg-[#fffaf1] p-5">
       <h2 className="break-words font-serif text-2xl">{item.title}</h2><p className="mt-1 text-sm text-[#202523]/65">{item.claimed} of {item.needed} covered · {item.archived ? "Closed / hidden" : `${Math.max(0, item.needed - item.claimed)} still needed`}</p>

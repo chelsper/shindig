@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition, type FormEvent } from "react";
 import { createHostUpdate, deleteHostUpdate, editHostUpdate } from "../../app/admin/updates/actions";
 import { useHostEvent } from "./host-event-context";
+import { HubContentNextStep } from "./hub-content-next-step";
 import type { AdminHostUpdate } from "../../lib/server/updates";
 import { UPDATE_LIMITS } from "../../lib/updates";
 import { ContentDeleteButton } from "./content-delete-button";
@@ -49,7 +50,7 @@ function UpdateEditor({ update, onSaved, onCancel }: { update?: AdminHostUpdate;
         <label className="field-label">Message<textarea className="field-input min-h-32 resize-y" maxLength={UPDATE_LIMITS.message} name="message" onChange={(event) => setMessage(event.target.value)} required rows={4} value={message} /></label>
         <p className="text-xs leading-5 text-[#202523]/60">{!hostEvent.contentLive ? "Saved for your event. This note stays private until the event is published with Host Updates enabled." : update ? "Changes appear immediately. The original published date stays the same." : "This update will appear publicly on the Event Hub."}</p>
         {error ? <p className="text-sm text-[#843528]" role="alert">{error}</p> : null}
-        {saved ? <p className="text-sm text-[#285630]" role="status">{!hostEvent.contentLive ? "Update saved for your event." : update ? "Update saved." : "Your update is published!"}</p> : null}
+        {saved ? <><p className="text-sm text-[#285630]" role="status">{!hostEvent.contentLive ? "Update saved for your event." : update ? "Update saved." : "Your update is published!"}</p><HubContentNextStep /></> : null}
         <div className="flex flex-wrap items-center gap-3">
           <button className="primary-button" disabled={pending} type="submit">{pending ? "Saving…" : update ? "Save changes" : hostEvent.contentLive ? "Publish update" : "Save update"}</button>
           {onCancel ? <button className="min-h-11 px-4 text-sm text-[#355f9e] underline underline-offset-4" onClick={onCancel} type="button">Cancel</button> : null}
@@ -70,7 +71,7 @@ function HostUpdateCard({ update }: { update: AdminHostUpdate }) {
         <>
           {update.heading ? <h2 className="break-words font-serif text-2xl">{update.heading}</h2> : null}
           <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-7">{update.message}</p>
-          {saved ? <p className="mt-3 text-sm text-[#285630]" role="status">Update saved.</p> : null}
+          {saved ? <><p className="mt-3 text-sm text-[#285630]" role="status">Update saved.</p><HubContentNextStep /></> : null}
           <div className="mt-4 flex flex-wrap items-start gap-2">
             <button className="min-h-11 rounded-full border border-[#355f9e]/25 px-4 text-xs font-semibold text-[#355f9e]" onClick={() => { setEditing(true); setSaved(false); }} type="button">Edit</button>
             <ContentDeleteButton label="update" onDelete={() => deleteHostUpdate(update.id, true, ...hostEvent.args)} />

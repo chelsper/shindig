@@ -5,6 +5,7 @@ import type { AdminPoll } from "../../lib/polls";
 import { PollResults } from "../event-hub/poll-results";
 import { PollEditor } from "./poll-editor";
 import { useHostEvent } from "./host-event-context";
+import { HubContentNextStep } from "./hub-content-next-step";
 
 function HostPollCard({ poll }: { poll: AdminPoll }) {
   const hostEvent = useHostEvent();
@@ -42,16 +43,18 @@ function HostPollCard({ poll }: { poll: AdminPoll }) {
       </div>
       {confirmDelete ? <div className="mt-3 rounded-xl border border-[#843528]/20 p-3 text-sm"><p>Delete this private draft and its options? This can’t be undone.</p><div className="mt-2 flex gap-3"><button type="button" disabled={pending} className="min-h-11 text-[#843528] underline" onClick={() => change("DELETE_DRAFT")}>Confirm delete</button><button type="button" disabled={pending} className="min-h-11 text-[#355f9e]" onClick={() => setConfirmDelete(false)}>Cancel</button></div></div> : null}
     </>}
-    {notice ? <p role="status" className="mt-3 text-sm text-[#285630]">{notice}</p> : null}
+    {notice ? <><p role="status" className="mt-3 text-sm text-[#285630]">{notice}</p><HubContentNextStep /></> : null}
     {error ? <p role="alert" className="mt-3 text-sm text-[#843528]">{error}</p> : null}
   </li>;
 }
 
 export function HostPollsManager({ polls }: { polls: AdminPoll[] }) {
   const [creating, setCreating] = useState(false);
+  const [saved, setSaved] = useState(false);
   const { contentLive } = useHostEvent();
   return <div className="space-y-5">
-    {creating ? <section aria-label="Create a poll" className="rounded-[1.75rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 sm:p-7"><h2 className="mb-5 font-serif text-2xl">A new question</h2><PollEditor onSaved={() => setCreating(false)} onCancel={() => setCreating(false)} /></section> : <button type="button" className="primary-button" onClick={() => setCreating(true)}>+ Create poll</button>}
+    {creating ? <section aria-label="Create a poll" className="rounded-[1.75rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 sm:p-7"><h2 className="mb-5 font-serif text-2xl">A new question</h2><PollEditor onSaved={() => { setCreating(false); setSaved(true); }} onCancel={() => setCreating(false)} /></section> : <button type="button" className="primary-button" onClick={() => { setCreating(true); setSaved(false); }}>+ Create poll</button>}
+    {saved && <><p role="status" className="text-sm leading-6 text-[#285630]">Poll saved as a private draft. {contentLive ? "Open it when you’re ready for guests to vote." : "Choose “Make ready for guests” before publishing this section."}</p><HubContentNextStep /></>}
     {polls.length ? <ul aria-label="Host polls" className="space-y-4">{polls.map((poll) => <HostPollCard poll={poll} key={poll.key} />)}</ul> : <p className="py-5 text-center text-sm leading-6 text-[#202523]/65">{contentLive ? "No polls yet. Create a draft; guests won’t see it until you open it." : "Create a poll, then make it ready for guests. Voting stays unavailable until you publish the event with Polls enabled."}</p>}
   </div>;
 }

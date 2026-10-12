@@ -8,7 +8,8 @@ vi.mock("../lib/server/potluck", () => ({ listHostPotluckItems: mocks.potluck })
 vi.mock("../lib/server/polls", () => ({ listPollsForAdmin: mocks.polls }));
 vi.mock("../lib/server/updates", () => ({ listHostUpdatesForAdmin: mocks.updates }));
 vi.mock("../lib/server/questions", () => ({ listQuestionsForAdmin: mocks.questions }));
-vi.mock("next/navigation", () => ({ redirect: () => { throw Error("redirect"); }, notFound: () => { throw Error("not found"); } }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), redirect: () => { throw Error("redirect"); }, notFound: () => { throw Error("not found"); } }));
+vi.mock("../app/admin/events/[id]/content/actions", () => ({ saveHubSectionVisibility: vi.fn() }));
 vi.mock("../app/admin/potluck/actions", () => ({ savePotluckItem: vi.fn(), releasePotluckSignup: vi.fn() }));
 vi.mock("../app/admin/polls/actions", () => ({ saveHostPoll: vi.fn(), setHostPollStatus: vi.fn() }));
 vi.mock("../app/admin/updates/actions", () => ({ createHostUpdate: vi.fn(), editHostUpdate: vi.fn(), deleteHostUpdate: vi.fn() }));
@@ -29,19 +30,31 @@ describe("Hub Content setup page", () => {
     ["updates", "Save update"], ["questions", "No questions yet"],
   ])("shows the %s editor before the event has ever been published", async (view, label) => {
     const html = renderToStaticMarkup(await Page(context(view)));
-    expect(html).toContain(label); expect(html).toContain("This section is private");
+    expect(html).toContain(label); expect(html).toMatch(/This section is (private|off)/);
     expect(html).toContain("Saving here does not publish the event");
     expect(html).toContain('aria-label="Hub content sections"'); expect(html).toContain("grid-cols-2");
     expect(html).toContain(`/admin/events/${draft.id}/settings#hub-settings-heading`);
     expect(html).toContain("Back to event setup"); expect(html).not.toContain("Manage guest responses");
+    expect(html).toContain('role="switch"'); expect(html).toContain("in saved setup");
+    expect(html).toContain(`/admin/events/${draft.id}/preview?view=hub`);
     expect(mocks[view as "potluck" | "polls" | "updates" | "questions"]).toHaveBeenCalledTimes(1);
     expect(dynamic).toBe("force-dynamic"); expect(metadata.robots.index).toBe(false); expect(metadata.referrer).toBe("no-referrer");
   });
   it("shows the published feature state instead of misleadingly trusting unpublished switches", async () => {
     mocks.data.mockResolvedValue({ ...data, settings: { ...data.settings, settings: { ...settings, features: { ...settings.features, updates: false } } }, publication: { ...publication, snapshot: { ...snapshot, settings } } });
     const html = renderToStaticMarkup(await Page(context("updates")));
-    expect(html).toContain("This section is live"); expect(html).toContain("affect the live Hub immediately");
+    expect(html).toContain("This section is still live"); expect(html).toContain("content edits still take effect");
+    expect(html).toContain("Off after publishing");
     expect(html).toContain("Publish update"); expect(html).toContain("off in your saved setup"); expect(html).toContain("Manage guest responses");
+  });
+  it("labels off modules honestly and keeps approved questions private when the section is not live", async () => {
+    mocks.data.mockResolvedValue({ ...data, settings: { ...data.settings, settings: { ...settings, features: { ...settings.features, questions: false } } } });
+    mocks.questions.mockResolvedValue([{ id: "private-id", question: "Parking?", answer: "In the driveway", isPublished: true, guestName: null, createdAt: "2026-11-01T12:00:00Z" }]);
+    const html = renderToStaticMarkup(await Page(context("questions")));
+    expect(html).toContain("This section is off"); expect(html).toContain('aria-checked="false"');
+    expect(html).toContain("Approved · Saved privately"); expect(html).not.toContain(">Published<");
+    expect(html).toContain("Approve this question and answer for when the section is live");
+    expect(html).toContain("all saved event changes, not just this section");
   });
   it("keeps disabled and archived content manageable but correctly labeled private", async () => {
     mocks.data.mockResolvedValue({ ...data, publication: { ...publication, visibility: "archived" } });

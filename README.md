@@ -9,9 +9,9 @@ the same Neon database used by `DATABASE_URL`. It adds `potluck_items`,
 not create items or enable the module for any event. No new environment
 variables, dependencies, email service or guest accounts are needed.
 
-For an editable event, enable **Bring something** in **RSVP & Hub**, save, then
-review and publish. Under **Responses → Bring something**, add an item, a short
-note and the number needed. Hosts can edit, close/reopen items and release a
+For an editable event, open **Hub Content → Bring something** to prepare items,
+notes and quantities, and turn the section on beside the editor. Then review
+and publish. The switch is also available in **RSVP & Hub**. Hosts can edit, close/reopen items and release a
 signup with confirmation. These item/claim changes take effect immediately for
 an enabled published event; they are not private event-draft changes. Closing
 keeps existing claims and permits guests to cancel. There is no destructive
@@ -38,6 +38,37 @@ public projection, cross-event denial, quantity limits, retries, cancellation,
 host authorization, feature/lifecycle gates, UI states and database failures.
 Independent native-Postgres lock-wait tests require a disposable PostgreSQL
 server; embedded PostgreSQL alone does not prove connection interleavings.
+
+## Hub feature setup & visibility
+
+In **Event setup → Hub Content**, Bring something, Polls, Host Updates and Ask
+the Host each have an on/off control beside their content editor. The section
+tabs and visibility panel distinguish **Off**, **Saved privately**, and **Live**.
+Turning a live section off in saved setup still says **Live · Off after
+publishing**; saving the switch never hides it or deletes existing content.
+Archived events explicitly require restoration before publication.
+
+Saving content in a private section gives a contextual next step: enable the
+adjacent switch if off, or open **Review & publish** if enabled. Settings also
+link directly to each content editor; the preview links open the saved Hub.
+Approved answers in a private section are labeled approved/saved privately,
+not published. Poll drafts and unapproved questions remain private as before.
+
+`saveHubSectionVisibility` accepts only an event ID, current settings revision,
+one supported content section and a boolean. Existing server-only readers and
+writers enforce ownership, load the other settings server-side, validate, and
+use optimistic revisions to prevent overwriting another tab’s changes. Failed
+or stale saves never claim success. The UI locks rapid repeated clicks. This
+action updates only draft settings: no publication writes, guest mutations or
+changes to Jasper Shucks.
+
+Publication is still explicit and reviews **all saved event changes**, not only
+the selected section. Content edits in an already-live section still take
+effect immediately; that behavior is clearly labeled rather than silently
+changed. No migration, new package or environment variable is needed. Tests
+cover states, recovery, ownership, preservation of other settings, and a real
+disposable PostgreSQL off → saved on → explicit publish → saved off → explicit
+publish journey, including continued privacy and retention of content.
 
 ## Mobile event setup navigation
 
