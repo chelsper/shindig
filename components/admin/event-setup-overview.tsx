@@ -9,12 +9,14 @@ import { EventSetupNavigation } from "./event-setup-navigation";
 import { duplicateEventPath } from "../../lib/event-duplication";
 import { HubContentReadiness } from "./hub-content-readiness";
 import type { HubContentPreview } from "../../lib/event-hub-preview";
+import type { ReactNode } from "react";
 
 export type SetupPublication = EventLifecycle & { hasUnpublishedChanges: boolean };
-export function EventSetupOverview({ draft, artwork, settings, coordinates, live, content, justSaved = false, justCopied = false }: {
+export function EventSetupOverview({ draft, artwork, settings, coordinates, live, content, hosting, justSaved = false, justCopied = false }: {
   draft: EventDraft; artwork: DraftArtworkRecord; settings: DraftSettingsRecord;
   coordinates: Coordinates | null; live: SetupPublication | null; justSaved?: boolean; justCopied?: boolean;
   content?: HubContentPreview;
+  hosting?: ReactNode;
 }) {
   const base = `/admin/events/${draft.id}`;
   const issues = publicationIssues({ details: draft, artwork: artwork.settings, settings: settings.settings, coordinates });
@@ -48,6 +50,7 @@ export function EventSetupOverview({ draft, artwork, settings, coordinates, live
       <p className="mt-2 text-xs leading-5 text-[#202523]/65">Hub Content is managed separately: edits to already-live sections take effect immediately. Private preview never submits or publishes anything.</p>
       {live && <Link href={`${base}/guests`} className={`${link} mt-2`}>Manage saved guests &amp; content →</Link>}
     </section>
+    {hosting}
     {!archived && <section aria-labelledby="setup-next-heading" className="px-1">
       <p className="text-xs font-bold uppercase tracking-wider text-[#355f9e]">Your next step</p>
       <h2 id="setup-next-heading" className="mt-2 font-serif text-2xl">{missing.length ? `${missing.length} ${missing.length === 1 ? "detail" : "details"} to finish` : published && !live.hasUnpublishedChanges ? "All set for your gathering" : "Ready for your final review"}</h2>

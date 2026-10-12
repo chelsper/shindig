@@ -13,6 +13,7 @@ import { saveDraftSettingsRecord } from "../lib/server/event-draft-settings";
 import { saveHubSectionVisibility } from "../app/admin/events/[id]/content/actions";
 import { getHostHubContentEvent } from "../lib/server/host-hub-content";
 import { getHostHubPreview } from "../lib/server/host-hub-preview";
+import { getHostingOverview } from "../lib/server/hosting-overview";
 import { hostScopeArgs } from "../lib/server/host-event";
 import { resolvePublicEventScope } from "../lib/server/event-scope";
 import { getEventPublication, publishEventRecord, changeEventLifecycleRecord } from "../lib/server/event-publications";
@@ -207,5 +208,44 @@ describe.skipIf(!modulePath)("private Hub Content preparation and publication", 
     await publishEventRecord(f.id, { ...versions, settings: 4, publication: 2 }, null);
     expect(await listPublicPotluckItems((await resolvePublicEventScope(f.slug))!)).toEqual([]);
     expect(await listHostPotluckItems(f.slug)).toHaveLength(1);
+  });
+  it("summarizes only the owned event, including hidden attendance and excluding canceled/closed signup quantities", async () => {
+    const f = await fixture(); await prepare(f); await publishEventRecord(f.id, versions, null);
+    const guest = (await resolvePublicEventScope(f.slug))!;
+    const other = await fixture(); await prepare(other);
+    for (const [slug, attending, size, visible] of [[f.slug, true, 2, true], [f.slug, true, 3, false], [f.slug, false, null, false], [other.slug, true, 20, true]]) {
+      await db.query("INSERT INTO rsvps(id,event_slug,guest_name,attending,party_size,display_on_guest_list,comment) VALUES($1,$2,'Private RSVP name',$3,$4,$5,'Private RSVP note')", [randomUUID(), slug, attending, size, visible]);
+    }
+    const active = createRsvpEditToken(), canceled = createRsvpEditToken();
+    for (const token of [active, canceled]) expect((await writePotluckClaim("create", { itemKey: f.key, editToken: token, guestName: "Private signup", quantity: 2, revision: 0 }, "b".repeat(64), guest)).status).toBe("saved");
+    expect((await writePotluckClaim("cancel", { itemKey: f.key, editToken: canceled, guestName: "Private signup", quantity: 0, revision: 1 }, "b".repeat(64), guest)).status).toBe("saved");
+    await savePotluckItem({ key: randomUUID(), title: "Second request", note: "", needed: 2, archived: false, revision: 0 }, f.slug);
+    const closed = randomUUID();
+    await savePotluckItem({ key: closed, title: "Closed request", note: "", needed: 7, archived: false, revision: 0 }, f.slug);
+    expect((await writePotluckClaim("create", { itemKey: closed, editToken: createRsvpEditToken(), guestName: "Private closed signup", quantity: 3, revision: 0 }, "b".repeat(64), guest)).status).toBe("saved");
+    await savePotluckItem({ key: closed, title: "Closed request", note: "", needed: 7, archived: true, revision: 1 }, f.slug);
+    for (let i = 0; i < 3; i++) await insertGuestQuestion({ requestToken: randomUUID(), question: `Private question ${i}`, guestName: "Private questioner" }, guest);
+    const questions = await listQuestionsForAdmin(f.scope);
+    await answerGuestQuestion(questions[0].id, { answer: "Private answer", isPublished: false }, f.slug);
+    await answerGuestQuestion(questions[1].id, { answer: "Approved answer", isPublished: true }, f.slug);
+    for (const slug of [f.slug, other.slug]) await db.query("INSERT INTO playlist_suggestions(event_slug,song_title,artist,suggested_by) VALUES($1,'Song','Artist','Private suggester')", [slug]);
+    const before = await db.query("SELECT (SELECT count(*) FROM rsvps) AS rsvps,(SELECT sum(quantity) FROM potluck_claims) AS quantities,(SELECT sum(revision) FROM event_publications) AS revisions");
+    const data = (await getHostingOverview(f.id))!;
+    expect(data.rsvps).toEqual({ totalAttending: 2, totalResponses: 3, declined: 1, totalPartySize: 5 });
+    expect(data.potluck).toEqual({ items: 2, needed: 6, covered: 2, remaining: 4, uncoveredItems: 2 });
+    expect(data.questions).toEqual({ total: 3, unanswered: 1, answeredPrivate: 1, approved: 1 });
+    expect(data.playlist).toEqual({ total: 1 }); expect(data.polls).toEqual({ total: 1, open: 1, drafts: 0, closed: 0 }); expect(data.updates).toEqual({ total: 1 });
+    for (const value of ["Private RSVP", "Private signup", "Private question", "Private answer", "Private suggester", active, canceled, f.id, f.key, other.id, "Approved answer", "Song"]) expect(JSON.stringify(data)).not.toContain(value);
+    expect(await db.query("SELECT (SELECT count(*) FROM rsvps) AS rsvps,(SELECT sum(quantity) FROM potluck_claims) AS quantities,(SELECT sum(revision) FROM event_publications) AS revisions")).toEqual(before);
+    await changeEventLifecycleRecord(f.id, 1, "archive");
+    expect((await getHostingOverview(f.id))?.rsvps).toEqual(data.rsvps);
+    state.host = "bob"; expect(await getHostingOverview(f.id)).toBeNull();
+    state.host = null; await expect(getHostingOverview(f.id)).rejects.toThrow("Host access");
+  });
+  it("keeps truly empty drafts at zero without publishing them", async () => {
+    const f = await fixture(); const data = (await getHostingOverview(f.id))!;
+    expect(data.rsvps).toEqual({ totalAttending: 0, totalResponses: 0, declined: 0, totalPartySize: 0 });
+    expect(data.potluck).toEqual({ items: 0, needed: 0, covered: 0, remaining: 0, uncoveredItems: 0 });
+    expect(data.questions?.total).toBe(0); expect(await getEventPublication(f.slug)).toBeNull();
   });
 });

@@ -1,5 +1,34 @@
 # Shindig
 
+## Private hosting overview
+
+Open **Your events → Event overview** (`/admin/events/[id]/setup`) for
+**Hosting at a glance**, alongside the existing setup/publication guidance.
+It distinguishes attending people (including hidden guests), RSVP households,
+all responses and declines. RSVP availability, remaining capacity and the
+event-local reply deadline use the **last published** rules, not private edits.
+Unpublished/archived events retain activity without implying guest access.
+
+Unanswered questions and unfilled Bring something requests appear first, with
+direct links to their existing event-scoped editors. Other Hub activity is
+expandable: songs, open/draft/closed polls and host notes. Off sections with
+retained activity remain manageable by the host; empty, unused sections are
+omitted. Visibility labels distinguish live features, saved private choices
+and switches waiting to be published. New drafts never link to guest-management
+routes that require a first publication. Response screens return to the overview.
+
+`getHostingOverview` is a server-only, owner-checked aggregate reader. It
+returns counts, not names, comments, tokens or individual RSVP/Q&A content.
+All queries are event-scoped, read-only and uncached across requests; use
+**Refresh totals** to read current activity. Bring-something coverage sums
+quantities per open item, excludes canceled quantities/closed items, and caps
+coverage per item so excess on one cannot hide a shortage on another.
+Unanswered, answered-private and approved Q&A are counted separately; an
+approved answer is not described as public unless its section is live.
+Optional query failures show unavailable, never fabricated zeros, while other
+totals and setup continue working. No migration, service, package or environment
+variable is added. Jasper’s original admin/guest pages are unchanged.
+
 ## Guest navigation & return visits
 
 Public Hub sections have shareable fragment links (for example

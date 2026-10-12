@@ -1,17 +1,19 @@
 vi.mock("server-only", () => ({}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-const mocks = vi.hoisted(() => ({ auth: vi.fn(), draft: vi.fn(), artwork: vi.fn(), settings: vi.fn(), publication: vi.fn(), content: vi.fn(), redirect: vi.fn(), notFound: vi.fn() }));
+const mocks = vi.hoisted(() => ({ auth: vi.fn(), draft: vi.fn(), artwork: vi.fn(), settings: vi.fn(), publication: vi.fn(), content: vi.fn(), hosting: vi.fn(), redirect: vi.fn(), notFound: vi.fn() }));
 vi.mock("../lib/server/admin-session", () => ({ isAdminAuthenticated: mocks.auth }));
 vi.mock("../lib/server/event-drafts", () => ({ getEventDraft: mocks.draft }));
 vi.mock("../lib/server/event-draft-artwork", () => ({ getDraftArtwork: mocks.artwork }));
 vi.mock("../lib/server/event-draft-settings", () => ({ getDraftSettings: mocks.settings }));
 vi.mock("../lib/server/event-publications", () => ({ getHostEventPublication: mocks.publication }));
 vi.mock("../lib/server/host-hub-preview", () => ({ getHostHubPreview: mocks.content }));
+vi.mock("../lib/server/hosting-overview", () => ({ getHostingOverview: mocks.hosting }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect, notFound: mocks.notFound }));
 import Page, { metadata, dynamic } from "../app/admin/events/[id]/setup/page";
 import { draft, snapshot, eventId as id, publication } from "./fixtures/publication";
 import { unavailableHubPreview } from "../lib/event-hub-preview";
+import { hosting } from "./fixtures/hosting-overview";
 
 const props = { params: Promise.resolve({ id }) };
 beforeEach(() => {
@@ -20,6 +22,7 @@ beforeEach(() => {
   mocks.settings.mockResolvedValue({ settings: snapshot.settings, revision: 3 });
   mocks.publication.mockResolvedValue(null);
   mocks.content.mockResolvedValue(unavailableHubPreview());
+  mocks.hosting.mockResolvedValue(hosting);
   mocks.redirect.mockImplementation(() => { throw new Error("redirect"); }); mocks.notFound.mockImplementation(() => { throw new Error("not found"); });
 });
 
@@ -28,7 +31,7 @@ describe("authenticated event setup route", () => {
     mocks.auth.mockResolvedValue(false);
     await expect(Page(props)).rejects.toThrow("redirect");
     expect(mocks.redirect).toHaveBeenCalledWith("/host/sign-in");
-    for (const fn of [mocks.draft, mocks.artwork, mocks.settings, mocks.publication, mocks.content]) expect(fn).not.toHaveBeenCalled();
+    for (const fn of [mocks.draft, mocks.artwork, mocks.settings, mocks.publication, mocks.content, mocks.hosting]) expect(fn).not.toHaveBeenCalled();
     expect(dynamic).toBe("force-dynamic"); expect(metadata.robots).toEqual({ index: false, follow: false }); expect(metadata.referrer).toBe("no-referrer");
   });
   it("checks malformed IDs before reading, and resolves only the requested event", async () => {
@@ -37,10 +40,12 @@ describe("authenticated event setup route", () => {
     await Page(props);
     for (const fn of [mocks.draft, mocks.artwork, mocks.settings]) expect(fn).toHaveBeenCalledWith(id);
     expect(mocks.publication).toHaveBeenCalledWith(`event-${id}`);
+    expect(mocks.hosting).toHaveBeenCalledWith(id);
   });
   it.each(["draft", "artwork", "settings"] as const)("returns not-found for missing %s rather than borrowed defaults", async (key) => {
     mocks[key].mockResolvedValue(null);
     await expect(Page(props)).rejects.toThrow("not found");
+    expect(mocks.hosting).not.toHaveBeenCalled();
   });
   it.each(["draft", "artwork", "settings", "publication"] as const)("does not mistake a %s failure for a ready or unpublished event", async (key) => {
     mocks[key].mockRejectedValue(new Error("postgresql://private-secret"));
@@ -79,5 +84,15 @@ describe("authenticated event setup route", () => {
     expect(html).toContain("Couldn’t check"); expect(html).toContain("Ready for your final review");
     expect(html).toContain(`content?view=updates`); expect(html).not.toContain("secret");
     mocks.content.mockResolvedValue(null); await expect(Page(props)).rejects.toThrow("not found");
+  });
+  it("isolates hosting-read failures and uses only published RSVP limits", async () => {
+    mocks.hosting.mockRejectedValue(Error("private sql detail"));
+    let html = renderToStaticMarkup(await Page(props));
+    expect(html).toContain("Activity couldn’t load"); expect(html).toContain("Event setup checklist"); expect(html).not.toContain("private sql detail");
+    mocks.hosting.mockResolvedValue(hosting);
+    mocks.publication.mockResolvedValue({ ...publication, snapshot: { ...snapshot, settings: { ...snapshot.settings, rsvp: { ...snapshot.settings.rsvp, capacity: 30 } } } });
+    mocks.settings.mockResolvedValue({ revision: 4, settings: { ...snapshot.settings, rsvp: { ...snapshot.settings.rsvp, capacity: 100 } } });
+    html = renderToStaticMarkup(await Page(props));
+    expect(html).toContain("6 of 30 guest places remaining"); expect(html).not.toContain("76 of 100 guest places remaining"); expect(html).toContain("Unpublished changes");
   });
 });
