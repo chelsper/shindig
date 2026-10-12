@@ -1,5 +1,32 @@
 # Shindig
 
+## Guest navigation & return visits
+
+Public Hub sections have shareable fragment links (for example
+`/e/your-party/event#potluck` and `/event#playlist`). Explicit links open that
+enabled section; disabled/removed sections fall back to the first available
+one. Tabs preserve mounted forms, support keyboard navigation and browser
+Back/Forward, and remember the last section per event in session storage.
+Admin/design previews do not change URLs or store selections. “Copy link to
+this section” constructs only a public Hub URL, without private tokens or
+current query parameters. Signup editors return directly to Bring something.
+
+After a confirmed RSVP/signup, or on its validated private edit page, guests
+may explicitly choose **Remember this private link on this device**. Nothing
+is saved automatically. The invitation and Hub then show event-scoped private
+shortcuts after hydration, with individual Forget controls. These are bearer
+links: anyone using the browser can edit that RSVP/signup, so the UI warns
+against saving on shared devices. Existing server-side token, event, feature
+and lifecycle checks remain authoritative; no public data query is expanded.
+
+Browser local storage retains only event slug, link kind, capability token and
+save timestamp, not names, comments or form data. Shortcuts expire from the UI
+after 180 days, are pruned on the next write, and are capped at 20 without silent
+eviction. Forgetting removes only the shortcut, not the RSVP/signup or its
+server token. Storage errors leave normal private links usable. Links do not
+sync across browsers/devices or between Shindig and Jasper hostnames; guests
+should still keep a copy. No migration, dependency or environment change.
+
 ## Bring something — optional signups
 
 Before deploying this feature, apply `db/migrations/022_bring_something.sql` to

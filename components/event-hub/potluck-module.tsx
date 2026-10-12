@@ -6,13 +6,14 @@ import { createRsvpEditToken } from "../../lib/rsvp-edit-token";
 import { eventPaths } from "../../lib/event-routes";
 import { POTLUCK_LIMITS, type PotluckClaim, type PublicPotluckItem } from "../../lib/potluck";
 import { saveGuestPotluckClaim } from "../../app/event/potluck-actions";
+import { RememberGuestLink } from "../guest-return-links";
 
-export function PotluckModule({ items, eventSlug, unavailable = false }: { items: PublicPotluckItem[]; eventSlug: string; unavailable?: boolean }) {
+export function PotluckModule({ items, eventSlug, publicSlug, unavailable = false }: { items: PublicPotluckItem[]; eventSlug: string; publicSlug?: string; unavailable?: boolean }) {
   const [selected, setSelected] = useState<string | null>(null), [guestName, setGuestName] = useState(""), [quantity, setQuantity] = useState(1);
   const [error, setError] = useState(""), [success, setSuccess] = useState<{ claim: PotluckClaim; token: string } | null>(null), [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition(), busy = useRef(false), token = useRef<string | null>(null), router = useRouter();
   const item = items.find(i => i.key === selected);
-  const editPath = success ? `${eventPaths(eventSlug).invitation}/bring/${success.token}` : "";
+  const editPath = success ? `${eventPaths(publicSlug ?? eventSlug).invitation}/bring/${success.token}` : "";
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (busy.current || !item || unavailable) return;
     busy.current = true; setError("");
@@ -32,6 +33,7 @@ export function PotluckModule({ items, eventSlug, unavailable = false }: { items
       <p className="font-semibold">You’re bringing the good stuff!</p><p>{success.claim.quantity} × {success.claim.title} is on your list.</p>
       <p className="mt-2 text-xs">Save your private link to change or cancel this signup. Anyone with it can manage this item for you. We won’t email it.</p>
       <div className="mt-2 flex flex-wrap gap-x-4"><Link href={editPath} className="inline-flex min-h-11 items-center font-semibold text-[#355f9e] underline">Manage my signup</Link><button type="button" className="min-h-11 text-[#355f9e] underline" onClick={async () => { try { await navigator.clipboard.writeText(new URL(editPath, window.location.origin).href); setCopied(true); } catch { setCopied(false); setError("Copy wasn’t available. Open Manage my signup and save that page’s address."); } }}>{copied ? "Link copied" : "Copy private link"}</button></div>
+      <RememberGuestLink eventSlug={eventSlug} kind="potluck" token={success.token} />
     </div>}
     {unavailable ? <p role="status" className="py-8 text-sm leading-6 text-[#202523]/65">The bring-something list is taking a break. Please check back soon.</p> : !items.length ? <p className="py-8 font-serif text-xl">Nothing needed just yet. The host will add a few ideas here.</p> : <ul className="mt-5 divide-y divide-[#202523]/10">{items.map(i => {
       const remaining = Math.max(0, i.needed - i.claimed);

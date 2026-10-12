@@ -10,6 +10,7 @@ import { submitEventRsvp } from "../app/e/actions";
 import { rsvpUpdatePath } from "../lib/calendar";
 import { CalendarActions } from "./calendar-actions";
 import { EventHubLink } from "./event-hub-link";
+import { RememberGuestLink, SavedGuestLinks } from "./guest-return-links";
 import { OYSTER_ROAST_EVENT, eventMonthLabel, type OysterRoastEvent } from "../lib/oyster-roast-event";
 import { createRsvpEditToken } from "../lib/rsvp-edit-token";
 import { RsvpsClosed } from "./rsvp/rsvps-closed";
@@ -170,6 +171,7 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
   }
 
   const responseContent = <>
+            <SavedGuestLinks eventSlug={oysterRoastEvent.slug} publicSlug={oysterRoastEvent.publicSlug} potluckEnabled={oysterRoastEvent.features.potluck} />
             <div className="rounded-[1.75rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 shadow-[0_18px_50px_rgba(41,56,53,0.10)] backdrop-blur sm:p-7">
               {repliesClosed ? <RsvpsClosed deadlinePassed={oysterRoastEvent.rsvpAvailability === "deadline"} /> : submitted ? (
                 <div aria-live="polite" className="py-3 text-center sm:py-5">
@@ -219,6 +221,7 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
                       >
                         Update RSVP
                       </Link>
+                      <RememberGuestLink eventSlug={oysterRoastEvent.slug} kind="rsvp" token={editToken} />
                     </div>
                   ) : (
                     <button

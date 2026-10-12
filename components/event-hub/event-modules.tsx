@@ -1,4 +1,5 @@
-import type { EventFeatures, OysterRoastEvent } from "../../lib/oyster-roast-event";
+import { OYSTER_ROAST_EVENT, type EventFeatures, type OysterRoastEvent } from "../../lib/oyster-roast-event";
+import { SavedGuestLinks } from "../guest-return-links";
 import type { PublicPlaylistSuggestion } from "../../lib/playlist";
 import type { PublicQuestion } from "../../lib/questions";
 import type { PublicHostUpdate } from "../../lib/updates";
@@ -64,7 +65,7 @@ const moduleRegistry: ModuleDefinition[] = [
   },
   {
     id: "potluck", label: "Bring something", icon: "potluck",
-    render: ({ event, potluckItems = [], potluckUnavailable }) => <PotluckModule items={potluckItems} eventSlug={event!.slug} unavailable={potluckUnavailable} />,
+    render: ({ event, potluckItems = [], potluckUnavailable }) => <PotluckModule items={potluckItems} eventSlug={event!.slug} publicSlug={event!.publicSlug} unavailable={potluckUnavailable} />,
   },
   {
     id: "polls", label: "Important Research", icon: "polls",
@@ -94,5 +95,9 @@ export function EventModules(props: EventModulesProps) {
     .map(({ render, ...module }) => ({ ...module, content: render(props) }));
 
   const eventSlug = props.event?.slug === "oyster-roast-2026" ? undefined : props.event?.slug;
-  return <GuestInteractionsProvider key={eventSlug ?? "legacy"} eventSlug={eventSlug} enabled={props.features.playlist || (props.features.polls && Boolean(props.polls?.length))}><HubNavigation modules={modules} eyebrow={eventSlug ? "Around the Shindig" : undefined} /></GuestInteractionsProvider>;
+  const event = props.event ?? OYSTER_ROAST_EVENT;
+  return <GuestInteractionsProvider key={eventSlug ?? "legacy"} eventSlug={eventSlug} enabled={props.features.playlist || (props.features.polls && Boolean(props.polls?.length))}>
+    <SavedGuestLinks eventSlug={event.slug} publicSlug={"publicSlug" in event ? event.publicSlug : undefined} potluckEnabled={props.features.potluck} />
+    <HubNavigation modules={modules} eyebrow={eventSlug ? "Around the Shindig" : undefined} navigation={{ eventSlug: event.slug, hubPath: event.eventHub.path }} />
+  </GuestInteractionsProvider>;
 }

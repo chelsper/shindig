@@ -5,6 +5,8 @@ import { saveGuestPotluckClaim } from "../../app/event/potluck-actions";
 import { POTLUCK_LIMITS, type PotluckClaim } from "../../lib/potluck";
 import type { EventConfiguration } from "../../lib/oyster-roast-event";
 import { EventDesignSurface, EventGuestContent } from "../event-design/event-presentation";
+import { hubSectionPath } from "../../lib/hub-navigation";
+import { RememberGuestLink } from "../guest-return-links";
 
 export function PotluckClaimEditor({ event, initial, token }: { event: EventConfiguration; initial: PotluckClaim; token: string }) {
   const [claim, setClaim] = useState(initial), [name, setName] = useState(initial.guestName), [quantity, setQuantity] = useState(initial.quantity || 1);
@@ -21,7 +23,7 @@ export function PotluckClaimEditor({ event, initial, token }: { event: EventConf
     finally { busy.current = false; } });
   }
   const content = <main className="mx-auto min-h-screen max-w-xl px-5 py-10">
-    <Link className="inline-flex min-h-11 items-center text-sm underline" href={event.eventHub.path}>← Back to Event Hub</Link>
+    <Link className="inline-flex min-h-11 items-center text-sm underline" href={hubSectionPath(event.eventHub.path, "potluck")}>← Back to Bring something</Link>
     <p className="mt-5 text-xs uppercase tracking-widest">{event.title}</p><h1 className="mt-2 font-serif text-4xl">Your little contribution</h1>
     <h2 className="mt-5 break-words font-serif text-2xl">{claim.title}</h2>
     <p className="mt-2 text-sm leading-6">{claim.quantity ? `You’re signed up for ${claim.quantity}.` : "This signup has been canceled."} Your name stays between you and the host. This does not change your RSVP.</p>
@@ -35,6 +37,7 @@ export function PotluckClaimEditor({ event, initial, token }: { event: EventConf
     {error && <p role="alert" className="mt-5 text-sm leading-6">{error} <button type="button" disabled={pending} className="min-h-11 underline" onClick={() => window.location.reload()}>Reload saved signup</button></p>}
     {message && <p role="status" className="mt-5 rounded-xl border border-current/20 p-4 text-sm leading-6">{message}</p>}
     <p className="mt-6 text-xs leading-5">Keep this private link. Anyone who has it can change or cancel this signup. We don’t send email or text confirmations.</p>
+    <RememberGuestLink eventSlug={event.slug} kind="potluck" token={token} />
   </main>;
   return event.design ? <EventDesignSurface appearance={event.design} fullHeight><EventGuestContent>{content}</EventGuestContent></EventDesignSurface> : content;
 }

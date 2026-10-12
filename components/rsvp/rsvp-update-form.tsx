@@ -9,6 +9,7 @@ import { updateEventRsvp } from "../../app/e/actions";
 import { OYSTER_ROAST_EVENT, type OysterRoastEvent } from "../../lib/oyster-roast-event";
 import { CalendarActions } from "../calendar-actions";
 import { EventHubLink } from "../event-hub-link";
+import { RememberGuestLink } from "../guest-return-links";
 import { RsvpsClosed } from "./rsvps-closed";
 import { RsvpDeadlineNote } from "./rsvp-deadline-note";
 
@@ -115,6 +116,7 @@ export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT 
           </p>
         </section>
 
+        <div className="mb-5"><RememberGuestLink eventSlug={event.slug} kind="rsvp" token={token} /></div>
         <section className="rounded-[1.75rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 shadow-[0_18px_50px_rgba(41,56,53,0.10)] backdrop-blur sm:p-8">
           {repliesClosed ? (
             <>

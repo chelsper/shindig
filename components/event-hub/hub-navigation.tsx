@@ -3,6 +3,8 @@
 import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
 import type { EventFeatures } from "../../lib/oyster-roast-event";
+import { hubSectionPath } from "../../lib/hub-navigation";
+import { useHubSection, type HubNavigationContext } from "./use-hub-section";
 
 export type HubModule = {
   id: keyof EventFeatures;
@@ -49,14 +51,22 @@ function ModuleIcon({ icon }: { icon: HubModule["icon"] }) {
 }
 
 // Module content is composed on the server. This boundary only switches panels.
-export function HubNavigation({ modules, eyebrow = "Around the roast" }: { modules: HubModule[]; eyebrow?: string }) {
+export function HubNavigation({ modules, eyebrow = "Around the roast", navigation }: { modules: HubModule[]; eyebrow?: string; navigation?: HubNavigationContext }) {
   const [selectedId, setSelectedId] = useState(modules[0]?.id);
+  const [copyFeedback, setCopyFeedback] = useState<{ section: string; message: string } | null>(null);
+  const publicNavigation = useHubSection(navigation, modules.map(module => module.id));
   const tabRefs = useRef<Partial<Record<HubModule["id"], HTMLButtonElement | null>>>({});
-  const activeId = modules.some((module) => module.id === selectedId)
+  const activeId = navigation ? publicNavigation.active : modules.some((module) => module.id === selectedId)
     ? selectedId
     : modules[0]?.id;
 
   if (modules.length === 0) return null;
+
+  function select(id: HubModule["id"]) {
+    setCopyFeedback(null);
+    if (navigation) publicNavigation.select(id);
+    else setSelectedId(id);
+  }
 
   function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
     let nextIndex: number;
@@ -79,7 +89,7 @@ export function HubNavigation({ modules, eyebrow = "Around the roast" }: { modul
 
     event.preventDefault();
     const nextId = modules[nextIndex].id;
-    setSelectedId(nextId);
+    select(nextId);
     tabRefs.current[nextId]?.focus();
   }
 
@@ -101,7 +111,7 @@ export function HubNavigation({ modules, eyebrow = "Around the roast" }: { modul
               }`}
               id={`hub-tab-${module.id}`}
               key={module.id}
-              onClick={() => setSelectedId(module.id)}
+              onClick={() => select(module.id)}
               onKeyDown={(event) => handleKeyDown(event, index)}
               ref={(element) => { tabRefs.current[module.id] = element; }}
               role="tab"
@@ -113,6 +123,15 @@ export function HubNavigation({ modules, eyebrow = "Around the roast" }: { modul
             </button>
           ))}
         </div>
+        {navigation && activeId && <div className="mt-2 flex flex-wrap items-center gap-x-3 px-1 text-xs text-[#355f9e]">
+          <button type="button" className="min-h-11 text-left underline underline-offset-4" onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(new URL(hubSectionPath(navigation.hubPath, activeId), window.location.origin).href);
+              setCopyFeedback({ section: activeId, message: "Section link copied — safe to share with guests." });
+            } catch { setCopyFeedback({ section: activeId, message: "Copy isn’t available. Open the section link and copy its address." }); }
+          }}>Copy link to this section</button>
+          {copyFeedback?.section === activeId && <p role="status" className="basis-full pb-2 leading-5">{copyFeedback.message} <a href={hubSectionPath(navigation.hubPath, activeId)} className="inline-flex min-h-11 items-center underline">Open section link</a></p>}
+        </div>}
       </nav>
 
       {modules.map((module) => (
