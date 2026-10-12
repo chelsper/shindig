@@ -26,7 +26,7 @@ export default async function HubContentPage({ params, searchParams }: { params:
   if (!data) notFound();
   const { draft, settings, publication, scope, slug } = data;
   const live = publication?.visibility === "published" && publication.snapshot.settings.features[view];
-  const failed = <p role="alert" className="rounded-2xl bg-[#fff4d8] p-5 text-sm leading-6">This section couldn’t load. Please try again. If this is the first Hub Content setup, check migration 023 has been applied. <Link className="underline" href={`/admin/events/${id}/content?view=${view}`}>Reload this section</Link></p>;
+  const failed = <p role="alert" className="rounded-2xl bg-[#fff4d8] p-5 text-sm leading-6">This section couldn’t load. Please try again. If this is the first Hub Content setup, check the database migrations have been applied. <Link className="underline" href={`/admin/events/${id}/content?view=${view}`}>Reload this section</Link></p>;
   let content;
   if (view === "potluck") {
     const items = await listHostPotluckItems(slug).catch(() => null);
@@ -39,7 +39,7 @@ export default async function HubContentPage({ params, searchParams }: { params:
     content = updates ? <HostUpdatesManager updates={updates} /> : failed;
   } else {
     const questions = await listQuestionsForAdmin(scope).catch(() => null);
-    content = questions ? <><p className="mb-5 text-sm leading-6 text-[#202523]/65">Guests send questions from your published Event Hub. Answer them here, then choose whether to share the question and answer. Unanswered questions and guest names stay private. This is not a custom RSVP questionnaire.</p><HostQuestionsManager questions={questions} /></> : failed;
+    content = questions ? <><p className="mb-5 text-sm leading-6 text-[#202523]/65">Prepare FAQs ahead of time or answer questions guests send from your published Event Hub. Choose which answers to share. Unapproved answers and guest names stay private. This is not a custom RSVP questionnaire.</p><HostQuestionsManager questions={questions} /></> : failed;
   }
   return <EventHubContent id={id} title={draft.title} timeZone={draft.timeZone} slug={slug} view={view} enabled={settings.settings.features[view]} features={settings.settings.features} live={Boolean(live)} publishedBefore={Boolean(publication)} revision={settings.revision} archived={publication?.visibility === "archived"} liveFeatures={publication?.visibility === "published" ? publication.snapshot.settings.features : null}>{content}</EventHubContent>;
 }

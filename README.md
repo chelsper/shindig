@@ -1,5 +1,32 @@
 # Shindig
 
+## Host-written FAQs
+
+In **Event setup → Hub Content → Ask the Host**, use **+ Add a FAQ** to prepare
+practical answers before guests ask. Host-written FAQs and incoming guest
+questions are separate in the editor and share the existing guest Q&A module.
+Both question and answer are required (1,000/2,000 characters). New FAQs default
+to private. Hosts can edit their question/answer, explicitly approve them,
+unpublish, or delete with confirmation. Guest-submitted question text remains
+read-only; guest names never appear publicly.
+
+Approval alone cannot reveal content in a disabled/private event. The event
+must be published with Ask the Host enabled. Approved FAQs appear in the saved
+private preview; unapproved answers do not. On a live section, saving approved
+FAQ edits takes effect immediately, as the editor explains. No extra module,
+notifications, accounts, or default answers are added.
+
+Apply **`db/migrations/024_host_faqs.sql` before deploying**. It adds a source
+marker (existing rows default to `guest`) and a positive FAQ revision to
+`event_questions`, preserving all existing answers, names and visibility.
+It can be reapplied and seeds/publishes nothing. Host FAQs must have an answer
+and cannot carry a guest name. Server-only writes resolve event ownership,
+validate input, deduplicate exact create/retry requests with a purpose/event-
+scoped hash, and reject stale edits instead of overwriting another tab. Only
+question/answer text leaves the existing public data layer; source, revisions,
+identifiers and private data remain host-only. No new packages or environment
+variables are needed.
+
 ## Private hosting overview
 
 Open **Your events → Event overview** (`/admin/events/[id]/setup`) for

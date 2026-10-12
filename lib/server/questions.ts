@@ -4,7 +4,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { neon } from "@neondatabase/serverless";
 import { OYSTER_ROAST_SCOPE, requireHostEventScope, eventScopeSlug, eventFeatureEnabled, requireEventFeature, type EventScope } from "./event-scope";
 import type { PublicQuestion } from "../questions";
-import type { AnswerInput, QuestionInput } from "./event-content-validation";
+import type { AnswerInput, HostFaqInput, QuestionInput } from "./event-content-validation";
 
 export type AdminQuestion = {
   id: string;
@@ -13,6 +13,8 @@ export type AdminQuestion = {
   answer: string | null;
   isPublished: boolean;
   createdAt: string;
+  source: "guest" | "host";
+  revision: number;
 };
 
 function database() {
@@ -63,7 +65,7 @@ export async function listQuestionsForAdmin(scope: EventScope = OYSTER_ROAST_SCO
   const sql = database();
   const rows = await sql`
     SELECT id::text, question, guest_name AS "guestName", answer,
-      is_published AS "isPublished", created_at AS "createdAt"
+      is_published AS "isPublished", created_at AS "createdAt", source, faq_revision AS revision
     FROM event_questions WHERE event_slug = ${eventSlug}
     ORDER BY created_at DESC, id DESC
   `;
@@ -72,6 +74,7 @@ export async function listQuestionsForAdmin(scope: EventScope = OYSTER_ROAST_SCO
     guestName: row.guestName == null ? null : String(row.guestName),
     answer: row.answer == null ? null : String(row.answer),
     isPublished: Boolean(row.isPublished), createdAt: new Date(row.createdAt).toISOString(),
+    source: row.source === "host" ? "host" : "guest", revision: Number(row.revision),
   }));
 }
 
@@ -84,8 +87,42 @@ export async function saveQuestionAnswer(id: string, input: AnswerInput, scope: 
     SET answer = ${input.answer}, is_published = ${input.isPublished},
       published_at = CASE WHEN ${input.isPublished} THEN COALESCE(published_at, now()) ELSE NULL END,
       updated_at = now()
-    WHERE event_slug = ${eventSlug} AND id = ${id}::uuid
+    WHERE event_slug = ${eventSlug} AND id = ${id}::uuid AND source = 'guest'
     RETURNING 1 AS updated
+  `;
+  return rows.length > 0;
+}
+
+export async function insertHostFaq(requestId: string, input: HostFaqInput, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<boolean> {
+  await requireHostEventScope(scope);
+  const eventSlug = eventScopeSlug(scope);
+  const submissionHash = createHash("sha256").update(`host-faq:${eventSlug}:${requestId.toLowerCase()}`).digest("hex");
+  const rows = await database()`
+    INSERT INTO event_questions (event_slug, question, answer, source, guest_name, submission_hash, is_published, published_at)
+    VALUES (${eventSlug}, ${input.question}, ${input.answer}, 'host', NULL, ${submissionHash}, ${input.isPublished}, CASE WHEN ${input.isPublished} THEN now() ELSE NULL END)
+    ON CONFLICT (submission_hash) DO UPDATE SET submission_hash = EXCLUDED.submission_hash
+    WHERE event_questions.event_slug = EXCLUDED.event_slug AND event_questions.source = 'host'
+      AND event_questions.faq_revision = 1 AND event_questions.question = EXCLUDED.question
+      AND event_questions.answer = EXCLUDED.answer AND event_questions.is_published = EXCLUDED.is_published
+    RETURNING 1 AS saved
+  `;
+  // Exact retries succeed without overwriting anything; changed retries conflict.
+  return rows.length > 0;
+}
+
+export async function updateHostFaq(id: string, revision: number, input: HostFaqInput, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<boolean> {
+  await requireHostEventScope(scope);
+  const eventSlug = eventScopeSlug(scope);
+  const rows = await database()`
+    UPDATE event_questions
+    SET question = ${input.question}, answer = ${input.answer}, is_published = ${input.isPublished},
+      published_at = CASE WHEN ${input.isPublished} THEN COALESCE(published_at, now()) ELSE NULL END,
+      updated_at = CASE WHEN faq_revision = ${revision} THEN clock_timestamp() ELSE updated_at END,
+      faq_revision = CASE WHEN faq_revision = ${revision} THEN faq_revision + 1 ELSE faq_revision END
+    WHERE event_slug = ${eventSlug} AND id = ${id}::uuid AND source = 'host'
+      AND (faq_revision = ${revision} OR (faq_revision = ${revision} + 1
+        AND question = ${input.question} AND answer = ${input.answer} AND is_published = ${input.isPublished}))
+    RETURNING 1 AS saved
   `;
   return rows.length > 0;
 }

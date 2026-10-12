@@ -7,6 +7,7 @@ import { HubContentNextStep } from "./hub-content-next-step";
 import { QUESTION_LIMITS } from "../../lib/questions";
 import type { AdminQuestion } from "../../lib/server/questions";
 import { ContentDeleteButton } from "./content-delete-button";
+import { HostFaqsManager } from "./host-faqs-manager";
 
 function HostQuestionCard({ question }: { question: AdminQuestion }) {
   const hostEvent = useHostEvent();
@@ -61,6 +62,13 @@ function HostQuestionCard({ question }: { question: AdminQuestion }) {
 }
 
 export function HostQuestionsManager({ questions }: { questions: AdminQuestion[] }) {
-  if (questions.length === 0) return <p className="rounded-[1.75rem] border border-[#202523]/10 bg-[#fffaf1]/85 px-5 py-10 text-center font-serif text-2xl text-[#202523]/70">No questions yet. You’re all caught up.</p>;
-  return <ol aria-label="Guest questions" className="space-y-5">{questions.map((question) => <HostQuestionCard key={question.id} question={question} />)}</ol>;
+  const guests = questions.filter(question => question.source !== "host");
+  return <div className="space-y-9">
+    <HostFaqsManager faqs={questions.filter(question => question.source === "host")} />
+    <section aria-label="Questions from guests" className="border-t border-[#202523]/15 pt-7">
+      <h2 className="mb-5 font-serif text-3xl">Questions from guests</h2>
+      {guests.length === 0 ? <p className="rounded-[1.75rem] border border-[#202523]/10 bg-[#fffaf1]/85 px-5 py-10 text-center font-serif text-2xl text-[#202523]/70">No questions yet. You’re all caught up.</p>
+        : <ol aria-label="Guest questions" className="space-y-5">{guests.map((question) => <HostQuestionCard key={question.id} question={question} />)}</ol>}
+    </section>
+  </div>;
 }

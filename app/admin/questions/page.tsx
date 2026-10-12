@@ -13,7 +13,7 @@ export default async function AdminQuestionsPage() {
   let questions: AdminQuestion[] | null = null;
   try { questions = await listQuestionsForAdmin(); } catch { console.error("Admin questions retrieval failed."); }
   return (
-    <ContentShell title="Ask the Host" description="Questions arrive privately. Answer just for now, or choose to share the question and answer with everyone. Guest names stay here.">
+    <ContentShell title="Ask the Host" description="Prepare helpful FAQs or answer incoming guest questions. Choose which answers to share; guest names and unapproved answers stay here.">
       {questions === null ? <p className="py-8 text-center text-sm" role="alert">Questions couldn’t load. Please refresh and try again.</p> : <HostQuestionsManager questions={questions} />}
     </ContentShell>
   );

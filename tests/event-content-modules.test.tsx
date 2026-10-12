@@ -43,7 +43,7 @@ describe("event content presentation", () => {
     for (const value of ["Ask the Host", "Host Updates", "hub-tab-questions", "hub-panel-updates", "Hidden question", "Hidden answer", "Hidden heading", "Hidden message"]) expect(html).not.toContain(value);
   });
   it("shows private submitter information only in the host UI and defaults to unpublished", () => {
-    const html = renderToStaticMarkup(<HostQuestionsManager questions={[{ id: "private-id", question: "Chairs?", guestName: "Private Guest", answer: null, isPublished: false, createdAt: "2026-10-01T20:00:00Z" }]} />);
+    const html = renderToStaticMarkup(<HostQuestionsManager questions={[{ id: "private-id", question: "Chairs?", guestName: "Private Guest", answer: null, isPublished: false, createdAt: "2026-10-01T20:00:00Z", source: "guest", revision: 1 }]} />);
     expect(html).toContain("Private Guest");
     expect(html).toContain("Name visible only to you");
     expect(html).toContain('type="checkbox"');

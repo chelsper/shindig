@@ -70,8 +70,8 @@ describe("public event content privacy", () => {
 
 describe("host content data access", () => {
   it("keeps private guest names confined to the admin query", async () => {
-    mocks.sql.mockResolvedValue([{ id, question: "Chairs?", guestName: "Private Person", answer: null, isPublished: false, createdAt: "2026-10-01T20:00:00Z", submissionHash: "secret" }]);
-    await expect(listQuestionsForAdmin()).resolves.toEqual([{ id, question: "Chairs?", guestName: "Private Person", answer: null, isPublished: false, createdAt: "2026-10-01T20:00:00.000Z" }]);
+    mocks.sql.mockResolvedValue([{ id, question: "Chairs?", guestName: "Private Person", answer: null, isPublished: false, createdAt: "2026-10-01T20:00:00Z", source: "guest", revision: 1, submissionHash: "secret" }]);
+    await expect(listQuestionsForAdmin()).resolves.toEqual([{ id, question: "Chairs?", guestName: "Private Person", answer: null, isPublished: false, createdAt: "2026-10-01T20:00:00.000Z", source: "guest", revision: 1 }]);
     expect(mocks.sql.mock.calls[0][0].join("?")).toContain("ORDER BY created_at DESC, id DESC");
   });
 

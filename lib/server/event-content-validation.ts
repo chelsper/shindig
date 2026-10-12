@@ -7,6 +7,7 @@ type Result<T> = { success: true; data: T } | { success: false; message: string 
 export type UpdateInput = { heading: string | null; message: string };
 export type QuestionInput = { requestToken: string; question: string; guestName: string | null };
 export type AnswerInput = { answer: string | null; isPublished: boolean };
+export type HostFaqInput = { question: string; answer: string; isPublished: boolean };
 
 export function isContentId(value: unknown): value is string {
   return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -71,4 +72,18 @@ export function validateHostAnswer(input: unknown): Result<AnswerInput> {
     return { success: false, message: "Write an answer before publishing this question." };
   }
   return { success: true, data: { answer, isPublished: value.isPublished } };
+}
+
+export function validateHostFaq(input: unknown): Result<HostFaqInput> {
+  const value = fields(input);
+  if (!value || typeof value.question !== "string" || !value.question.trim()) {
+    return { success: false, message: "Add a question your guests might ask." };
+  }
+  const question = value.question.trim();
+  if (question.length > QUESTION_LIMITS.question) return { success: false, message: `Keep the question to ${QUESTION_LIMITS.question.toLocaleString("en-US")} characters or fewer.` };
+  const result = validateHostAnswer(value);
+  if (!result.success) return result;
+  if (!result.data.answer) return { success: false, message: "Add an answer before saving your FAQ." };
+  // Source, guest identity, event and revision cannot be set through this body.
+  return { success: true, data: { question, answer: result.data.answer, isPublished: result.data.isPublished } };
 }

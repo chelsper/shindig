@@ -3,14 +3,34 @@
 import { revalidatePath } from "next/cache";
 import { OYSTER_ROAST_EVENT } from "../../../lib/oyster-roast-event";
 import { isHostAuthenticated } from "../../../lib/server/host-access";
-import { isContentId, validateHostAnswer } from "../../../lib/server/event-content-validation";
-import { removeQuestion, saveQuestionAnswer } from "../../../lib/server/questions";
+import { isContentId, validateHostAnswer, validateHostFaq } from "../../../lib/server/event-content-validation";
+import { insertHostFaq, updateHostFaq, removeQuestion, saveQuestionAnswer } from "../../../lib/server/questions";
 import type { HostContentResult } from "../updates/actions";
 import { hostScopeArgs, refreshHostEvent } from "../../../lib/server/host-event";
 
 function refreshQuestions() {
   revalidatePath("/admin/questions");
   revalidatePath(OYSTER_ROAST_EVENT.eventHub.path);
+}
+
+export async function saveHostFaq(id: string, revision: number, input: unknown, eventSlug?: string): Promise<HostContentResult> {
+  if (!(await isHostAuthenticated())) return { ok: false, message: "Your host session has expired. Please sign in again." };
+  if (!isContentId(id) || !Number.isSafeInteger(revision) || revision < 0) return { ok: false, message: "Please reload this section and try again." };
+  const validation = validateHostFaq(input);
+  if (!validation.success) return { ok: false, message: validation.message };
+  try {
+    const scopes = await hostScopeArgs(eventSlug);
+    const saved = revision === 0
+      ? await insertHostFaq(id, validation.data, ...scopes)
+      : await updateHostFaq(id, revision, validation.data, ...scopes);
+    if (!saved) return { ok: false, message: "This FAQ changed or is no longer available. Reload this section before editing again." };
+    await refreshHostEvent(eventSlug);
+  } catch {
+    console.error("Host FAQ save failed.");
+    return { ok: false, message: "We couldn’t save your FAQ. Please try again. Your text is still here." };
+  }
+  refreshQuestions();
+  return { ok: true };
 }
 
 export async function answerGuestQuestion(id: string, input: unknown, eventSlug?: string): Promise<HostContentResult> {
