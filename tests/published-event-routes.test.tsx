@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 vi.mock("server-only", () => ({}));
+vi.mock("../lib/server/rsvp-contacts", () => ({ contactCollectionClosed: async () => false, getGuestContactPreferences: async () => ({ emailOptIn: false, textOptIn: false, email: null, phone: null, revision: 0, collectionClosed: false }) }));
 const mocks = vi.hoisted(() => ({ pub: vi.fn(), event: vi.fn(), blob: vi.fn(), auth: vi.fn(), guest: vi.fn(), list: vi.fn(), save: vi.fn(), revalidate: vi.fn(), search: vi.fn(), throttle: vi.fn(), weather: vi.fn(), typical: vi.fn(), draft: vi.fn(), artwork: vi.fn(), settings: vi.fn() }));
 vi.mock("../lib/server/event-publications", () => ({ getEventPublication: mocks.pub, getHostEventPublication: mocks.pub, getPublishedEvent: mocks.event, publishEventRecord: mocks.save }));
 vi.mock("../lib/server/admin-session", () => ({ isAdminAuthenticated: mocks.auth }));
@@ -47,7 +48,8 @@ describe("published routes", () => {
     expect(invitation).toContain("reply-by date has passed"); expect(invitation).not.toContain("<form");
     expect(invitation).toContain(`/e/${eventSlug}/event`);
     const edit = renderToStaticMarkup(await Edit({ params: Promise.resolve({ slug: eventSlug, token }) }));
-    expect(edit).toContain("Attending · 3 guests"); expect(edit).not.toContain("<form"); expect(edit).toContain("Add to Calendar");
+    expect(edit).toContain("Attending · 3 guests"); expect(edit).not.toContain("Updating RSVP"); expect(edit).not.toContain("Save Changes"); expect(edit).toContain("Add to Calendar");
+    expect(edit).toContain("Save update preferences"); // Contact withdrawal remains available after attendance closes.
   });
   it("keeps decline and private reduction forms available when full, with event-local deadline copy", async () => {
     mocks.event.mockResolvedValue({ ...event, rsvpAvailability: "full", rsvp: { ...snapshot.settings.rsvp, capacity: 3, deadlineAtUtc: "2026-11-07T23:00:00.000Z" } });

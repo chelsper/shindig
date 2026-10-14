@@ -7,6 +7,7 @@ import {
   type GuestRsvp,
 } from "../../lib/server/rsvps";
 import { validateRsvpUpdate } from "../../lib/server/rsvp-validation";
+import { RsvpAdmissionError } from "../../lib/rsvp-policy";
 
 export type UpdateRsvpResult =
   | { ok: true; rsvp: GuestRsvp }
@@ -47,6 +48,7 @@ export async function updateRsvp(input: unknown): Promise<UpdateRsvpResult> {
 
     return { ok: true, rsvp };
   } catch (error) {
+    if (error instanceof RsvpAdmissionError) return { ok: false, message: error.message };
     const databaseError =
       error && typeof error === "object"
         ? (error as { code?: string; name?: string })

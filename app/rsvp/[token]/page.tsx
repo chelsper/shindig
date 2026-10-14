@@ -8,6 +8,7 @@ import { isValidRsvpEditToken } from "../../../lib/rsvp-edit-token";
 import { hashRsvpEditToken } from "../../../lib/server/rsvp-edit-token";
 import { getRsvpForGuest } from "../../../lib/server/rsvps";
 import { getEventConfiguration } from "../../../lib/server/invitation-settings";
+import { getGuestContactPreferences } from "../../../lib/server/rsvp-contacts";
 
 export const dynamic = "force-dynamic";
 
@@ -74,8 +75,10 @@ export default async function RsvpUpdatePage({ params }: RsvpUpdatePageProps) {
   }
 
   let event;
+  let contacts;
   try {
-    event = await getEventConfiguration();
+    [event, contacts] = await Promise.all([getEventConfiguration(), getGuestContactPreferences(hashRsvpEditToken(token))]);
   } catch { return <LinkUnavailable loadFailed />; }
-  return <RsvpUpdateForm initialRsvp={rsvp} token={token} event={event} />;
+  if (!contacts) return <LinkUnavailable />;
+  return <RsvpUpdateForm initialRsvp={rsvp} token={token} event={event} initialContacts={contacts} />;
 }

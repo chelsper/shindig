@@ -9,6 +9,8 @@ import type {
 } from "./rsvp-validation";
 import { validateRsvpUpdate } from "./rsvp-validation";
 import { writeEventRsvp } from "./rsvp-admission";
+import { writeGuestRsvpWithContacts } from "./rsvp-contacts";
+import type { GuestContactPreferences } from "../rsvp-contacts";
 
 function fieldsForEvent(input: ValidatedRsvpUpdate, scope: EventScope, host = false): ValidatedRsvpUpdate {
   // Guest-facing switches must not erase host comments or saved visibility
@@ -27,7 +29,7 @@ export type SavedRsvp = {
   comment: string | null;
 };
 
-export type GuestRsvp = Omit<SavedRsvp, "id">;
+export type GuestRsvp = Omit<SavedRsvp, "id"> & { contactPreferences?: GuestContactPreferences };
 
 export type SaveRsvpResult =
   | { status: "created" | "duplicate"; rsvp: SavedRsvp }
@@ -103,6 +105,12 @@ export async function saveRsvp(rsvp: ValidatedRsvp,
 
   if (!databaseUrl) {
     return { status: "disabled" };
+  }
+
+  if (rsvp.contactPreferences) {
+    const result = await writeGuestRsvpWithContacts(scope, "guest-create", rsvp.id, editTokenHash, rsvp);
+    if (!result.rsvp || (result.status !== "created" && result.status !== "duplicate")) throw new Error("RSVP could not be saved.");
+    return { status: result.status, rsvp: result.rsvp };
   }
 
   if (eventSlug !== OYSTER_ROAST_SCOPE.slug) {
@@ -204,6 +212,12 @@ export async function updateRsvpForGuest(editTokenHash: string,
   rsvp: ValidatedRsvpUpdate, scope: EventScope = OYSTER_ROAST_SCOPE): Promise<GuestRsvp | null> {
   const eventSlug = eventScopeSlug(scope);
   rsvp = fieldsForEvent(rsvp, scope);
+  if (rsvp.contactPreferences) {
+    const result = await writeGuestRsvpWithContacts(scope, "guest-update", null, editTokenHash, rsvp);
+    if (!result.rsvp) return null;
+    const { guestName, attending, partySize, displayOnGuestList, comment } = result.rsvp;
+    return { guestName, attending, partySize, displayOnGuestList, comment, contactPreferences: result.contactPreferences };
+  }
   if (eventSlug !== OYSTER_ROAST_SCOPE.slug) {
     const result = await writeEventRsvp(scope, "guest-update", null, editTokenHash, rsvp);
     if (!result.rsvp) return null;

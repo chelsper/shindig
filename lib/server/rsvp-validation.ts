@@ -1,4 +1,5 @@
 import { OYSTER_ROAST_EVENT } from "../oyster-roast-event";
+import { validateContactPreferences, type ContactPreferences } from "../rsvp-contacts";
 
 export const OYSTER_ROAST_EVENT_SLUG = OYSTER_ROAST_EVENT.slug;
 
@@ -11,6 +12,7 @@ export type RsvpRules = { maxPartySize: number; allowComments: boolean; guestLis
 const DEFAULT_RULES: RsvpRules = { maxPartySize: 20, allowComments: true, guestListEnabled: true };
 
 export type ValidatedRsvp = {
+  contactPreferences?: ContactPreferences;
   id: string;
   eventSlug: string;
   guestName: string;
@@ -21,6 +23,7 @@ export type ValidatedRsvp = {
 };
 
 export type ValidatedRsvpUpdate = {
+  contactPreferences?: ContactPreferences;
   guestName: string;
   attending: boolean;
   partySize: number | null;
@@ -99,9 +102,12 @@ function validateRsvpFields(
     return { success: false, message: "Please keep your note under 1,000 characters." };
   }
 
+  const contacts = submission.contactPreferences === undefined ? undefined : validateContactPreferences(submission.contactPreferences);
+  if (contacts && !contacts.success) return contacts;
   return {
     success: true,
     data: {
+      ...(contacts?.success ? { contactPreferences: contacts.data } : {}),
       guestName,
       attending: submission.attending,
       partySize,

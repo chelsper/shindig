@@ -126,6 +126,11 @@ button {
   transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
 
+/* Keep the optional contact controls from zooming the viewport on iPhone. */
+.contact-preferences .field-input {
+  font-size: 1rem;
+}
+
 .field-input::placeholder {
   color: rgb(32 37 35 / 38%);
 }

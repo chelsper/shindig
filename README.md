@@ -1,5 +1,55 @@
 # Shindig
 
+## Optional guest contact preferences
+
+Apply **`db/migrations/025_rsvp_contact_preferences.sql` before deploying**.
+It adds separate `rsvp_contact_preferences` and `event_contact_settings` tables
+and atomic guest-write/cleanup functions. Reapplying is safe; existing RSVPs,
+edit links, public guest lists, events and consent choices are not rewritten.
+No existing guest is opted in. No packages or environment variables are added.
+
+Guests can choose **By text**, **By email**, both, or neither while replying.
+Both start unchecked; RSVP does not require contact details. The exact permission
+copy for `event-updates-v1` is: “Your contact details are shared only with the
+host for reminders and updates about this event.” These are unverified contact
+details, not marketing permission or permission to use another event’s list.
+US/Canadian ten-digit numbers normalize to +1; other numbers require +country
+code. Email and phone are validated server-side with bounded lengths.
+
+The existing private RSVP link has a separate **Keep in touch** form. Guests can
+change or withdraw either channel without changing attendance, including after
+the RSVP deadline/closure. Unchecking erases that channel’s contact and consent
+timestamp. The event must still be published for its private guest page to open.
+Hosts can clean up contacts even for an unpublished/archived event.
+
+Hosts open **Guest responses → Private contacts** (legacy Jasper:
+`/admin/contacts`). They can filter by email/text and attendance, copy deduplicated
+recipients, and draft/copy a message for their own apps. Copying recipients
+reauthenticates and refreshes consent. Clipboard-denied browsers offer selectable
+text. Use email Bcc and recipient-private texts; ordinary group texts reveal
+numbers. **Nothing is sent by Shindig**, and the message draft is not persisted.
+
+**Clear event contacts** requires explicit confirmation. It permanently removes
+this event’s email/phone/consent timestamps and ends further collection, without
+deleting RSVPs. Cleanup is manual (not an automatic retention timer); hosts
+should use it after the gathering and remove their own exported/copied details.
+This cannot retract copies already taken or instantly erase managed database
+backups. It is deliberately not a reusable cross-event address book or an
+invitation tracker for guests who haven’t replied.
+
+All contact reads/writes are server-only. Host operations verify ownership;
+guest access uses the event-scoped hashed private token. Contact information is
+excluded from public Hub readers, RSVP CSV exports, calendars and browser local
+storage. RSVP + initial preferences save atomically. Revisions reject stale
+preferences, duplicate RSVP creates never replay opt-ins, and cleanup serializes
+with writes so stale forms cannot restore contacts. No guest contact changes
+are possible via the host RSVP editor. Private routes use no-store/no-referrer.
+
+Tests include validation, opt-in/out, token/ownership/event isolation, rollback,
+retry/stale-tab behavior, cleanup, unchanged RSVP/CSV/public projections and
+mobile-friendly rendering. Embedded PostgreSQL tests use the same disposable
+PGlite setup described below; they never connect to Neon.
+
 ## Host-written FAQs
 
 In **Event setup → Hub Content → Ask the Host**, use **+ Add a FAQ** to prepare

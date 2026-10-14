@@ -15,6 +15,8 @@ import { OYSTER_ROAST_EVENT, eventMonthLabel, type OysterRoastEvent } from "../l
 import { createRsvpEditToken } from "../lib/rsvp-edit-token";
 import { RsvpsClosed } from "./rsvp/rsvps-closed";
 import { RsvpDeadlineNote } from "./rsvp/rsvp-deadline-note";
+import { ContactPreferencesFields } from "./rsvp/contact-preferences-fields";
+import { EMPTY_CONTACT_PREFERENCES } from "../lib/rsvp-contacts";
 
 type RsvpChoice = "attending" | "declined" | null;
 
@@ -59,10 +61,11 @@ function PinIcon() {
 
 type InvitationPageProps = {
   persistenceDisabled: boolean;
+  contactCollectionClosed?: boolean;
   event?: OysterRoastEvent;
 };
 
-export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = OYSTER_ROAST_EVENT }: InvitationPageProps) {
+export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = OYSTER_ROAST_EVENT, contactCollectionClosed = false }: InvitationPageProps) {
   const legacy = oysterRoastEvent.slug === OYSTER_ROAST_EVENT.slug;
   const rules = oysterRoastEvent.rsvp ?? { maxPartySize: 20, allowComments: true, guestListDefaultVisible: true };
   const repliesClosed = oysterRoastEvent.rsvpsOpen === false || oysterRoastEvent.rsvpAvailability === "deadline";
@@ -71,6 +74,7 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
   const [partySize, setPartySize] = useState("1");
   const [displayOnGuestList, setDisplayOnGuestList] = useState(rules.guestListDefaultVisible);
   const [comment, setComment] = useState("");
+  const [contactPreferences, setContactPreferences] = useState({ ...EMPTY_CONTACT_PREFERENCES, collectionClosed: contactCollectionClosed });
   const [submitted, setSubmitted] = useState(false);
   const [submissionPersisted, setSubmissionPersisted] = useState(true);
   const [editToken, setEditToken] = useState<string | null>(null);
@@ -140,6 +144,7 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
           displayOnGuestList:
             choice === "attending" ? displayOnGuestList : false,
           comment,
+          contactPreferences,
         });
 
         if (!result.ok) {
@@ -213,7 +218,7 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
                   {editToken ? (
                     <div className="mt-5 rounded-xl border border-[#355f9e]/15 bg-[#e9f2f8]/65 px-4 py-3">
                       <p className="text-xs leading-5 text-[#214e91]/75">
-                        Save this private link if you need to change your response later.
+                        Save this private link to change your response or update preferences later.
                       </p>
                       <Link
                         className="mt-2 inline-flex text-xs font-bold uppercase tracking-[0.14em] text-[#214e91] underline decoration-[#214e91]/30 underline-offset-4 transition hover:decoration-[#214e91]"
@@ -352,6 +357,10 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
                           </span>
                         </label>
                       ) : null}
+                      {!contactCollectionClosed && <ContactPreferencesFields value={contactPreferences} disabled={isPending} onChange={(next) => {
+                        setContactPreferences(next);
+                        if (!isPending) resetSubmissionIdentity();
+                      }} />}
                     </div>
                   )}
 

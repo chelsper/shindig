@@ -12,6 +12,8 @@ import { EventHubLink } from "../event-hub-link";
 import { RememberGuestLink } from "../guest-return-links";
 import { RsvpsClosed } from "./rsvps-closed";
 import { RsvpDeadlineNote } from "./rsvp-deadline-note";
+import { ContactPreferencesForm } from "./contact-preferences-form";
+import type { GuestContactPreferences } from "../../lib/rsvp-contacts";
 
 type GuestRsvp = {
   guestName: string;
@@ -25,11 +27,12 @@ type RsvpUpdateFormProps = {
   initialRsvp: GuestRsvp;
   token: string;
   event?: OysterRoastEvent;
+  initialContacts?: GuestContactPreferences;
 };
 
 type RsvpChoice = "attending" | "declined";
 
-export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT }: RsvpUpdateFormProps) {
+export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT, initialContacts }: RsvpUpdateFormProps) {
   const eventSlug = event.slug;
   const legacy = eventSlug === OYSTER_ROAST_EVENT.slug;
   const rules = event.rsvp ?? { maxPartySize: 20, allowComments: true, guestListDefaultVisible: true };
@@ -289,6 +292,7 @@ export function RsvpUpdateForm({ initialRsvp, token, event = OYSTER_ROAST_EVENT 
             </form>
           )}
         </section>
+        {initialContacts && <ContactPreferencesForm initial={initialContacts} token={token} eventSlug={eventSlug} />}
       </div>
     </main>
   );

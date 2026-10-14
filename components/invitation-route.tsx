@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { InvitationPage } from "./invitation-page";
 import { EventDetailsUnavailable } from "./event-details-unavailable";
 import { getEventConfiguration } from "../lib/server/invitation-settings";
+import { contactCollectionClosed } from "../lib/server/rsvp-contacts";
 
 // Shared by the Jasper Shucks root and the explicit invitation compatibility
 // route. Keep one renderer so domain separation cannot fork the RSVP behavior.
@@ -16,7 +17,8 @@ export async function renderInvitation() {
   const persistenceDisabled = process.env.NODE_ENV === "development" && !process.env.DATABASE_URL?.trim();
   try {
     const event = await getEventConfiguration();
-    return <InvitationPage event={event} persistenceDisabled={persistenceDisabled} />;
+    const closed = persistenceDisabled ? false : await contactCollectionClosed(event.slug).catch(() => true);
+    return <InvitationPage event={event} persistenceDisabled={persistenceDisabled} contactCollectionClosed={closed} />;
   } catch {
     console.error("Invitation details unavailable.");
     return <EventDetailsUnavailable />;

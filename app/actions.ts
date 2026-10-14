@@ -4,6 +4,7 @@ import { saveRsvp, type SavedRsvp } from "../lib/server/rsvps";
 import { isValidRsvpEditToken } from "../lib/rsvp-edit-token";
 import { hashRsvpEditToken } from "../lib/server/rsvp-edit-token";
 import { validateRsvpSubmission } from "../lib/server/rsvp-validation";
+import { RsvpAdmissionError } from "../lib/rsvp-policy";
 
 export type SubmitRsvpResult =
   | {
@@ -67,6 +68,7 @@ export async function submitRsvp(input: unknown): Promise<SubmitRsvpResult> {
       editToken,
     };
   } catch (error) {
+    if (error instanceof RsvpAdmissionError) return { ok: false, message: error.message };
     const databaseError =
       error && typeof error === "object"
         ? (error as { code?: string; name?: string })

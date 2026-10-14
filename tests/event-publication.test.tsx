@@ -1,6 +1,7 @@
 import { compareEventPublication } from "../lib/event-publication-changes";
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+vi.mock("../app/rsvp/contact-actions", () => ({ updateContactPreferences: vi.fn() }));
 vi.mock("../app/actions", () => ({ submitRsvp: vi.fn() }));
 vi.mock("../app/e/actions", () => ({ submitEventRsvp: vi.fn(), updateEventRsvp: vi.fn() }));
 vi.mock("../app/rsvp/actions", () => ({ updateRsvp: vi.fn() }));

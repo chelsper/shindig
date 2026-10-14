@@ -56,7 +56,7 @@ export function EventHostingOverview({ id, data, features, publication }: {
         {publication.rsvp.capacity != null && rsvps && <p>{Math.max(0, publication.rsvp.capacity - rsvps.totalPartySize)} of {publication.rsvp.capacity} guest places remaining.</p>}
         {publication.rsvp.deadlineAtUtc && <p>Reply deadline: {rsvpDeadlineLabel(publication.rsvp.deadlineAtUtc, publication.timeZone)}.</p>}
         <p className="text-xs text-[#202523]/60">Based on the last published RSVP rules, not unpublished setup changes.{publication.visibility !== "published" ? " Guest links are unavailable; saved activity is retained." : ""}</p>
-        <div className="flex flex-wrap gap-x-5"><Link className={link} href={`${base}/guests`}>Manage guests →</Link><Link className={link} href={`${base}/publish`}>Manage publication & replies →</Link></div>
+        <div className="flex flex-wrap gap-x-5"><Link className={link} href={`${base}/guests`}>Manage guests →</Link><Link className={link} href={`${base}/guests?view=contacts`}>Private contacts →</Link><Link className={link} href={`${base}/publish`}>Manage publication & replies →</Link></div>
       </> : <p>Guests can respond after you publish. Guest management opens after the first publication.</p>}
     </div>
     {unavailable && <p role="status" className="mt-4 text-xs leading-5 text-[#765319]">Some activity couldn’t be checked. Available totals remain visible; refresh to try again.</p>}

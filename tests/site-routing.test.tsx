@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("../lib/server/rsvp-contacts", () => ({ contactCollectionClosed: async () => false }));
 
 vi.mock("next/headers", () => ({ headers: vi.fn() }));
 vi.mock("../app/actions", () => ({ submitRsvp: vi.fn() }));
