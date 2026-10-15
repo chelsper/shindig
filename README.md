@@ -1,5 +1,48 @@
 # Shindig
 
+## Private invitation tracker
+
+Apply **`db/migrations/026_private_invitation_tracker.sql` before deploying**.
+It adds `event_invitees` and a composite RSVP identity index/foreign key. It does
+not import existing guests, rewrite RSVPs, publish events, or grant update consent.
+There are no new packages or environment variables.
+
+Open **Event overview → Invitation tracker**, or **Guest responses → Invitation
+tracker**. Jasper uses `/admin/invitations`; editable events use
+`/admin/events/[id]/invitations`. Planning is available before first publication
+and for unpublished/archived events. The invitation/reminder copy buttons appear
+only when the event is published, using its canonical friendly link when set.
+
+Add one person/household per invitation with an optional email/phone. Mark it
+invited after sending through your own app. **Nothing is sent by Shindig**;
+copying a link/message does not mark it as sent. Filters show All, Not sent,
+Waiting for RSVP (sent but not linked), and Responded. Counts are invitation
+entries, not attendees. Search is in-memory only; private contact details are
+never put into search URLs or browser storage.
+
+Use **Link RSVP**, choose a saved response, and confirm that it belongs to the
+invitee. No name/contact matching is automatic. Both attending and declined
+responses count as Responded; later RSVP edits are reflected on refresh. One
+response can be linked to one invitation entry within the same event, enforced
+by database constraints. Unlinking preserves the RSVP. Deleting an RSVP clears
+the link and restores the entry's sent/not-sent status. Editing/removing an
+invitee never changes the RSVP or independently collected guest update opt-ins.
+
+Host-added contacts are **not consent** and remain separate from Private contacts.
+There is no recipient export, messaging provider, notification, contact import,
+cross-event address book, or tracking link. Contact syntax is checked but numbers
+and addresses are not verified. Remove entries when no longer needed; removal
+requires confirmation and permanently deletes their tracker contact details.
+Cleanup is manual, and cannot retract copies in other apps or database backups.
+
+Every page/action/DAL call checks the current host and event ownership, including
+legacy-admin separation. All SQL is parameterized. Public readers, calendars,
+RSVP exports and event duplication never read this table. Private route headers
+remain no-store/no-referrer/noindex. UUID creation keys prevent rapid duplicate
+submissions; revision checks reject stale writes; no errors include database
+details. Tests exercise validation, matching, event/owner isolation, retries,
+removal, privacy and PostgreSQL constraints using a disposable database only.
+
 ## Optional guest contact preferences
 
 Apply **`db/migrations/025_rsvp_contact_preferences.sql` before deploying**.

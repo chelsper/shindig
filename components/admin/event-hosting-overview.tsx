@@ -51,6 +51,7 @@ export function EventHostingOverview({ id, data, features, publication }: {
     ].map(([label, count]) => <div key={label} className="min-w-0 rounded-2xl bg-[#e9f2f8]/65 p-3"><dt className="text-xs leading-5 text-[#202523]/70">{label}</dt><dd className="mt-1 font-serif text-3xl tabular-nums">{count}</dd></div>)}</dl>
     <p className="mt-3 text-xs leading-5 text-[#202523]/60">Attendance includes guests whose names are hidden on the public list. Responses count households, not individual people.</p></> : <p role="status" className="mt-5 rounded-xl bg-[#fff4d8] p-4 text-sm">Attendance totals couldn’t load. No zero counts are assumed.</p>}
     <div className="mt-4 border-y border-[#202523]/10 py-4 text-sm leading-6">
+      <Link className={link} href={`${base}/invitations`}>Invitation tracker →</Link>
       <p className="font-semibold">{hostingRsvpStatus(publication, rsvps, data.checkedAt)}</p>
       {publication ? <>
         {publication.rsvp.capacity != null && rsvps && <p>{Math.max(0, publication.rsvp.capacity - rsvps.totalPartySize)} of {publication.rsvp.capacity} guest places remaining.</p>}

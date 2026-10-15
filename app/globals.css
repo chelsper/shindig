@@ -131,6 +131,12 @@ button {
   font-size: 1rem;
 }
 
+/* Private tracker forms also avoid iPhone's small-input focus zoom. */
+.tracker-input {
+  font-size: 1rem;
+  font-weight: 400;
+}
+
 .field-input::placeholder {
   color: rgb(32 37 35 / 38%);
 }
