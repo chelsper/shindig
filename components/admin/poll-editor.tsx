@@ -2,6 +2,7 @@
 import { useRef, useState, useTransition, type FormEvent } from "react";
 import { saveHostPoll } from "../../app/admin/polls/actions";
 import { useHostEvent } from "./host-event-context";
+import { HubSaveNotice } from "./event-save-status";
 import { POLL_LIMITS, type AdminPoll, type PollOption } from "../../lib/polls";
 
 export function PollEditor({ poll, onSaved, onCancel }: { poll?: AdminPoll; onSaved: () => void; onCancel: () => void }) {
@@ -68,6 +69,7 @@ export function PollEditor({ poll, onSaved, onCancel }: { poll?: AdminPoll; onSa
       <label className="field-label">Display order (lower first)<input className="field-input max-w-32" type="number" min={0} max={999} required value={order} onChange={(event) => setOrder(event.target.valueAsNumber)} /></label>
       <p className="text-xs leading-5 text-[#202523]/60">{!hostEvent.contentLive ? "Prepare the choices now, then make the poll ready for guests. Nothing appears until the event is published with Polls enabled." : poll ? "Changes to an open poll appear immediately. Archive it to remove it from the Event Hub without losing responses." : "New polls are private drafts. Open the poll when you’re ready for guests to vote."}</p>
       {error ? <p role="alert" className="text-sm text-[#843528]">{error}</p> : null}
+      <HubSaveNotice live={hostEvent.contentLive} behavior={!poll || poll.status === "DRAFT" || poll.status === "ARCHIVED" ? "private" : "immediate"} />
       <div className="flex flex-wrap gap-3"><button type="submit" className="primary-button" disabled={pending}>{pending ? "Saving…" : poll ? "Save changes" : "Save draft"}</button><button type="button" className="min-h-11 px-3 text-sm text-[#355f9e]" onClick={onCancel}>Cancel</button></div>
     </fieldset>
   </form>;

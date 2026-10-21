@@ -4,6 +4,7 @@ import { useRef, useState, useTransition, type FormEvent } from "react";
 import { createHostUpdate, deleteHostUpdate, editHostUpdate } from "../../app/admin/updates/actions";
 import { useHostEvent } from "./host-event-context";
 import { HubContentNextStep } from "./hub-content-next-step";
+import { HubSaveNotice } from "./event-save-status";
 import type { AdminHostUpdate } from "../../lib/server/updates";
 import { UPDATE_LIMITS } from "../../lib/updates";
 import { ContentDeleteButton } from "./content-delete-button";
@@ -55,6 +56,7 @@ function UpdateEditor({ update, onSaved, onCancel }: { update?: AdminHostUpdate;
           <button className="primary-button" disabled={pending} type="submit">{pending ? "Saving…" : update ? "Save changes" : hostEvent.contentLive ? "Publish update" : "Save update"}</button>
           {onCancel ? <button className="min-h-11 px-4 text-sm text-[#355f9e] underline underline-offset-4" onClick={onCancel} type="button">Cancel</button> : null}
         </div>
+        <HubSaveNotice live={hostEvent.contentLive} />
       </fieldset>
     </form>
   );

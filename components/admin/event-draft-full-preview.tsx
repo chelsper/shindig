@@ -9,12 +9,15 @@ import { EventSetupNavigation } from "./event-setup-navigation";
 import { SavedHubPreview } from "./saved-hub-preview";
 import { HubContentReadiness } from "./hub-content-readiness";
 import { unavailableHubPreview, type HubContentPreview } from "../../lib/event-hub-preview";
+import type { DraftPublicationStatus } from "../../lib/event-save-status";
+import { EventSaveStatus } from "./event-save-status";
 
 const button = "inline-flex min-h-11 items-center justify-center rounded-full border border-[#202523]/20 px-4 py-2 text-xs font-semibold text-[#355f9e]";
 
-export function EventDraftFullPreview({ draft, artwork, record, view, content = unavailableHubPreview() }: {
+export function EventDraftFullPreview({ draft, artwork, record, view, content = unavailableHubPreview(), publicationStatus }: {
   draft: EventDraft; artwork: DraftArtwork; record: DraftSettingsRecord; view: "invitation" | "hub";
   content?: HubContentPreview;
+  publicationStatus?: DraftPublicationStatus | null;
 }) {
   const id = draft.id;
   const base = `/admin/events/${id}`;
@@ -29,10 +32,12 @@ export function EventDraftFullPreview({ draft, artwork, record, view, content = 
         <p className="mt-2 max-w-3xl text-sm leading-6 text-[#202523]/70">Your saved event, at full size. Switch between the invitation and Hub to review the experience. Responses and other guest actions are disabled here. Details, artwork and feature switches use your saved draft; Hub content marked live is already visible on the published event.</p>
         {record.revision === 0 && <p className="mt-2 text-sm text-[#765319]">RSVP &amp; Hub choices are still suggested defaults. Save them in settings before your final review.</p>}
         <EventSetupNavigation id={id} current="preview" />
+        <EventSaveStatus publication={publicationStatus} />
         <nav aria-label="Preview screens" className="mt-4 flex flex-wrap gap-2">
           <Link className={`${button} ${view === "invitation" ? "bg-white" : ""}`} aria-current={view === "invitation" ? "page" : undefined} href={`${base}/preview`}>Invitation</Link>
           <Link className={`${button} ${view === "hub" ? "bg-white" : ""}`} aria-current={view === "hub" ? "page" : undefined} href={`${base}/preview?view=hub`}>Event Hub</Link>
           <Link className={button} href="/admin/events">All events</Link>
+          <Link className={button} href={`${base}/publish`}>Review &amp; publish</Link>
         </nav>
       </header>
       {view === "hub" && <div className="mb-6"><HubContentReadiness id={id} content={content} features={record.settings.features} compact /></div>}

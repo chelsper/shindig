@@ -79,7 +79,7 @@ describe("private draft settings page and server action", () => {
   });
   it("does not report weather as incomplete when its saved location is confirmed", async () => {
     const coordinates = { latitude: 30, longitude: -81 };
-    mocks.publication.mockResolvedValue({ snapshot: { details: draft, coordinates } });
+    mocks.publication.mockResolvedValue({ visibility: "published", sourceRevisions: { details: 1, artwork: 0, settings: 0 }, snapshot: { details: draft, coordinates } });
     mocks.draft.mockResolvedValue({ ...draft, address: "Confirmed address", location: { ...coordinates, address: "Confirmed address", matchedAddress: "Confirmed address", source: "manual" } });
     expect((await SettingsPage(context)).props.coordinates).toEqual(coordinates);
     mocks.draft.mockResolvedValue({ ...draft, address: "New event address" });

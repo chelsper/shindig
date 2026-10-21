@@ -1,11 +1,14 @@
 import Link from "next/link";
 import type { MouseEvent } from "react";
+import type { SaveStatusInput } from "../../lib/event-save-status";
+import { EventSaveStatus } from "./event-save-status";
 
-export function DraftEditorActionBar({ formId, saveLabel, saveAccessibleLabel, pendingLabel = "Saving draft…", saveAllowed, reviewReady, reviewHref, reviewLabel = "Review & publish", pending, dirty, conflict, status, error, reopenHref, reopenLabel, onLeave }: {
+export function DraftEditorActionBar({ formId, saveLabel, saveAccessibleLabel, pendingLabel = "Saving draft…", saveAllowed, reviewReady, reviewHref, reviewLabel = "Review & publish", pending, dirty, conflict, status, error, reopenHref, reopenLabel, onLeave, publicationStatus, previewHref }: {
   formId: string; saveLabel: string; saveAccessibleLabel?: string; pendingLabel?: string; saveAllowed: boolean;
   reviewReady: boolean; reviewHref: string; reviewLabel?: string; pending: boolean; dirty: boolean; conflict: boolean;
   status: string; error: string | null; reopenHref: string; reopenLabel: string;
   onLeave: (event: MouseEvent<HTMLAnchorElement>) => void;
+  publicationStatus?: SaveStatusInput; previewHref?: string;
 }) {
   const canReview = reviewReady && !dirty && !pending && !conflict;
   const reviewClass = "inline-flex min-h-12 items-center justify-center rounded-full border border-[#355f9e]/30 bg-[#e9f2f8] px-4 text-center text-xs font-bold text-[#214e91] disabled:opacity-45";
@@ -14,7 +17,7 @@ export function DraftEditorActionBar({ formId, saveLabel, saveAccessibleLabel, p
       {error && <p role="alert" className="mb-2 text-sm leading-5 text-red-900">{error}</p>}
       {conflict && <a className="mb-2 inline-flex min-h-11 items-center text-sm font-semibold text-[#355f9e] underline" href={reopenHref} onClick={onLeave}>{reopenLabel}</a>}
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-        <p role="status" className="text-xs leading-5 text-[#202523]/65">{status}</p>
+        <div className="min-w-0"><EventSaveStatus {...publicationStatus} dirty={dirty} pending={pending} conflict={conflict} failed={Boolean(error)} compact /><p role="status" className="mt-1 text-xs leading-5 text-[#202523]/65">{status}</p>{previewHref && (canReview ? <Link href={previewHref} onClick={onLeave} className="inline-flex min-h-11 items-center text-xs font-semibold text-[#355f9e] underline underline-offset-4">Preview changes →</Link> : <span className="inline-flex min-h-11 items-center text-xs text-[#202523]/50" aria-disabled="true">Save before previewing changes</span>)}</div>
         <div className="grid grid-cols-2 gap-2 sm:min-w-80">
           <button type="submit" form={formId} aria-label={pending ? undefined : saveAccessibleLabel} className="primary-button min-h-12 px-4 text-xs" disabled={pending || conflict || !saveAllowed}>{pending ? pendingLabel : saveLabel}</button>
           {canReview ? <Link href={reviewHref} className={reviewClass} onClick={onLeave}>{reviewLabel}</Link> : <button type="button" className={reviewClass} disabled>{reviewLabel}</button>}

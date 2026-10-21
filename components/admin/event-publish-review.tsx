@@ -21,6 +21,7 @@ import { EventSetupNavigation } from "./event-setup-navigation";
 import { rsvpDeadlineLabel } from "../../lib/rsvp-policy";
 import type { PublicationChangeReview as ChangeReview } from "../../lib/event-publication-changes";
 import { PublicationChangeReview } from "./publication-change-review";
+import { EventSaveStatus } from "./event-save-status";
 
 export function EventPublishReview({ draft, artwork, settings, live, changeReview, musicConfigured = true }: {
   draft: EventDraft; artwork: DraftArtworkRecord; settings: DraftSettingsRecord;
@@ -44,6 +45,7 @@ export function EventPublishReview({ draft, artwork, settings, live, changeRevie
   const button = "inline-flex min-h-11 items-center text-sm font-semibold text-[#355f9e] underline underline-offset-4";
   return <div className="space-y-6 pb-10">
     <EventSetupNavigation id={draft.id} current="publish" onNavigate={(event) => { if (busy.current) event.preventDefault(); }} />
+    <EventSaveStatus publication={success ? { visibility: "published", hasUnpublishedChanges: false } : live ?? { visibility: null, hasUnpublishedChanges: true }} />
     <div role="status" className="text-sm leading-6 text-[#202523]/70"><span className="font-semibold">{eventStatus(live)}</span>{live && <span> · {live.hasUnpublishedChanges ? changeReview?.changeCount === 0 ? "Saved again — no content changes from the last published version." : "Unpublished changes — review the saved version below." : "Saved draft matches the last published version."}</span>}</div>
     {!archived && !success && <PublishReadiness id={draft.id} blockers={problems} />}
     {live && <EventLifecycleControls key={live.revision} id={draft.id} live={live} />}
@@ -82,11 +84,11 @@ export function EventPublishReview({ draft, artwork, settings, live, changeRevie
       } catch { setMessage("Publishing couldn’t be confirmed. Refresh this review before trying again."); }
       finally { busy.current = false; } });
     }}>
-      <h2 className="font-serif text-2xl">Ready to invite your people?</h2>
+      <h2 className="font-serif text-2xl">{live?.visibility === "published" ? "Ready to update your live event?" : "Ready to invite your people?"}</h2>
       {problems.length > 0 && <p className="mt-3 text-sm leading-6 text-[#765319]">Publishing is waiting for {problems.length === 1 ? "one setup detail" : `${problems.length} setup details`}. <Link className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4" href="#publish-readiness">Show me what to finish →</Link></p>}
       <label className="mt-4 flex min-h-12 items-start gap-3 text-sm leading-6"><input type="checkbox" className="mt-1 size-5 shrink-0 accent-[#355f9e]" checked={confirmed} disabled={pending} onChange={(e) => setConfirmed(e.target.checked)} /><span>{live ? "I reviewed the changes above and the saved details, artwork and settings." : "I reviewed the saved details, artwork and settings."} Make this version public to anyone with the link.</span></label>
       {live?.rsvpsOpen === false && <p className="mt-3 text-sm leading-6">RSVPs will remain closed after publishing. Use Reopen RSVPs above when you’re ready.</p>}
-      <button className="primary-button mt-4 w-full" aria-describedby={problems.length ? "publish-readiness-heading" : undefined} disabled={!confirmed || problems.length > 0 || pending} type="submit">{pending ? "Publishing…" : problems.length ? "Finish setup to publish" : live?.visibility === "unpublished" ? "Republish reviewed event" : live ? "Publish changes" : "Publish event"}</button>
+      <button className="primary-button mt-4 w-full" aria-describedby={problems.length ? "publish-readiness-heading" : undefined} disabled={!confirmed || problems.length > 0 || pending} type="submit">{pending ? "Publishing…" : problems.length ? "Finish setup to publish" : live?.visibility === "unpublished" ? "Republish reviewed event" : live ? "Update live event" : "Publish event"}</button>
       <p className="mt-3 text-xs leading-5 text-[#202523]/60">No invitations or messages will be sent. Jasper Shucks will not change.</p>
     </form>}
     {message && <p role="status" className="rounded-2xl bg-[#e9f2f8] p-4 text-sm leading-6">{message}</p>}

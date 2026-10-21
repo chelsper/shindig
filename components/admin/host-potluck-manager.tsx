@@ -2,6 +2,7 @@
 import { useRef, useState, useTransition } from "react";
 import { useHostEvent } from "./host-event-context";
 import { HubContentNextStep } from "./hub-content-next-step";
+import { HubSaveNotice } from "./event-save-status";
 import { savePotluckItem, releasePotluckSignup } from "../../app/admin/potluck/actions";
 import { POTLUCK_LIMITS, type HostPotluckItem, type PotluckItemInput, type PotluckResult } from "../../lib/potluck";
 const blank = (): PotluckItemInput => ({ key: "", title: "", note: "", needed: 1, revision: 0, archived: false });
@@ -26,6 +27,7 @@ export function HostPotluckManager({ initial }: { initial: HostPotluckItem[] }) 
         <label className="field-label">Item<input autoFocus className="field-input" required maxLength={100} value={editing.title} onChange={e => setEditing({ ...editing, title: e.target.value })} /></label>
         <label className="field-label">Helpful note (optional)<textarea className="field-input min-h-20 py-3" maxLength={500} value={editing.note} onChange={e => setEditing({ ...editing, note: e.target.value })} /></label>
         <label className="field-label">Total quantity needed<input className="field-input" type="number" inputMode="numeric" min={1} max={100} step={1} required value={editing.needed || ""} onChange={e => setEditing({ ...editing, needed: Number(e.target.value) })} /></label>
+        <HubSaveNotice live={contentLive} behavior={editing.archived ? "private" : "immediate"} />
         <div className="flex flex-wrap gap-3"><button type="submit" className={button} disabled={pending}>{pending ? "Saving…" : "Save item"}</button><button type="button" className={button} disabled={pending} onClick={() => { setEditing(null); createKey.current = null; }}>Cancel editing</button></div>
       </fieldset>
     </form>}

@@ -14,11 +14,12 @@ import { getEventDesign, type EventDesignId } from "../../lib/event-design";
 import { defaultArtworkCrop } from "../../lib/design-artwork";
 import { EditorViewToggle, type EditorView } from "./editor-view-toggle";
 import { DraftEditorActionBar } from "./draft-editor-action-bar";
+import type { DraftPublicationStatus } from "../../lib/event-save-status";
 
 const panel = "rounded-[1.5rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 sm:p-6";
 const button = "inline-flex min-h-11 items-center justify-center rounded-full border border-[#355f9e]/25 bg-[#e9f2f8]/65 px-4 text-xs font-bold text-[#214e91] disabled:opacity-40";
 
-export function EventDraftArtworkEditor({ draft, initial, uploadConfigured, requestedDesign }: { draft: EventDraft; initial: DraftArtworkRecord; uploadConfigured: boolean; requestedDesign?: EventDesignId }) {
+export function EventDraftArtworkEditor({ draft, initial, uploadConfigured, requestedDesign, publicationStatus }: { draft: EventDraft; initial: DraftArtworkRecord; uploadConfigured: boolean; requestedDesign?: EventDesignId; publicationStatus?: DraftPublicationStatus | null }) {
   const [settings, setSettings] = useState(initial.settings);
   const [revision, setRevision] = useState(initial.revision);
   const [view, setView] = useState<"invitation" | "hub">("invitation");
@@ -115,7 +116,8 @@ export function EventDraftArtworkEditor({ draft, initial, uploadConfigured, requ
         </section>
       </div>
     </div>
-    <DraftEditorActionBar formId="event-artwork-form" saveLabel="Save artwork" saveAccessibleLabel="Save draft design & artwork" saveAllowed={dirty}
+    <DraftEditorActionBar formId="event-artwork-form" saveLabel="Save draft" saveAccessibleLabel="Save draft design & artwork" saveAllowed={dirty}
+      publicationStatus={{ publication: publicationStatus, savedSinceLoad: revision !== initial.revision }} previewHref={`/admin/events/${draft.id}/preview`}
       pendingLabel={busy?.startsWith("Uploading") ? "Uploading…" : "Saving artwork…"} pending={Boolean(busy)} dirty={dirty} conflict={conflict}
       reviewReady reviewHref={`/admin/events/${draft.id}/publish`} error={error} reopenHref={`/admin/events/${draft.id}/artwork`} reopenLabel="Reopen saved artwork" onLeave={leave}
       status={busy ?? (conflict ? "Reopen the latest artwork before saving or reviewing." : message ?? (dirty ? "You have unsaved artwork changes. Save before reviewing." : "Saved draft artwork stays private until you explicitly publish it. Artwork is optional."))} />

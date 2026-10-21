@@ -7,6 +7,7 @@ import type { AdminQuestion } from "../../lib/server/questions";
 import { useHostEvent } from "./host-event-context";
 import { HubContentNextStep } from "./hub-content-next-step";
 import { ContentDeleteButton } from "./content-delete-button";
+import { HubSaveNotice } from "./event-save-status";
 
 function savedMessage(approved: boolean, live: boolean) {
   return approved ? live ? "FAQ published on the Event Hub." : "FAQ approved and saved privately. It will appear when this section is live."
@@ -48,6 +49,7 @@ export function HostFaqEditor({ faq, onSaved, onCancel }: { faq?: AdminQuestion;
       <label className="flex min-h-11 cursor-pointer items-start gap-3 text-sm leading-6"><input type="checkbox" name="isPublished" className="mt-1 size-5 shrink-0 accent-[#355f9e]" checked={approved} onChange={e => setApproved(e.target.checked)} /><span>{hostEvent.contentLive ? "Publish this FAQ on the Event Hub" : "Approve this FAQ for when the section is live"}</span></label>
       <p className="text-xs leading-5 text-[#202523]/60">{hostEvent.contentLive ? "Checked FAQs and edits to them appear as soon as you save. Uncheck and save to unpublish." : "Approved FAQs stay private until Ask the Host is enabled and the event is published. Unchecked FAQs stay private even then."} Check your text for personal details before sharing.</p>
       {error ? <p className="text-sm leading-6 text-[#843528]" role="alert">{error}</p> : null}
+      <HubSaveNotice live={hostEvent.contentLive} behavior="moderated" />
       <div className="flex flex-wrap gap-3">
         <button type="submit" className="primary-button" disabled={pending}>{pending ? "Saving…" : "Save FAQ & visibility"}</button>
         <button type="button" className="min-h-11 px-4 text-sm text-[#355f9e] underline underline-offset-4" disabled={pending} onClick={onCancel}>Cancel</button>

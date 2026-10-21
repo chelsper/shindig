@@ -10,6 +10,7 @@ import { getDraftArtwork } from "../../../../../lib/server/event-draft-artwork";
 import { getDraftSettings } from "../../../../../lib/server/event-draft-settings";
 import { getHostHubPreview } from "../../../../../lib/server/host-hub-preview";
 import { unavailableHubPreview } from "../../../../../lib/event-hub-preview";
+import { getDraftPublicationStatus } from "../../../../../lib/server/event-save-status";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Private Event Preview | Shindig", robots: { index: false, follow: false }, referrer: "no-referrer" };
@@ -32,5 +33,6 @@ export default async function DraftPreviewPage({ params, searchParams }: {
   if (!draft || !artwork || !record) notFound();
   const content = view === "hub" ? await getHostHubPreview(id).catch(() => unavailableHubPreview()) : undefined;
   if (content === null) notFound();
-  return <EventDraftFullPreview draft={draft} artwork={artwork.settings} record={record} view={view} content={content} />;
+  const publicationStatus = await getDraftPublicationStatus(id, { details: draft.revision, artwork: artwork.revision, settings: record.revision });
+  return <EventDraftFullPreview draft={draft} artwork={artwork.settings} record={record} view={view} content={content} publicationStatus={publicationStatus} />;
 }

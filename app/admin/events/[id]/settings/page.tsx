@@ -11,6 +11,7 @@ import { isDraftId } from "../../../../../lib/event-drafts";
 import { getHostEventPublication } from "../../../../../lib/server/event-publications";
 import { draftEventSlug } from "../../../../../lib/event-routes";
 import { savedWeatherCoordinates } from "../../../../../lib/event-readiness";
+import { hasUnpublishedChanges } from "../../../../../lib/event-lifecycle";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Draft RSVP & Hub Settings | Shindig", robots: { index: false, follow: false }, referrer: "no-referrer" };
@@ -23,7 +24,8 @@ export default async function DraftSettingsPage({ params }: { params: Promise<{ 
   catch {
     return <ContentShell title="Settings couldn’t load" contextLabel="Private draft" dashboardHref="/admin/events" description="Please try again shortly. For first-time setup, check migrations 001–019 and 021 are installed. Your live event hasn’t changed."><Link className="inline-flex min-h-11 items-center text-sm text-[#355f9e] underline" href={`/admin/events/${id}/setup`}>Back to overview</Link></ContentShell>;
   }
-  const [draft, artwork, initial] = data;
+  const [draft, artwork, initial, live] = data;
   if (!draft || !artwork || !initial) notFound();
-  return <EventDraftSettingsEditor draft={draft} artwork={artwork.settings} initial={initial} coordinates={savedWeatherCoordinates(draft)} />;
+  const publicationStatus = { visibility: live?.visibility ?? null, hasUnpublishedChanges: !live || hasUnpublishedChanges({ details: draft.revision, artwork: artwork.revision, settings: initial.revision }, live.sourceRevisions) };
+  return <EventDraftSettingsEditor draft={draft} artwork={artwork.settings} initial={initial} publicationStatus={publicationStatus} coordinates={savedWeatherCoordinates(draft)} />;
 }

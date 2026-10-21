@@ -14,11 +14,12 @@ import { eventLocalInput, eventLocalToUtc } from "../../lib/event-date-time";
 import { MAX_EVENT_CAPACITY } from "../../lib/rsvp-policy";
 import { EditorViewToggle, type EditorView } from "./editor-view-toggle";
 import { DraftEditorActionBar } from "./draft-editor-action-bar";
+import type { DraftPublicationStatus } from "../../lib/event-save-status";
 
 const panel = "rounded-[1.5rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 sm:p-6";
 const button = "inline-flex min-h-11 items-center justify-center rounded-full border border-[#355f9e]/25 bg-[#e9f2f8]/65 px-4 text-xs font-bold text-[#214e91] focus-visible:outline-2 focus-visible:outline-offset-4 disabled:opacity-40";
 
-export function EventDraftSettingsEditor({ draft, artwork, initial, coordinates = null }: { draft: EventDraft; artwork: DraftArtwork; initial: DraftSettingsRecord; coordinates?: Coordinates | null }) {
+export function EventDraftSettingsEditor({ draft, artwork, initial, coordinates = null, publicationStatus }: { draft: EventDraft; artwork: DraftArtwork; initial: DraftSettingsRecord; coordinates?: Coordinates | null; publicationStatus?: DraftPublicationStatus | null }) {
   const [settings, setSettings] = useState(initial.settings);
   const [deadlineEnabled, setDeadlineEnabled] = useState(Boolean(initial.settings.rsvp.deadlineAtUtc));
   const [deadlineLocal, setDeadlineLocal] = useState(eventLocalInput(initial.settings.rsvp.deadlineAtUtc ?? null, draft.timeZone));
@@ -121,7 +122,8 @@ export function EventDraftSettingsEditor({ draft, artwork, initial, coordinates 
         </section>
       </div>
     </div>
-    <DraftEditorActionBar formId="event-settings-form" saveLabel="Save settings" saveAccessibleLabel="Save draft settings" saveAllowed={dirty || revision === 0}
+    <DraftEditorActionBar formId="event-settings-form" saveLabel="Save draft" saveAccessibleLabel="Save draft settings" saveAllowed={dirty || revision === 0}
+      publicationStatus={{ publication: publicationStatus, savedSinceLoad: revision !== initial.revision, newDraft: revision === 0 }} previewHref={`${base}/preview?view=hub`}
       pendingLabel="Saving choices…" pending={pending} dirty={dirty} conflict={conflict} reviewReady={revision > 0} reviewHref={`${base}/publish`}
       error={error} reopenHref={`${base}/settings`} reopenLabel="Reopen saved settings" onLeave={leave}
       status={pending ? "Saving choices privately…" : conflict ? "Reopen the latest settings before saving or reviewing." : dirty ? "You have unsaved choices. Save before reviewing." : saved ? "Choices saved to your private draft. Jasper Shucks and all live RSVPs are unchanged." : revision === 0 ? "Suggested defaults. Save to confirm your choices." : "Your saved choices are up to date. Review does not publish."} />

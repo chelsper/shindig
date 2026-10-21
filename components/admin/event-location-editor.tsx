@@ -6,8 +6,9 @@ import { eventAddressQuery, locationNumbers, parseEventLocation, type AddressMat
 import { findEventAddress, saveEventLocation } from "../../app/admin/events/[id]/location/actions";
 import { EventSetupNavigation } from "./event-setup-navigation";
 import { DraftEditorActionBar } from "./draft-editor-action-bar";
+import type { DraftPublicationStatus } from "../../lib/event-save-status";
 
-export function EventLocationEditor({ draft }: { draft: EventDraft }) {
+export function EventLocationEditor({ draft, publicationStatus }: { draft: EventDraft; publicationStatus?: DraftPublicationStatus | null }) {
   const [matches, setMatches] = useState<AddressMatch[] | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [manual, setManual] = useState(false), [latitude, setLatitude] = useState(""), [longitude, setLongitude] = useState("");
@@ -101,7 +102,8 @@ export function EventLocationEditor({ draft }: { draft: EventDraft }) {
     </form>
     <p className="text-xs leading-5 text-[#202523]/65">Location confirmation is required only when Weather is enabled. No device location is used, and Jasper Shucks is unchanged.</p>
     </div></div>
-    <DraftEditorActionBar formId="event-location-form" saveLabel="Save location" saveAccessibleLabel="Confirm & save location" saveAllowed={Boolean(candidate && confirmed && dirty)} pendingLabel={pending === "find" ? "Finding…" : "Saving location…"}
+    <DraftEditorActionBar formId="event-location-form" saveLabel="Save draft" saveAccessibleLabel="Confirm & save location" saveAllowed={Boolean(candidate && confirmed && dirty)} pendingLabel={pending === "find" ? "Finding…" : "Saving location…"}
+      publicationStatus={{ publication: publicationStatus, savedSinceLoad: revision !== draft.revision }} previewHref={`${base}/preview?view=hub`}
       pending={pending !== null} dirty={dirty} conflict={conflict} reviewReady reviewHref={`${base}/setup`} reviewLabel="Continue setup"
       error={error} reopenHref={`${base}/location`} reopenLabel="Reopen saved location" onLeave={leave}
       status={pending === "find" ? "Finding address… Nothing is saved yet." : pending === "save" ? "Saving location privately…" : conflict ? "Reopen the latest location before continuing." : message || (dirty ? confirmed ? "Your location choice is unsaved. Save before continuing." : "Check your location and confirm it before saving." : saved ? "Location confirmed and saved privately. Continue setup for your next step." : "Location confirmation is needed only with Weather. Your setup checklist will guide you.")} />

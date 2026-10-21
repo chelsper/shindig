@@ -8,6 +8,7 @@ import { getEventDraft } from "../../../../lib/server/event-drafts";
 import { getDraftArtwork } from "../../../../lib/server/event-draft-artwork";
 import { getDraftSettings } from "../../../../lib/server/event-draft-settings";
 import { isDraftId } from "../../../../lib/event-drafts";
+import { getDraftPublicationStatus } from "../../../../lib/server/event-save-status";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Edit Event Draft | Shindig", robots: { index: false, follow: false }, referrer: "no-referrer" };
@@ -24,8 +25,8 @@ export default async function EditEventPage({ params, searchParams }: { params: 
   if (!draft) notFound();
   // Keep details editable if optional preview reads fail. Never substitute live
   // artwork or invent defaults for an existing draft whose settings did not load.
-  const previewContext = await Promise.all([getDraftArtwork(id), getDraftSettings(id)])
-    .then(([artwork, settings]) => artwork && settings ? { artwork: artwork.settings, settings } : null)
-    .catch(() => null);
-  return <EventDraftEditor key={id} id={id} initialDraft={draft} previewContext={previewContext} justSaved={(await searchParams).saved === "1"} timeZones={[...new Set([draft.timeZone, "UTC", ...Intl.supportedValuesOf("timeZone")])]} />;
+  const previewData = await Promise.all([getDraftArtwork(id), getDraftSettings(id)]).catch(() => null);
+  const previewContext = previewData?.[0] && previewData[1] ? { artwork: previewData[0].settings, settings: previewData[1] } : null;
+  const publicationStatus = previewData?.[0] && previewData[1] ? await getDraftPublicationStatus(id, { details: draft.revision, artwork: previewData[0].revision, settings: previewData[1].revision }) : null;
+  return <EventDraftEditor key={id} id={id} initialDraft={draft} publicationStatus={publicationStatus} previewContext={previewContext} justSaved={(await searchParams).saved === "1"} timeZones={[...new Set([draft.timeZone, "UTC", ...Intl.supportedValuesOf("timeZone")])]} />;
 }

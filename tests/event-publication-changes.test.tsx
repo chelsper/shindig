@@ -161,8 +161,8 @@ describe("publish change review presentation and safeguards", () => {
   });
   it("keeps publication explicitly unconfirmed after reviewing changes and preserves closed RSVPs", () => {
     const html = renderToStaticMarkup(<EventPublishReview changeReview={review} draft={changed.details} artwork={{ settings: snapshot.artwork, revision: 0 }} settings={{ settings: snapshot.settings, revision: 3 }} live={{ ...publication, coordinates: null, hasUnpublishedChanges: true, rsvpsOpen: false }} />);
-    expect(html).toContain("I reviewed the changes above"); expect(html).toMatch(/disabled=""[^>]*>Publish changes/);
+    expect(html).toContain("I reviewed the changes above"); expect(html).toMatch(/disabled=""[^>]*>Update live event/);
     expect(html).not.toContain('checked=""'); expect(html).toContain("RSVPs will remain closed");
-    expect(html.indexOf("Review your changes")).toBeLessThan(html.indexOf("Ready to invite your people?"));
+    expect(html.indexOf("Review your changes")).toBeLessThan(html.indexOf("Ready to update your live event?"));
   });
 });

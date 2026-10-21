@@ -10,6 +10,7 @@ import { duplicateEventPath } from "../../lib/event-duplication";
 import { HubContentReadiness } from "./hub-content-readiness";
 import type { HubContentPreview } from "../../lib/event-hub-preview";
 import type { ReactNode } from "react";
+import { EventSaveStatus } from "./event-save-status";
 
 export type SetupPublication = EventLifecycle & { hasUnpublishedChanges: boolean };
 export function EventSetupOverview({ draft, artwork, settings, coordinates, live, content, hosting, justSaved = false, justCopied = false }: {
@@ -50,6 +51,7 @@ export function EventSetupOverview({ draft, artwork, settings, coordinates, live
     <section aria-label="Publication status" className="rounded-3xl border border-[#355f9e]/20 bg-[#e9f2f8]/65 p-5 sm:p-7">
       <p className="text-xs font-bold uppercase tracking-wider text-[#355f9e]">{eventStatus(live)}</p>
       <h2 className="mt-2 break-words font-serif text-3xl">{draft.title}</h2>
+      <div className="mt-3"><EventSaveStatus publication={live ?? { visibility: null, hasUnpublishedChanges: true }} compact /></div>
       {published ? <details className="mt-2"><summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-[#355f9e]">{live.hasUnpublishedChanges ? "Unpublished changes · review status" : "Publication & saved changes"}</summary>{publicationNotes}</details> : publicationNotes}
       {live && <div className="mt-2 flex flex-wrap gap-x-5"><Link href={`${base}/guests`} className={link}>Manage saved guests &amp; content →</Link>{published && <Link href={`${base}/publish#share-event`} className={link}>Share your event →</Link>}</div>}
     </section>

@@ -8,6 +8,7 @@ import { getEventDraft } from "../../../../../lib/server/event-drafts";
 import { draftImageStorageToken, getDraftArtwork } from "../../../../../lib/server/event-draft-artwork";
 import { isDraftId } from "../../../../../lib/event-drafts";
 import { parseEventDesignId } from "../../../../../lib/event-design";
+import { getDraftPublicationStatus } from "../../../../../lib/server/event-save-status";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Draft Artwork | Shindig", robots: { index: false, follow: false }, referrer: "no-referrer" };
@@ -22,5 +23,6 @@ export default async function DraftArtworkPage({ params, searchParams }: { param
   }
   const [draft, initial] = data;
   if (!draft || !initial) notFound();
-  return <EventDraftArtworkEditor draft={draft} initial={initial} uploadConfigured={Boolean(draftImageStorageToken())} requestedDesign={parseEventDesignId((await searchParams)?.style) ?? undefined} />;
+  const publicationStatus = await getDraftPublicationStatus(id, { details: draft.revision, artwork: initial.revision });
+  return <EventDraftArtworkEditor draft={draft} initial={initial} publicationStatus={publicationStatus} uploadConfigured={Boolean(draftImageStorageToken())} requestedDesign={parseEventDesignId((await searchParams)?.style) ?? undefined} />;
 }

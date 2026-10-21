@@ -85,7 +85,7 @@ describe("published guest screens and calendar", () => {
   it("renders archived review with restore, host access and CSV but no publication controls or public links", () => {
     const html = renderToStaticMarkup(<EventPublishReview changeReview={compareEventPublication(eventId, snapshot, snapshot)} draft={draft} artwork={{ settings: snapshot.artwork, revision: 0 }} settings={{ settings: snapshot.settings, revision: 3 }} live={{ revision: 6, publishedAt: "2026-10-06", coordinates: null, visibility: "archived", rsvpsOpen: false, hasUnpublishedChanges: false }} />);
     for (const text of ["Archived", "Restore event", "Everything is saved", "Export all RSVPs", 'href="/admin/events?view=archived"', `href="/admin/events/${eventId}/guests"`]) expect(html).toContain(text);
-    for (const text of ["<form", "Reopen RSVPs", "Publish changes", "Republish reviewed event", "Ready to invite", `href="/e/${eventSlug}`, "Confirm: Restore event"]) expect(html).not.toContain(text);
+    for (const text of ["<form", "Reopen RSVPs", "Update live event", "Republish reviewed event", "Ready to invite", `href="/e/${eventSlug}`, "Confirm: Restore event"]) expect(html).not.toContain(text);
   });
   it("links directly between invitation and Hub without requiring another RSVP", () => {
     const html = renderToStaticMarkup(<InvitationPage event={event} persistenceDisabled={false} />);
@@ -113,7 +113,7 @@ describe("published guest screens and calendar", () => {
     expect(html).toMatch(/disabled=""[^>]*>Publish event/); expect(html).toContain("Make this version public");
     expect(html).not.toContain(`href="/e/${eventSlug}`);
     const live = renderToStaticMarkup(<EventPublishReview changeReview={compareEventPublication(eventId, snapshot, snapshot)} {...props} live={{ revision: 1, publishedAt: "2026-10-06", coordinates: null, visibility: "published", rsvpsOpen: true, hasUnpublishedChanges: false }} />);
-    expect(live).toContain(`href="/e/${eventSlug}"`); expect(live).toContain("Publish changes");
+    expect(live).toContain(`href="/e/${eventSlug}"`); expect(live).toContain("Update live event");
     expect(live).toContain('aria-label="Choose a link to share"'); expect(live).toContain("Get QR code");
   });
 });

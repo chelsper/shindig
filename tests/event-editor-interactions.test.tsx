@@ -28,6 +28,7 @@ import { EventDraftEditor } from "../components/admin/event-draft-editor";
 import { EventEditorActions } from "../components/admin/event-editor-actions";
 import { EventEditorPreview } from "../components/admin/event-editor-preview";
 import { EditorViewToggle } from "../components/admin/editor-view-toggle";
+import { eventSaveStatus, type SaveStatusInput } from "../lib/event-save-status";
 
 const id = "5199b7de-d731-4bb1-8e55-3380e2f0e365";
 const draft: EventDraft = { ...EMPTY_EVENT_DRAFT, id, title: "Garden supper", status: "draft", revision: 2, createdAt: "2026-10-06T12:00:00Z", updatedAt: "2026-10-06T12:00:00Z" };
@@ -54,6 +55,18 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("event editor controller interactions", () => {
+  it("moves live → unsaved → saved privately only after a confirmed save", async () => {
+    props.publicationStatus = { visibility: "published", hasUnpublishedChanges: false }; render();
+    const status = () => eventSaveStatus({ ...(actions().publicationStatus as SaveStatusInput), dirty: Boolean(actions().dirty), pending: Boolean(actions().pending), failed: Boolean(actions().error) }).label;
+    expect(status()).toBe("Live — guests see this version");
+    change("title", "A fresh title"); expect(status()).toBe("Unsaved changes");
+    submit(); expect(status()).toBe("Working…"); await Promise.all(harness.tasks); render();
+    expect(status()).toBe("Saved privately — changes not published");
+    expect(harness.replace).not.toHaveBeenCalled();
+    change("title", "Another change"); harness.save.mockResolvedValue({ ok: false, message: "Try again." });
+    submit(); await Promise.all(harness.tasks); render();
+    expect(status()).toBe("Changes need attention"); expect(actions().dirty).toBe(true);
+  });
   it("updates the preview as the host types and keeps edits while switching mobile views", () => {
     change("title", "New garden party"); change("description", "Bring a friend.");
     expect(preview().fields).toMatchObject({ title: "New garden party", description: "Bring a friend." });

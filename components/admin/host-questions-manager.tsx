@@ -4,6 +4,7 @@ import { useRef, useState, useTransition, type FormEvent } from "react";
 import { answerGuestQuestion, deleteGuestQuestion } from "../../app/admin/questions/actions";
 import { useHostEvent } from "./host-event-context";
 import { HubContentNextStep } from "./hub-content-next-step";
+import { HubSaveNotice } from "./event-save-status";
 import { QUESTION_LIMITS } from "../../lib/questions";
 import type { AdminQuestion } from "../../lib/server/questions";
 import { ContentDeleteButton } from "./content-delete-button";
@@ -54,6 +55,7 @@ function HostQuestionCard({ question }: { question: AdminQuestion }) {
           {error ? <p className="text-sm text-[#843528]" role="alert">{error}</p> : null}
           {confirmation ? <><p className="text-sm leading-6 text-[#285630]" role="status">{confirmation}</p><HubContentNextStep /></> : null}
           <button className="primary-button" disabled={pending} type="submit">{pending ? "Saving…" : "Save answer & visibility"}</button>
+          <HubSaveNotice live={hostEvent.contentLive} behavior="moderated" />
         </fieldset>
       </form>
       <div className="mt-4 border-t border-[#202523]/10 pt-4"><ContentDeleteButton label="question and its answer" onDelete={() => deleteGuestQuestion(question.id, true, ...hostEvent.args)} /></div>

@@ -5,6 +5,7 @@ import { EventLocationEditor } from "../../../../../components/admin/event-locat
 import { isHostAuthenticated as isAdminAuthenticated } from "../../../../../lib/server/host-access";
 import { getEventDraft } from "../../../../../lib/server/event-drafts";
 import { isDraftId } from "../../../../../lib/event-drafts";
+import { getDraftPublicationStatus } from "../../../../../lib/server/event-save-status";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Event location | Shindig", robots: { index: false, follow: false }, referrer: "no-referrer" as const };
 export default async function LocationPage({ params }: { params: Promise<{ id: string }> }) {
@@ -17,5 +18,5 @@ export default async function LocationPage({ params }: { params: Promise<{ id: s
   if (!draft) notFound();
   // Keep the save acknowledgment mounted across the action's cache revalidation.
   // Stale edits still require an explicit reopen; never silently replace inputs.
-  return <EventLocationEditor key={draft.id} draft={draft} />;
+  return <EventLocationEditor key={draft.id} draft={draft} publicationStatus={await getDraftPublicationStatus(id, { details: draft.revision })} />;
 }

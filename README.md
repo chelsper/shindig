@@ -2,6 +2,27 @@
 
 ## Consistent host workspace
 
+### Saved versus live
+
+Editors, Overview, saved Preview and Share use consistent status labels:
+**Unsaved changes**, **Saved privately — changes not published**, and
+**Live — guests see this version**. The live label requires a successful
+owner-checked comparison of saved details/artwork/settings revisions with the
+published snapshot. Unpublished/archived events are explicitly not live; failed
+status reads show **live status unavailable**, without blocking editing.
+
+Editor actions use **Save draft** and **Preview changes**; preview/review links
+stay disabled while edits are unsaved, pending or conflicted. **Update live
+event** remains behind the existing explicit publication review and confirmation.
+Saving or navigating never publishes event details automatically.
+
+Hub save notices distinguish immediate live changes from private prepared
+content. Unapproved answers/FAQs and draft polls stay private; a pending
+feature-off change does not imply that an already-live section is hidden.
+These are presentation-only changes, with no migration or new environment variables.
+
+### Navigation
+
 Host-created events share four primary destinations: **Overview**, **Edit Event**,
 **Guests**, and **Share**. The existing owner-checked routes remain unchanged.
 

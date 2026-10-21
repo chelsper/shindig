@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { saveHubSectionVisibility } from "../../app/admin/events/[id]/content/actions";
 import { HUB_CONTENT_MODULES, hubSectionStatus, type HubContentView } from "../../lib/event-hub-content";
+import { EventSaveStatus } from "./event-save-status";
 
 export function HubSectionVisibility({ id, section, enabled: initialEnabled, revision: initialRevision, live, archived = false }: {
   id: string; section: HubContentView; enabled: boolean; revision: number; live: boolean; archived?: boolean;
@@ -34,6 +35,7 @@ export function HubSectionVisibility({ id, section, enabled: initialEnabled, rev
       <button type="button" role="switch" aria-checked={enabled} aria-label={`Include ${label} in saved setup`} aria-describedby="hub-section-switch-help" disabled={pending || conflict} onClick={toggle} className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border px-4 font-semibold disabled:opacity-50 ${enabled ? "border-[#355f9e] bg-[#355f9e] text-white" : "border-[#355f9e]/30 bg-[#fffaf1] text-[#355f9e]"}`}><span aria-hidden="true" className="size-2 rounded-full border border-current" />{pending ? "Saving…" : enabled ? "On" : "Off"}</button>
     </div>
     <p id="hub-section-switch-help" className="mt-3">Include {label} in your saved Hub setup. This switch saves privately; it does not change the live page.</p>
+    {(saved || pending || error) && <div className="mt-3"><EventSaveStatus savedSinceLoad={Boolean(saved)} pending={pending} failed={Boolean(error)} conflict={conflict} compact /></div>}
     <p className="mt-2">{live
       ? enabled ? "This section is live. Saved content changes here affect the live Hub immediately." : "This section is still live. It is off in your saved setup, but guests can still see it and content edits still take effect until you publish the change."
       : enabled ? "This section is private. Your saved content is not visible to guests yet. Review & publish to include this section on the guest Hub." : "This section is off. You can prepare content below, but it stays private. Turn this section on here, then review & publish when you’re ready."}</p>

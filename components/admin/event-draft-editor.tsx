@@ -14,11 +14,12 @@ import type { EventEditorPreviewContext } from "../../lib/event-editor-preview";
 import { EventEditorPreview } from "./event-editor-preview";
 import { EventEditorActions } from "./event-editor-actions";
 import { EditorViewToggle } from "./editor-view-toggle";
+import type { DraftPublicationStatus } from "../../lib/event-save-status";
 
 const panel = "rounded-[1.5rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 sm:p-7";
 const secondary = "inline-flex min-h-11 items-center justify-center rounded-full border border-[#355f9e]/25 bg-[#e9f2f8]/65 px-4 text-xs font-bold text-[#214e91] focus-visible:outline-2 focus-visible:outline-offset-4";
 
-export function EventDraftEditor({ id, initialDraft, timeZones, justSaved = false, requestedDesign, previewContext }: { id: string; initialDraft?: EventDraft; timeZones: string[]; justSaved?: boolean; requestedDesign?: EventDesignId; previewContext?: EventEditorPreviewContext | null }) {
+export function EventDraftEditor({ id, initialDraft, timeZones, justSaved = false, requestedDesign, previewContext, publicationStatus }: { id: string; initialDraft?: EventDraft; timeZones: string[]; justSaved?: boolean; requestedDesign?: EventDesignId; previewContext?: EventEditorPreviewContext | null; publicationStatus?: DraftPublicationStatus | null }) {
   const router = useRouter();
   const initial = initialDraft ?? EMPTY_EVENT_DRAFT;
   const [fields, setFields] = useState(() => ({ ...initial, startsAtLocal: eventLocalInput(initial.startsAtUtc, initial.timeZone), endsAtLocal: eventLocalInput(initial.endsAtUtc, initial.timeZone) }));
@@ -124,6 +125,6 @@ export function EventDraftEditor({ id, initialDraft, timeZones, justSaved = fals
       </aside>
       </div>
     </div>
-    <EventEditorActions id={id} revision={revision} dirty={dirty} pending={pending} conflict={conflict} hasTitle={Boolean(fields.title.trim())} error={error} saved={saved} onLeave={(event) => { if (!allowLeave()) event.preventDefault(); }} />
+    <EventEditorActions id={id} revision={revision} dirty={dirty} pending={pending} conflict={conflict} hasTitle={Boolean(fields.title.trim())} error={error} saved={saved} publicationStatus={{ publication: publicationStatus, savedSinceLoad: revision !== (initialDraft?.revision ?? 0), newDraft: revision === 0 }} onLeave={(event) => { if (!allowLeave()) event.preventDefault(); }} />
   </main>;
 }
