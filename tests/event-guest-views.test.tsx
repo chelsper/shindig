@@ -51,6 +51,7 @@ describe("event guest editor and list", () => {
     expect(html).toContain("RSVP updated."); expect(html).toContain("Showing 1 of 3 responses"); expect(html).toContain("5</strong>guests attending");
     for (const path of ["new", "export", `${otherEventId}/edit`]) expect(html).toContain(`href="/admin/events/${eventId}/guests/${path}"`);
     expect(html).toContain("filter=declined&amp;q=A+%26+B"); expect(html).toContain('aria-current="page"');
+    expect(html).toContain(`href="/admin/events/${eventId}/invitations?response=${otherEventId}"`);
     expect(html).toContain("Nov 7, 2026, 5:00 PM"); expect(html).toContain("Last updated"); expect(html).toContain("Name hidden");
   });
   it("distinguishes an empty event from no matching results", () => {

@@ -2,6 +2,23 @@
 
 ## Consistent host workspace
 
+### Faster private invitation tracking
+
+- **Save & add another** confirms one household’s save before opening a blank
+  entry and focusing its name field. Contacts and sent status reset; failed saves
+  retain the same entry ID and entered values for safe retries.
+- Select up to 50 unsent, unlinked entries, review their names, and explicitly
+  confirm **Mark selected as invited**. Changing the filter/search clears the
+  selection. This sends nothing and creates no RSVP or contact consent.
+- Bulk changes use one event-scoped, revision-checked SQL statement with ordered
+  row locks. Every selected entry must still be eligible or none are updated.
+- RSVP matching uses searchable cards and a separate confirmation. **Replies to
+  match** starts from an unmatched response; **View or match invitation** on RSVP
+  records opens the correct host-only tracker. Already-linked replies point to
+  their existing entry. No name matching is automatic.
+- Uses migration 026’s existing tables; no new migration, package or environment
+  variable is required. Guest-facing pages and consent records are unchanged.
+
 ### Saved versus live
 
 Editors, Overview, saved Preview and Share use consistent status labels:

@@ -13,7 +13,7 @@ import { draftEventSlug, eventPaths } from "../../../../../lib/event-routes";
 import { SHINDIG_SITE } from "../../../../../lib/site";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Invitation tracker | Shindig", robots: { index: false, follow: false }, referrer: "no-referrer" as const };
-export default async function EventInvitationsPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EventInvitationsPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams?: Promise<{ response?: string }> }) {
   if (!(await isHostAuthenticated())) redirect("/host/sign-in");
   const { id } = await params;
   if (!isDraftId(id)) notFound();
@@ -23,8 +23,10 @@ export default async function EventInvitationsPage({ params }: { params: Promise
   const [draft, scope, publication] = result;
   if (!draft || !scope) notFound();
   const data = await listInvitationTracker(scope).catch(() => null);
+  const requested = (await searchParams)?.response;
+  const initialResponseId = data?.responses.find(r => r.id === requested)?.id;
   const invitationUrl = publication?.visibility === "published" ? new URL(eventPaths(publication.publicAlias ?? slug).invitation, SHINDIG_SITE.url).toString() : null;
   return <ContentShell title="Invitation tracker" contextLabel={draft.title} dashboardHref={`${base}/setup`} description="Plan your invitations privately, before or after publishing. RSVPs stay separate until you confirm a match.">
-    {data ? <InvitationTrackerPanel initial={data} title={publication?.snapshot.details.title ?? draft.title} invitationUrl={invitationUrl} eventSlug={slug} workspace={{ id, publishedBefore: Boolean(publication) }} /> : <><EventSetupNavigation id={id} current="guests" /><EventGuestsNavigation id={id} current="invitations" publishedBefore={Boolean(publication)} /><p role="alert">The invitation tracker couldn’t load. Please refresh and try again.</p></>}
+    {data ? <InvitationTrackerPanel initial={data} initialResponseId={initialResponseId} title={publication?.snapshot.details.title ?? draft.title} invitationUrl={invitationUrl} eventSlug={slug} workspace={{ id, publishedBefore: Boolean(publication) }} /> : <><EventSetupNavigation id={id} current="guests" /><EventGuestsNavigation id={id} current="invitations" publishedBefore={Boolean(publication)} /><p role="alert">The invitation tracker couldn’t load. Please refresh and try again.</p></>}
   </ContentShell>;
 }

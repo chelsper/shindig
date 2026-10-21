@@ -37,7 +37,21 @@ export async function changeInvitationRecord(input: unknown, scope: EventScope =
   const v = parsed.change;
   let rows;
   try {
-    if (v.kind === "save" && v.revision === 0) {
+    if (v.kind === "sent-many") {
+      // Lock in a stable order, then update only if EVERY selected entry is
+      // current, owned by this event, unsent and unlinked. One atomic statement:
+      // a stale/foreign selection never causes a partially marked batch.
+      rows = await sql`WITH requested AS (
+        SELECT * FROM jsonb_to_recordset(${JSON.stringify(v.entries)}::jsonb) AS x(id uuid,revision integer)
+      ), locked AS MATERIALIZED (
+        SELECT i.id FROM event_invitees i JOIN requested r ON r.id=i.id
+        WHERE i.event_slug=${slug} AND i.revision=r.revision AND i.invited_at IS NULL AND i.rsvp_id IS NULL
+        ORDER BY i.id FOR UPDATE OF i
+      ) UPDATE event_invitees SET invited_at=clock_timestamp(),revision=revision+1,updated_at=clock_timestamp()
+        WHERE event_slug=${slug} AND id IN (SELECT id FROM locked)
+        AND (SELECT count(*) FROM locked)=${v.entries.length} RETURNING id`;
+      if (rows.length !== v.entries.length) throw new InvitationTrackerError("Nothing was marked. A selected entry changed or is no longer available. Refresh and select again.");
+    } else if (v.kind === "save" && v.revision === 0) {
       rows = await sql`INSERT INTO event_invitees(id,event_slug,guest_name,email,phone,invited_at)
         VALUES(${v.id}::uuid,${slug},${v.guestName},${v.email},${v.phone},CASE WHEN ${v.invited} THEN clock_timestamp() ELSE NULL END)
         ON CONFLICT(id) DO NOTHING RETURNING id`;

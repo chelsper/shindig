@@ -76,6 +76,34 @@ describe.skipIf(!modulePath)("private invitation tracker PostgreSQL", () => {
     await expect(changeInvitationRecord({ ...sent, invited: false }, a.host)).rejects.toThrow("changed");
     expect((await listInvitationTracker(a.host)).invitees[0]).toMatchObject({ invited: true, revision: 2, response: null });
   });
+  it("bulk marks only confirmed selected entries, leaving RSVPs and consent untouched", async () => {
+    const a = await event("alice", true), inputs = [invite(), invite(), invite()];
+    for (const input of inputs) await changeInvitationRecord(input, a.host);
+    const before = await listRsvps("all", a.host), contacts = await listHostContacts(a.host);
+    const batch = { kind: "sent-many", entries: inputs.slice(0, 2).map(({ id }) => ({ id, revision: 1 })), confirmed: true };
+    expect((await changeInvitation({ ...batch, confirmed: false }, a.slug)).ok).toBe(false);
+    const result = await changeInvitation(batch, a.slug); expect(result.ok).toBe(true);
+    const rows = (await listInvitationTracker(a.host)).invitees;
+    expect(rows.filter(i => i.invited)).toHaveLength(2); expect(rows.find(i => i.id === inputs[2].id)).toMatchObject({ invited: false, revision: 1 });
+    expect(await listRsvps("all", a.host)).toEqual(before); expect(await listHostContacts(a.host)).toEqual(contacts);
+    // A repeated request must not mutate already-sent rows or claim a second save.
+    expect((await changeInvitation(batch, a.slug)).ok).toBe(false);
+    expect((await listInvitationTracker(a.host)).invitees).toEqual(rows);
+  });
+  it.each(["stale", "foreign", "sent", "linked", "missing"])("rejects the entire bulk operation when a selected entry is %s", async invalid => {
+    const a = await event("alice", true), one = invite(), two = invite();
+    await changeInvitationRecord(one, a.host);
+    const b = invalid === "foreign" ? await event() : a;
+    await changeInvitationRecord(two, b.host);
+    if (invalid === "stale") await changeInvitationRecord({ ...two, revision: 1, guestName: "Edited" }, a.host);
+    if (invalid === "sent") await changeInvitationRecord({ kind: "sent", id: two.id, revision: 1, invited: true }, a.host);
+    if (invalid === "linked") await changeInvitationRecord({ kind: "link", id: two.id, revision: 1, rsvpId: await rsvp(a.guest!), confirmed: true }, a.host);
+    const before = await listInvitationTracker(a.host);
+    const batch = { kind: "sent-many", entries: [{ id: one.id, revision: 1 }, { id: invalid === "missing" ? randomUUID() : two.id, revision: invalid === "sent" || invalid === "linked" ? 2 : 1 }], confirmed: true };
+    expect((await changeInvitation(batch, a.slug)).ok).toBe(false);
+    expect(await listInvitationTracker(a.host)).toEqual(before);
+    state.host = "bob"; expect((await changeInvitation(batch, a.slug)).ok).toBe(false);
+  });
   it.each([true, false])("links attending=%s only after confirmation and keeps RSVP/consent untouched", async attending => {
     const a = await event("alice", true), input = invite({ invited: true }), rsvpId = await rsvp(a.guest!, attending);
     await changeInvitationRecord(input, a.host);

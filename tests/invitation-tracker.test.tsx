@@ -25,6 +25,19 @@ beforeEach(() => {
   mocks.configuration.mockResolvedValue({ title: "Oyster Roast", websiteUrl: "https://www.jaspershucks.app/" });
 });
 describe("invitation tracker contract", () => {
+  it.each([
+    {}, { entries: [] }, { confirmed: false }, { confirmed: "true" },
+    { entries: [{ id: "bad", revision: 1 }] }, { entries: [{ id: eventId, revision: 0 }] },
+    { entries: [{ id: eventId, revision: 1.5 }] }, { entries: [null] },
+    { entries: [{ id: eventId, revision: 1 }, { id: eventId.toUpperCase(), revision: 1 }] },
+    { entries: Array.from({ length: 51 }, () => ({ id: eventId, revision: 1 })) },
+  ])("rejects malformed/unconfirmed/oversized bulk selections %#", override => {
+    const base = { kind: "sent-many", entries: [{ id: eventId, revision: 1 }], confirmed: true };
+    expect(validateInvitationChange(Object.keys(override).length ? { ...base, ...override } : { kind: "sent-many" }).ok).toBe(false);
+  });
+  it("projects bulk changes to only selected IDs and revisions", () => {
+    expect(validateInvitationChange({ kind: "sent-many", confirmed: true, eventSlug: "forged", entries: [{ id: eventId.toUpperCase(), revision: 1, emailOptIn: true }] })).toEqual({ ok: true, change: { kind: "sent-many", confirmed: true, entries: [{ id: eventId, revision: 1 }] } });
+  });
   it("normalizes contacts and strips anything that could imply a guest response or consent", () => {
     expect(validateInvitationChange({ ...input, rsvpId: otherEventId, attending: true, emailOptIn: true, ownerId: "someone" })).toEqual({ ok: true, change: { kind: "save", id: eventId, revision: 0, guestName: "Chelsea & Damon", email: "chelsea@example.com", phone: "+19045550123", invited: false } });
     expect(validateInvitationChange({ ...input, email: "", phone: "" })).toMatchObject({ ok: true, change: { email: null, phone: null } });
@@ -51,6 +64,14 @@ describe("invitation tracker contract", () => {
   });
 });
 describe("private invitation tracker routes", () => {
+  it("only opens response links resolved from the authorized event’s tracker", async () => {
+    for (const responseId of [otherEventId, "foreign-response"]) {
+      for (const page of [await EventPage({ params: Promise.resolve({ id: eventId }), searchParams: Promise.resolve({ response: responseId }) }), await LegacyPage({ searchParams: Promise.resolve({ response: responseId }) })]) {
+        const panel = page.props.children as React.ReactElement<{ initialResponseId?: string }>;
+        expect(panel.props.initialResponseId).toBe(responseId === otherEventId ? otherEventId : undefined);
+      }
+    }
+  });
   it("checks authentication before any private data lookup", async () => {
     mocks.auth.mockResolvedValue(false);
     await expect(EventPage({ params: Promise.resolve({ id: eventId }) })).rejects.toThrow("REDIRECT");

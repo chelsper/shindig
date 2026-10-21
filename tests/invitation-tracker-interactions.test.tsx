@@ -9,6 +9,8 @@ vi.mock("react", async original => {
 });
 vi.mock("../app/admin/invitations/actions", () => ({ changeInvitation: actions.change, refreshInvitationTracker: actions.refresh }));
 import { InvitationTrackerPanel } from "../components/admin/invitation-tracker";
+import { MatchInvitee } from "../components/admin/invitation-match-picker";
+import { InviteeEditor } from "../components/admin/invitation-entry-editor";
 import { EventSetupNavigation } from "../components/admin/event-setup-navigation";
 import { EventGuestsNavigation } from "../components/admin/event-guests-navigation";
 import type { InvitationTracker, Invitee } from "../lib/invitation-tracker";
@@ -30,6 +32,75 @@ beforeEach(() => { h.slots = []; h.cursor = 0; h.tasks = []; h.pending = false; 
 afterEach(() => vi.unstubAllGlobals());
 
 describe("private tracker interactions", () => {
+  it("saves and opens a fresh household only after confirmation, clearing contact and sent fields", async () => {
+    render(); click("+ Add invitee"); render();
+    const editor = find(n => n.type === InviteeEditor)!;
+    const originalId = (editor.props.entry as Invitee).id;
+    (editor.props.onSave as (value: unknown, another: boolean) => void)({ kind: "save", id: originalId, revision: 0, guestName: "New family", email: "test@example.test", phone: "+19045550123", invited: true }, true);
+    await Promise.all(h.tasks); render();
+    const next = find(n => n.type === InviteeEditor)!.props.entry as Invitee;
+    expect(next).toMatchObject({ revision: 0, guestName: "", email: null, phone: null, invited: false });
+    expect(next.id).not.toBe(originalId); expect(actions.change).toHaveBeenCalledTimes(1);
+  });
+  it("retains the same entry ID and editor when Save & add another fails", async () => {
+    actions.change.mockResolvedValue({ ok: false, message: "Please retry" });
+    render(); click("+ Add invitee"); render();
+    const editor = find(n => n.type === InviteeEditor)!;
+    (editor.props.onSave as (value: unknown, another: boolean) => void)({ ...(editor.props.entry as Invitee), kind: "save", guestName: "Family" }, true);
+    await Promise.all(h.tasks); render();
+    expect(find(n => n.type === InviteeEditor)!.props.entry).toEqual(editor.props.entry);
+    expect(find(n => n.props.role === "status")!.props.children).toBe("Please retry");
+  });
+  it("uses the submitter for add-another intent; ordinary Enter saves and closes", () => {
+    const onSave = vi.fn(), form = () => InviteeEditor({ entry: { ...entry, revision: 0 }, pending: false, onSave, onCancel: vi.fn() });
+    render(form);
+    const submit = find(n => n.type === "form")!.props.onSubmit as (e: unknown) => void;
+    submit({ preventDefault() {}, nativeEvent: { submitter: { getAttribute: () => "another" } } });
+    expect(onSave.mock.calls[0][1]).toBe(true);
+    submit({ preventDefault() {}, nativeEvent: { submitter: null } });
+    expect(onSave.mock.calls[1][1]).toBe(false);
+  });
+  it("requires selection and confirmation for bulk marking, and blocks duplicate rapid clicks", async () => {
+    render(); expect(button("Mark selected as invited")).toBeUndefined();
+    change(find(n => n.props["aria-label"] === "Select Household to mark invited")!, true, true); render();
+    click("Mark selected as invited"); render(); expect(actions.change).not.toHaveBeenCalled();
+    click("Yes, I’ve sent these invitations"); click("Yes, I’ve sent these invitations");
+    await Promise.all(h.tasks); render();
+    expect(actions.change).toHaveBeenCalledTimes(1);
+    expect(actions.change).toHaveBeenCalledWith({ kind: "sent-many", entries: [{ id: entry.id, revision: 1 }], confirmed: true }, "event-test");
+    expect(button("Mark selected as invited")).toBeUndefined();
+  });
+  it("clears selected entries when changing filters, so hidden rows cannot be marked", () => {
+    render(); change(find(n => n.props["aria-label"] === "Select Household to mark invited")!, true, true); render();
+    click("Waiting for RSVP"); render(); expect(button("Mark selected as invited")).toBeUndefined();
+    click("All"); render(); expect(find(n => n.props["aria-label"] === "Select Household to mark invited")!.props.checked).toBe(false);
+  });
+  it("retains selection and reports failure without claiming bulk success", async () => {
+    actions.change.mockResolvedValue({ ok: false, message: "Nothing was marked. Refresh." });
+    render(); change(find(n => n.props["aria-label"] === "Select Household to mark invited")!, true, true); render();
+    click("Mark selected as invited"); render(); click("Yes, I’ve sent these invitations"); await Promise.all(h.tasks); render();
+    expect(find(n => n.type === "p" && n.props.role === "status")!.props.children).toBe("Nothing was marked. Refresh.");
+    expect(button("Yes, I’ve sent these invitations")).toBeTruthy(); expect(button("Mark invited")).toBeTruthy();
+  });
+  it("opens a host-confirmed reverse match from an unmatched response, without guessing", () => {
+    render(() => InvitationTrackerPanel({ ...props, initialResponseId: response.id }));
+    expect(find(n => n.type === MatchInvitee)!.props.response).toEqual(response);
+    expect(actions.change).not.toHaveBeenCalled();
+    h.slots = []; const onSave = vi.fn(), form = () => MatchInvitee({ response, data: initial, pending: false, onSave, onCancel: vi.fn() });
+    render(form); expect(button("Confirm RSVP match").props.disabled).toBe(true);
+    (find(n => typeof n.type === "function" && n.type.name === "MatchChoices")!.props.onSelect as (id: string) => void)(entry.id); render(form);
+    expect(button("Confirm RSVP match").props.disabled).toBe(true);
+    (find(n => typeof n.type === "function" && n.type.name === "Confirmation")!.props.onChange as (value: boolean) => void)(true); render(form); click("Confirm RSVP match");
+    expect(onSave).toHaveBeenCalledWith({ kind: "link", id: entry.id, revision: 1, rsvpId: response.id, confirmed: true });
+  });
+  it("shows a direct existing-entry link for matched responses and ignores unknown response IDs", () => {
+    render(); expect(find(n => n.type === "a" && n.props.href === `#invitee-${entry.id}`)).toBeUndefined();
+    h.slots = [];
+    render(() => InvitationTrackerPanel({ ...props, initialResponseId: response.id, initial: { ...initial, invitees: [{ ...entry, response }] } }));
+    expect(find(n => n.type === MatchInvitee)).toBeUndefined(); expect(find(n => n.type === "a" && n.props.href === `#invitee-${entry.id}`)).toBeTruthy();
+    h.slots = []; render(() => InvitationTrackerPanel({ ...props, initialResponseId: "foreign" }));
+    expect(find(n => n.type === MatchInvitee)).toBeUndefined(); expect(actions.change).not.toHaveBeenCalled();
+  });
   it("guards both workspace navigation levels while editing or saving an invitation", async () => {
     vi.stubGlobal("window", { confirm: vi.fn(() => false) });
     const workspace = { id: entry.id, publishedBefore: true };
@@ -109,13 +180,13 @@ describe("private tracker interactions", () => {
     const saved = vi.fn();
     const form = () => (child.type as (props: Record<string, unknown>) => ReactNode)({ ...child.props, onSave: saved });
     h.slots = []; render(form); expect(button("Confirm RSVP match").props.disabled).toBe(true);
-    change(find(n => n.type === "select")!, response.id); render(form);
+    (find(n => typeof n.type === "function" && n.type.name === "MatchChoices")!.props.onSelect as (id: string) => void)(response.id); render(form);
     expect(button("Confirm RSVP match").props.disabled).toBe(true);
     click("Confirm RSVP match"); expect(saved).not.toHaveBeenCalled();
-    change(find(n => n.type === "input" && n.props.type === "checkbox")!, true, true); render(form);
+    (find(n => typeof n.type === "function" && n.type.name === "Confirmation")!.props.onChange as (value: boolean) => void)(true); render(form);
     expect(button("Confirm RSVP match").props.disabled).toBe(false); click("Confirm RSVP match");
     expect(saved).toHaveBeenCalledWith({ kind: "link", id: entry.id, revision: 1, rsvpId: response.id, confirmed: true });
-    change(find(n => n.type === "select")!, ""); render(form); expect(button("Confirm RSVP match").props.disabled).toBe(true);
+    (find(n => typeof n.type === "function" && n.type.name === "MatchChoices")!.props.onSelect as (id: string) => void)(""); render(form); expect(button("Confirm RSVP match").props.disabled).toBe(true);
   });
   it("refreshes rather than guessing that an existing RSVP belongs to an invitee", async () => {
     render(); click("Refresh tracker"); await Promise.all(h.tasks); render();

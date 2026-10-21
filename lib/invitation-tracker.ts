@@ -2,6 +2,7 @@ import { isDraftId, isDraftRevision } from "./event-drafts";
 
 export type InviteeFields = { guestName: string; email: string | null; phone: string | null; invited: boolean };
 export type InvitationChange =
+  | { kind: "sent-many"; entries: { id: string; revision: number }[]; confirmed: true }
   | ({ kind: "save"; id: string; revision: number } & InviteeFields)
   | { kind: "sent"; id: string; revision: number; invited: boolean }
   | { kind: "link"; id: string; revision: number; rsvpId: string; confirmed: true }
@@ -13,6 +14,12 @@ export type InvitationTracker = { invitees: Invitee[]; responses: TrackerRespons
 export type InvitationFilter = "all" | "not-sent" | "waiting" | "responded";
 export const invitationStatus = (entry: Invitee): Exclude<InvitationFilter, "all"> => entry.response ? "responded" : entry.invited ? "waiting" : "not-sent";
 export const INVITATION_STATUS_LABELS = { "not-sent": "Not sent", waiting: "Waiting for RSVP", responded: "Responded" };
+export const MAX_INVITATION_BATCH = 50;
+export const canMarkInvited = (entry: Invitee) => !entry.invited && !entry.response;
+export const unmatchedResponses = (data: InvitationTracker) => {
+  const linked = new Set(data.invitees.flatMap(entry => entry.response ? [entry.response.id] : []));
+  return data.responses.filter(response => !linked.has(response.id));
+};
 
 export function filterInvitees(entries: Invitee[], filter: InvitationFilter, query: string) {
   const term = query.trim().toLocaleLowerCase();
@@ -25,6 +32,16 @@ export function filterInvitees(entries: Invitee[], filter: InvitationFilter, que
 export function validateInvitationChange(input: unknown): { ok: true; change: InvitationChange } | { ok: false; message: string } {
   if (!input || typeof input !== "object" || Array.isArray(input)) return { ok: false, message: "Please check this invitee and try again." };
   const v = input as Record<string, unknown>;
+  if (v.kind === "sent-many") {
+    if (v.confirmed !== true || !Array.isArray(v.entries) || !v.entries.length || v.entries.length > MAX_INVITATION_BATCH) return { ok: false, message: `Select and confirm between 1 and ${MAX_INVITATION_BATCH} invitations.` };
+    const entries: { id: string; revision: number }[] = [];
+    for (const entry of v.entries) {
+      if (!entry || typeof entry !== "object" || !isDraftId(entry.id) || !isDraftRevision(entry.revision) || entry.revision === 0) return { ok: false, message: "Refresh the tracker and select the invitations again." };
+      entries.push({ id: entry.id.toLowerCase(), revision: entry.revision });
+    }
+    if (new Set(entries.map(entry => entry.id)).size !== entries.length) return { ok: false, message: "Select each invitation only once." };
+    return { ok: true, change: { kind: "sent-many", entries, confirmed: true } };
+  }
   if (!isDraftId(v.id) || !isDraftRevision(v.revision) || (v.kind !== "save" && v.revision === 0)) return { ok: false, message: "Please refresh the invitation tracker before making changes." };
   const base = { id: v.id.toLowerCase(), revision: v.revision };
   if (v.kind === "remove" && v.confirmed === true) return { ok: true, change: { ...base, kind: "remove", confirmed: true } };

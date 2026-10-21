@@ -192,6 +192,7 @@ export function AdminDashboard({ filter, rsvps, summary, event = OYSTER_ROAST_EV
                       </div>
                     </div>
                     <dl className="mt-4 grid grid-cols-2 gap-x-3 gap-y-4 text-sm">
+                      <div className="col-span-2"><Link className="inline-flex min-h-11 items-center text-sm text-[#355f9e] underline" href={`/admin/invitations?response=${rsvp.id}`}>View or match invitation →</Link></div>
                       <div>
                         <dt className="text-[0.64rem] font-bold tracking-[0.12em] text-[#202523]/45 uppercase">Party size</dt>
                         <dd className="mt-1 font-semibold">{rsvp.partySize ?? "—"}</dd>
@@ -255,6 +256,7 @@ export function AdminDashboard({ filter, rsvps, summary, event = OYSTER_ROAST_EV
                           <td className="px-4 py-4 text-xs leading-relaxed text-[#202523]/65">{formatDate(rsvp.createdAt)}</td>
                           <td className="px-5 py-4 text-xs leading-relaxed text-[#202523]/65">{formatDate(rsvp.updatedAt)}</td>
                           <td className="px-5 py-4 text-right">
+                            <Link className="inline-flex min-h-11 items-center text-xs text-[#355f9e] underline" href={`/admin/invitations?response=${rsvp.id}`}>View or match invitation</Link>
                             <Link
                               className="text-xs font-bold uppercase tracking-[0.1em] text-[#355f9e] underline decoration-[#355f9e]/25 underline-offset-4 transition hover:decoration-[#355f9e]"
                               href={`/admin/guests/${rsvp.id}/edit`}
