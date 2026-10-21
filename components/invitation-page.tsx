@@ -175,8 +175,8 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
     setEditToken(null);
   }
 
+  const guestTools = <SavedGuestLinks eventSlug={oysterRoastEvent.slug} publicSlug={oysterRoastEvent.publicSlug} potluckEnabled={oysterRoastEvent.features.potluck} />;
   const responseContent = <>
-            <SavedGuestLinks eventSlug={oysterRoastEvent.slug} publicSlug={oysterRoastEvent.publicSlug} potluckEnabled={oysterRoastEvent.features.potluck} />
             <div className="rounded-[1.75rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 shadow-[0_18px_50px_rgba(41,56,53,0.10)] backdrop-blur sm:p-7">
               {repliesClosed ? <RsvpsClosed deadlinePassed={oysterRoastEvent.rsvpAvailability === "deadline"} /> : submitted ? (
                 <div aria-live="polite" className="py-3 text-center sm:py-5">
@@ -404,6 +404,7 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
     details={{ title: oysterRoastEvent.title, eyebrow: oysterRoastEvent.invitation.eyebrow, date: oysterRoastEvent.dateLabel, time: oysterRoastEvent.timeLabel, venue: oysterRoastEvent.venue, address: oysterRoastEvent.address, description: oysterRoastEvent.description }}
     image={{ url: oysterRoastEvent.invitation.imageUrl, alt: oysterRoastEvent.invitation.imageAlt, crop: oysterRoastEvent.design.invitationCrop }}
     actions={<EventHubLink href={oysterRoastEvent.eventHub.path} />}
+    guestTools={guestTools}
   >{responseContent}</DesignedInvitation></main>;
 
   return (
@@ -420,7 +421,7 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
             <EventHubLink href={oysterRoastEvent.eventHub.path} />
           </div>
         </header>
-
+        {guestTools}
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.16fr)_minmax(370px,0.84fr)] lg:gap-10">
           {oysterRoastEvent.invitation.imageUrl ? <section aria-label={legacy ? "Oyster roast invitation artwork" : "Invitation artwork"} className="relative">
             <div className="hero-frame relative mx-auto max-w-[680px] overflow-hidden rounded-[1.75rem] bg-white shadow-[0_24px_70px_rgba(41,56,53,0.16)] sm:rounded-[2.25rem] lg:max-w-none">

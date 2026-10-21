@@ -29,7 +29,7 @@ function find(predicate: (node: ReactElement<Record<string, unknown>>) => boolea
   if (!isValidElement<Record<string, unknown>>(value)) return;
   return predicate(value) ? value : find(predicate, (value.props.children as ReactNode) ?? null);
 }
-function button(label: string) { return find(n => n.type === "button" && (n.props.children === label || (Array.isArray(n.props.children) && n.props.children.includes(label))))!; }
+function button(label: string) { return find(n => n.type === "button" && (n.props["aria-label"] === label || n.props.children === label || (Array.isArray(n.props.children) && n.props.children.includes(label))))!; }
 function click(label: string) { return (button(label).props.onClick as () => void | Promise<void>)(); }
 const hub = () => HubNavigation({ modules, navigation });
 const remember = () => RememberGuestLink(identity);
@@ -90,6 +90,15 @@ describe("guest Hub navigation handlers", () => {
     session.getItem.mockImplementation(() => { throw new Error("denied"); }); session.setItem.mockImplementation(() => { throw new Error("denied"); });
     render(hub); click("Playlist"); render(hub); expect(current.hash).toBe("#playlist");
   });
+  it("prioritizes near-event weather without overriding a saved section or shared link", () => {
+    const approaching = () => HubNavigation({ modules: [{ id: "weather", label: "Weather", icon: "weather", content: <p>Provider weather</p> }, ...modules], navigation });
+    render(approaching); expect(current.hash).toBe("#weather");
+    current.hash = ""; session.setItem(hubSectionStorageKey(navigation.eventSlug), "potluck"); render(approaching);
+    expect(current.hash).toBe("#potluck");
+    current.hash = "#playlist"; render(approaching);
+    expect(find(n => n.props["aria-selected"] === true)?.props.id).toBe("hub-tab-playlist");
+    expect(find(n => n.props.id === "hub-panel-potluck")).toBeTruthy();
+  });
 });
 
 describe("remembered private-link handlers", () => {
@@ -99,7 +108,9 @@ describe("remembered private-link handlers", () => {
     h.slots = []; render(saved);
     const link = find(n => n.props.href === `/e/test/rsvp/${identity.token}`)!;
     expect(link.props.prefetch).toBe(false); expect(link.props.referrerPolicy).toBe("no-referrer");
-    click("Forget"); render(saved); expect(tree).toBeNull(); expect(local.getItem(GUEST_LINKS_STORAGE_KEY)).toBeNull();
+    expect(link.props.className).toContain("min-h-12");
+    expect(find(n => n.type === "details")).toBeTruthy();
+    click("Forget link: Update my RSVP"); render(saved); expect(tree).toBeNull(); expect(local.getItem(GUEST_LINKS_STORAGE_KEY)).toBeNull();
   });
   it("does not claim a save when browser storage fails", () => {
     local.setItem.mockImplementation(() => { throw new Error("full"); }); render(remember);
@@ -112,5 +123,17 @@ describe("remembered private-link handlers", () => {
     render(() => SavedGuestLinks({ eventSlug: identity.eventSlug })); expect(tree).toBeNull();
     render(saved); expect(find(n => n.props.href === `/e/test/bring/${identity.token}`)).toBeTruthy();
     expect(find(n => typeof n.props.href === "string" && n.props.href.includes("other-event"))).toBeUndefined();
+  });
+  it("labels multiple private shortcuts separately without disclosing names or claiming attendance", () => {
+    rememberGuestLink(local, identity);
+    rememberGuestLink(local, { ...identity, token: "C".repeat(43) });
+    rememberGuestLink(local, { ...identity, kind: "potluck" });
+    render(saved);
+    for (const label of ["Update my RSVP 1", "Update my RSVP 2", "Manage my signup"]) {
+      expect(find(n => !!n.props.href && Array.isArray(n.props.children) && n.props.children.includes(label))).toBeTruthy();
+    }
+    click("Forget link: Update my RSVP 1"); render(saved);
+    expect(find(n => n.props.href === `/e/test/rsvp/${identity.token}`)).toBeUndefined();
+    expect(find(n => n.props.href === `/e/test/bring/${identity.token}`)).toBeTruthy();
   });
 });

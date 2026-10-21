@@ -37,7 +37,7 @@ function ForecastConditions({ weather, event }: { weather: EventWeather & { fore
   const { forecast, timeZone } = weather;
   const eventDay = weather.mode === "event-day";
   return <div>
-    <h3 className={headingClass}>{eventDay ? "Weather for tonight" : "Event Forecast"}</h3>
+    <h3 className={headingClass}>{eventDay ? "Event-day weather" : "Event Forecast"}</h3>
     <p className={`mt-1 ${detailClass}`}>{eventDay ? "Event-day forecast" : event.shortDateLabel} · {forecast.condition}</p>
     {eventDay && forecast.hours.length ? <ol aria-label="Hourly event forecast" className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-7">
       {forecast.hours.map((hour) => <li key={hour.at} className={`min-w-0 rounded-xl px-1.5 py-3 text-center ${hour.at === Date.parse(event.startsAtUtc) ? "bg-[#355f9e]/12 ring-1 ring-inset ring-[#355f9e]/20" : "bg-[#355f9e]/5"}`}>
@@ -59,7 +59,7 @@ export function WeatherContent({ weather, typical, loading = false, event = OYST
     <div className="py-5">
       {loading && !weather ? <p role="status" className={detailClass}>Checking the skies in {event.cityLabel}…</p> : weather?.forecast ? <ForecastConditions event={event} weather={{ ...weather, forecast: weather.forecast }} /> : <>
         <TypicalConditions typical={typical} event={event} />
-        {weather?.mode === "past" ? <p className={`mt-2 ${detailClass}`}>The roast has passed. These are historical averages, not conditions recorded at the event.</p> : weather?.forecastInRange ? <p className={`mt-2 ${detailClass}`}>The event forecast is temporarily unavailable. Please check back shortly.</p> : <p className={`mt-2 ${detailClass}`}>The event forecast will appear here when it’s close enough to call.</p>}
+        {weather?.mode === "past" ? <p className={`mt-2 ${detailClass}`}>The event has passed. These are historical averages, not conditions recorded at the event.</p> : weather?.forecastInRange ? <p className={`mt-2 ${detailClass}`}>The event forecast is temporarily unavailable. Please check back shortly.</p> : <p className={`mt-2 ${detailClass}`}>The event forecast will appear here when it’s close enough to call.</p>}
       </>}
     </div>
 

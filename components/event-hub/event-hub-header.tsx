@@ -4,6 +4,7 @@ import { calendarPath } from "../../lib/calendar";
 import type { EventHubHeaderSettings } from "../../lib/event-hub-settings";
 import { OYSTER_ROAST_EVENT, type OysterRoastEvent } from "../../lib/oyster-roast-event";
 import { EventHeaderImage } from "./event-header-image";
+import type { GuestEventTiming } from "../../lib/guest-event-timing";
 
 function CalendarIcon() {
   return (
@@ -25,11 +26,19 @@ function DirectionsIcon() {
 export function EventHubHeader({
   headerSettings,
   event = OYSTER_ROAST_EVENT,
+  timing,
 }: {
   headerSettings: EventHubHeaderSettings;
   event?: OysterRoastEvent;
+  timing?: GuestEventTiming;
 }) {
   const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address)}`;
+  const primaryAction = "border-[#202523] bg-[#202523] text-[#fffaf1] hover:border-[#355f9e] hover:bg-[#355f9e]";
+  const secondaryAction = "border-[#355f9e]/30 bg-[#e9f2f8]/80 text-[#214e91] hover:border-[#355f9e] hover:bg-[#e9f2f8]";
+  const directions = <a
+    className={`flex min-h-12 items-center justify-center gap-2 rounded-full border px-3 text-center text-xs font-bold uppercase tracking-[0.1em] transition ${timing?.nearEvent ? primaryAction : secondaryAction}`}
+    href={directionsUrl} rel="noreferrer" target="_blank"
+  ><DirectionsIcon />Get Directions</a>;
 
   return (
     <header className="overflow-hidden rounded-[1.75rem] border border-[#202523]/10 bg-[#fffaf1]/90 shadow-[0_18px_50px_rgba(41,56,53,0.10)] sm:rounded-[2rem]">
@@ -39,7 +48,7 @@ export function EventHubHeader({
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-[0.68rem] font-bold uppercase tracking-[0.22em] text-[#355f9e]">
-                Event Hub
+                {timing?.label ?? "Event Hub"}
               </p>
               <h1 className="mt-2 max-w-2xl font-serif text-4xl leading-[0.98] tracking-[-0.04em] sm:text-5xl">
                 {event.title}
@@ -67,23 +76,16 @@ export function EventHubHeader({
           </dl>
 
           <div className="mt-5 grid grid-cols-2 gap-2.5">
+            {timing?.nearEvent && directions}
             <a
-              className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-[#202523] bg-[#202523] px-3 text-center text-xs font-bold uppercase tracking-[0.1em] text-[#fffaf1] transition hover:border-[#355f9e] hover:bg-[#355f9e]"
+              className={`flex min-h-12 items-center justify-center gap-2 rounded-full border px-3 text-center text-xs font-bold uppercase tracking-[0.1em] transition ${timing?.nearEvent ? secondaryAction : primaryAction}`}
               download={event.calendarFilename}
               href={calendarPath(event)}
             >
               <CalendarIcon />
               Add to Calendar
             </a>
-            <a
-              className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-[#355f9e]/30 bg-[#e9f2f8]/80 px-3 text-center text-xs font-bold uppercase tracking-[0.1em] text-[#214e91] transition hover:border-[#355f9e] hover:bg-[#e9f2f8]"
-              href={directionsUrl}
-              rel="noreferrer"
-              target="_blank"
-            >
-              <DirectionsIcon />
-              Get Directions
-            </a>
+            {!timing?.nearEvent && directions}
           </div>
 
           <Link

@@ -28,7 +28,7 @@ describe("compact weather views", () => {
   });
   it("shows a wrapping local-time evening timeline on event day", () => {
     const html = renderToStaticMarkup(<WeatherContent weather={{ ...weather, mode: "event-day", forecastInRange: true, forecast }} typical={null} />);
-    expect(html).toContain("Weather for tonight");
+    expect(html).toContain("Event-day weather");
     expect(html).toContain("Hourly event forecast");
     expect(html).toContain("3 PM");
     expect(html).toContain("5 PM");

@@ -1,5 +1,6 @@
 import { OYSTER_ROAST_EVENT, type EventFeatures, type OysterRoastEvent } from "../../lib/oyster-roast-event";
-import { SavedGuestLinks } from "../guest-return-links";
+import type { GuestEventTiming } from "../../lib/guest-event-timing";
+import { LatestHostNote } from "./latest-host-note";
 import type { PublicPlaylistSuggestion } from "../../lib/playlist";
 import type { PublicQuestion } from "../../lib/questions";
 import type { PublicHostUpdate } from "../../lib/updates";
@@ -18,6 +19,7 @@ import type { PublicPotluckItem } from "../../lib/potluck";
 
 type EventModulesProps = {
   event?: OysterRoastEvent;
+  timing?: GuestEventTiming;
   features: EventFeatures;
   guestList: PublicGuestList | null;
   guestListUnavailable?: boolean;
@@ -75,8 +77,8 @@ const moduleRegistry: ModuleDefinition[] = [
     id: "updates",
     label: "Updates",
     icon: "updates",
-    render: ({ updates = [], updatesUnavailable }) => (
-      <UpdatesModule updates={updates} unavailable={updatesUnavailable} />
+    render: ({ updates = [], updatesUnavailable, event }) => (
+      <UpdatesModule updates={updates} unavailable={updatesUnavailable} event={event} />
     ),
   },
   {
@@ -94,10 +96,17 @@ export function EventModules(props: EventModulesProps) {
     .filter((module) => module.id !== "polls" || Boolean(props.polls?.length))
     .map(({ render, ...module }) => ({ ...module, content: render(props) }));
 
+  // Only change the default order. A shared section URL or a guest's remembered
+  // selection still wins, and all panels remain mounted to preserve typed input.
+  if (props.timing?.nearEvent) {
+    const priority = (id: HubModule["id"]) => id === "weather" ? 0 : id === "updates" ? 1 : 2;
+    modules.sort((a, b) => priority(a.id) - priority(b.id));
+  }
+
   const eventSlug = props.event?.slug === "oyster-roast-2026" ? undefined : props.event?.slug;
   const event = props.event ?? OYSTER_ROAST_EVENT;
   return <GuestInteractionsProvider key={eventSlug ?? "legacy"} eventSlug={eventSlug} enabled={props.features.playlist || (props.features.polls && Boolean(props.polls?.length))}>
-    <SavedGuestLinks eventSlug={event.slug} publicSlug={"publicSlug" in event ? event.publicSlug : undefined} potluckEnabled={props.features.potluck} />
-    <HubNavigation modules={modules} eyebrow={eventSlug ? "Around the Shindig" : undefined} navigation={{ eventSlug: event.slug, hubPath: event.eventHub.path }} />
+    {props.timing?.nearEvent && props.features.updates && !props.updatesUnavailable && <LatestHostNote updates={props.updates ?? []} timeZone={event.timeZone} />}
+    <HubNavigation modules={modules} eyebrow={props.timing?.nearEvent ? "Good to know before you go" : eventSlug ? "Around the Shindig" : undefined} navigation={{ eventSlug: event.slug, hubPath: event.eventHub.path }} />
   </GuestInteractionsProvider>;
 }

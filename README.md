@@ -222,7 +222,9 @@ current query parameters. Signup editors return directly to Bring something.
 After a confirmed RSVP/signup, or on its validated private edit page, guests
 may explicitly choose **Remember this private link on this device**. Nothing
 is saved automatically. The invitation and Hub then show event-scoped private
-shortcuts after hydration, with individual Forget controls. These are bearer
+shortcuts above the artwork after hydration: **Update my RSVP** and **Manage my
+signup**, when applicable. Individual Forget controls live under **About your
+saved links**. No welcome panel appears for first-time visitors. These are bearer
 links: anyone using the browser can edit that RSVP/signup, so the UI warns
 against saving on shared devices. Existing server-side token, event, feature
 and lifecycle checks remain authoritative; no public data query is expanded.
@@ -234,6 +236,16 @@ eviction. Forgetting removes only the shortcut, not the RSVP/signup or its
 server token. Storage errors leave normal private links usable. Links do not
 sync across browsers/devices or between Shindig and Jasper hostnames; guests
 should still keep a copy. No migration, dependency or environment change.
+
+During the seven calendar days before an event and until its configured end,
+the Hub brings directions, weather and updates forward. Event-local dates
+control “Today’s the day”/“See you tomorrow”; actual start/end instants control
+“Happening now”, including overnight events. The latest published host note is
+summarized above the tabs when Updates is enabled and available. Weather and
+Updates become the first enabled tabs; explicit links and remembered selections
+still win. This presentation is resolved on each server page load and never
+changes RSVP availability, fetches extra weather, or implies a forecast exists.
+Artwork and the first-time invitation experience remain unchanged.
 
 ## Bring something — optional signups
 

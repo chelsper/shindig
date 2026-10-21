@@ -47,16 +47,23 @@ export function SavedGuestLinks({ eventSlug, publicSlug, potluckEnabled = false 
   if (!links.length) return null;
   return <aside aria-label="Your saved private links" className="my-5 rounded-2xl border border-[#355f9e]/20 bg-[#e9f2f8]/60 px-4 py-3 text-[#202523] sm:px-5">
     <h2 className="text-sm font-semibold">Welcome back</h2>
-    <p className="mt-1 text-xs leading-5 text-[#202523]/65">Private links you chose to save in this browser. No need to start over.</p>
-    <ul className="mt-2 divide-y divide-[#355f9e]/10">{links.map(link => {
+    <p className="mt-1 text-xs leading-5 text-[#202523]/65">Pick up where you left off. Your private links are saved on this device.</p>
+    <ul className="mt-3 flex flex-wrap gap-2">{links.map(link => {
       const peers = links.filter(item => item.kind === link.kind);
-      const label = `${link.kind === "rsvp" ? "View / update my RSVP" : "Manage my signup"}${peers.length > 1 ? ` ${peers.indexOf(link) + 1}` : ""}`;
-      return <li key={`${link.kind}:${link.token}`} className="flex items-center justify-between gap-3">
-        <Link prefetch={false} referrerPolicy="no-referrer" href={guestReturnPath(link, publicSlug)} className="inline-flex min-h-11 items-center text-sm font-semibold text-[#214e91] underline underline-offset-4">{label}</Link>
-        <button type="button" aria-label={`Forget link: ${label}`} className="min-h-11 shrink-0 text-xs underline underline-offset-4" onClick={() => setError(changeLink(link, true) ? "" : "Couldn’t forget that link. Please try again.")}>Forget</button>
+      const label = `${link.kind === "rsvp" ? "Update my RSVP" : "Manage my signup"}${peers.length > 1 ? ` ${peers.indexOf(link) + 1}` : ""}`;
+      return <li key={`${link.kind}:${link.token}`} className="min-w-0 flex-1 basis-48">
+        <Link prefetch={false} referrerPolicy="no-referrer" href={guestReturnPath(link, publicSlug)} className={`flex min-h-12 items-center justify-between gap-3 rounded-full border px-4 py-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-4 ${link.kind === "rsvp" ? "border-[#355f9e] bg-[#355f9e] text-[#fffaf1]" : "border-[#355f9e]/30 bg-[#fffaf1] text-[#214e91]"}`}>{label}<span aria-hidden="true">→</span></Link>
       </li>;
     })}</ul>
-    <p className="text-[11px] leading-5 text-[#202523]/60">Forgetting a shortcut doesn’t cancel your RSVP or signup. Saved links expire here after 180 days and won’t follow you to another browser or device.</p>
+    <details className="mt-1 text-xs text-[#202523]/65">
+      <summary className="min-h-11 cursor-pointer content-center">About your saved links</summary>
+      <p className="leading-5">Anyone using this browser can open these links. Forgetting a shortcut doesn’t cancel your RSVP or signup. Saved links expire here after 180 days and won’t follow you to another browser or device.</p>
+      <ul className="mt-1">{links.map(link => {
+        const peers = links.filter(item => item.kind === link.kind);
+        const label = `${link.kind === "rsvp" ? "Update my RSVP" : "Manage my signup"}${peers.length > 1 ? ` ${peers.indexOf(link) + 1}` : ""}`;
+        return <li key={`${link.kind}:${link.token}`}><button type="button" aria-label={`Forget link: ${label}`} className="min-h-11 text-left underline underline-offset-4" onClick={() => setError(changeLink(link, true) ? "" : "Couldn’t forget that link. Please try again.")}>Forget link: {label}</button></li>;
+      })}</ul>
+    </details>
     {error && <p role="alert" className="mt-2 text-xs">{error}</p>}
   </aside>;
 }

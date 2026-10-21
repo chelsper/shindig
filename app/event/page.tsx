@@ -3,6 +3,8 @@ import { EventDetailsUnavailable } from "../../components/event-details-unavaila
 
 import { EventHubHeader } from "../../components/event-hub/event-hub-header";
 import { EventModules } from "../../components/event-hub/event-modules";
+import { SavedGuestLinks } from "../../components/guest-return-links";
+import { guestEventTiming } from "../../lib/guest-event-timing";
 import { DEFAULT_EVENT_HUB_HEADER } from "../../lib/event-hub-settings";
 import { OYSTER_ROAST_EVENT, eventMonthLabel } from "../../lib/oyster-roast-event";
 import type { PublicPlaylistSuggestion } from "../../lib/playlist";
@@ -101,6 +103,7 @@ export default async function EventPage() {
     else console.error("Public polls retrieval failed.");
   }
 
+  const timing = guestEventTiming(event);
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#f7f0e3] px-4 py-5 text-[#202523] sm:px-6 sm:py-8 lg:px-8 lg:py-10">
       <div aria-hidden="true" className="page-texture" />
@@ -112,9 +115,11 @@ export default async function EventPage() {
           </p>
         </div>
 
-        <EventHubHeader headerSettings={headerSettings} event={event} />
+        <SavedGuestLinks eventSlug={event.slug} />
+        <EventHubHeader headerSettings={headerSettings} event={event} timing={timing} />
         <EventModules
           event={event}
+          timing={timing}
           features={OYSTER_ROAST_EVENT.features}
           guestList={guestList}
           guestListUnavailable={guestListUnavailable}
