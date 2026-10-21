@@ -60,16 +60,36 @@ describe("guided event readiness", () => {
 });
 
 describe("private setup navigation and publication states", () => {
-  it.each(["setup", "details", "location", "artwork", "settings", "content", "preview", "publish"] as const)("uses the same event-scoped navigation on %s", (current) => {
+  it.each(["setup", "details", "location", "artwork", "settings", "content", "preview", "publish", "guests"] as const)("uses the same event-scoped navigation on %s", (current) => {
     const html = renderToStaticMarkup(<EventSetupNavigation id={id} current={current} />);
-    expect(html.match(/aria-current="page"/g)).toHaveLength(1);
+    const editing = !["setup", "publish", "guests"].includes(current);
+    const primary = html.match(/<nav aria-label="Event workspace"[\s\S]*?<\/nav>/)![0];
+    expect(primary.match(/aria-current="page"/g)).toHaveLength(1);
+    expect([...primary.matchAll(/href="([^"]+)"/g)].map(match => match[1])).toEqual([`${base}/setup`, base, `${base}/invitations`, `${base}/publish`]);
+    for (const label of ["Overview", "Edit Event", "Guests", "Share"]) expect(primary).toContain(label);
+    expect(html.match(/aria-current="page"/g)).toHaveLength(editing ? 2 : 1);
     const links = [...html.matchAll(/href="([^"]+)"/g)].map((match) => match[1]);
-    expect([...new Set(links)].sort()).toEqual([`${base}/setup`, base, `${base}/location`, `${base}/artwork`, `${base}/settings`, `${base}/content`, `${base}/preview`, `${base}/publish`].sort());
-    expect(html).toContain("min-h-11"); expect(html).toContain("flex-wrap");
-    expect(html).toContain('aria-expanded="false"'); expect(html).toContain("Choose setup section");
-    expect(html.includes('aria-label="Back:')).toBe(current !== "setup");
-    expect(html.includes('aria-label="Next:')).toBe(current !== "publish");
-    expect(html.includes("See what’s left")).toBe(current !== "setup");
+    expect([...new Set(links)].sort()).toEqual([`${base}/setup`, base, `${base}/invitations`, `${base}/publish`, ...(editing ? ["location", "artwork", "settings", "content", "preview"].map(path => `${base}/${path}`) : [])].sort());
+    expect(primary).toContain("min-h-12"); expect(primary).toContain("grid-cols-4");
+    expect(html.includes('aria-expanded="false"')).toBe(editing);
+    expect(html.includes('aria-label="Edit event sections"')).toBe(editing);
+    expect(html.includes('aria-label="Back:')).toBe(editing && current !== "details");
+    expect(html.includes('aria-label="Next:')).toBe(editing && current !== "preview");
+    expect(html.includes("See what’s left")).toBe(editing);
+  });
+  it("prioritizes setup for drafts and keeps invitation planning available in a collapsed section", () => {
+    const html = renderToStaticMarkup(<EventSetupOverview {...props} hosting={<section>Hosting fixture</section>} />);
+    expect(html).toContain('aria-label="Event setup checklist"');
+    expect(html.indexOf("Your next step")).toBeLessThan(html.indexOf("Hosting fixture"));
+    expect(html).toMatch(/<details[^>]*><summary[^>]*>Plan invitations &amp; hosting/);
+    expect(html).not.toContain('aria-label="Edit saved event"');
+  });
+  it("prioritizes hosting after publication without repeating a completed setup checklist", () => {
+    const html = renderToStaticMarkup(<EventSetupOverview {...props} live={{ visibility: "published", rsvpsOpen: true, hasUnpublishedChanges: false }} hosting={<section>Hosting fixture</section>} />);
+    expect(html.indexOf("Hosting fixture")).toBeLessThan(html.indexOf("Your next step"));
+    expect(html).toContain('aria-label="Edit saved event"');
+    expect(html).not.toContain('aria-label="Event setup checklist"');
+    expect(html).not.toContain("Plan invitations &amp; hosting");
   });
   it.each([null, { visibility: "unpublished", rsvpsOpen: false, hasUnpublishedChanges: true }, { visibility: "archived", rsvpsOpen: false, hasUnpublishedChanges: true }] satisfies (SetupPublication | null)[])("never offers public links or QR downloads for private events: %j", (live) => {
     const html = renderToStaticMarkup(<EventSetupOverview {...props} live={live} />);

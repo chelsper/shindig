@@ -24,6 +24,8 @@ import { HostPotluckManager } from "../../../../../components/admin/host-potluck
 import { listHostPotluckItems } from "../../../../../lib/server/potluck";
 import { HostContactsPanel } from "../../../../../components/admin/host-contacts";
 import { listHostContacts } from "../../../../../lib/server/rsvp-contacts";
+import { EventSetupNavigation } from "../../../../../components/admin/event-setup-navigation";
+import { EventGuestsNavigation } from "../../../../../components/admin/event-guests-navigation";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Event responses | Shindig", robots: { index: false, follow: false }, referrer: "no-referrer" as const };
 const views = ["rsvps", "contacts", "questions", "updates", "playlist", "polls", "potluck"] as const;
@@ -75,9 +77,10 @@ export default async function EventGuests({ params, searchParams }: { params: Pr
     }
       }
   return <ContentShell title={labels[view]} contextLabel={event.title} description="Only this event’s responses and content. Guest names on private questions stay here." dashboardHref={`/admin/events/${id}/setup`}>
-    <Link className="mb-3 inline-flex min-h-11 items-center text-sm text-[#355f9e] underline" href={`/admin/events/${id}/invitations`}>Invitation tracker →</Link>
+    <EventSetupNavigation id={id} current="guests" />
+    <EventGuestsNavigation id={id} current={view === "rsvps" || view === "contacts" ? view : "other"} publishedBefore />
     <p className="mb-5 text-sm text-[#202523]/65">{eventStatus(publication)} · Host management remains available. <Link className="inline-flex min-h-11 items-center text-[#355f9e] underline" href={`/admin/events/${id}/content`}>Hub Content &amp; event setup →</Link></p>
-    <nav className="mb-6 flex flex-wrap gap-2" aria-label="Manage this event">{views.map((v) => <Link key={v} href={`/admin/events/${id}/guests?view=${v}`} aria-current={v === view ? "page" : undefined} className={`inline-flex min-h-11 items-center rounded-full border border-[#355f9e]/25 px-4 text-sm ${v === view ? "bg-[#e9f2f8]" : ""}`}>{labels[v]}</Link>)}</nav>
+    <details className="mb-6" open={view !== "rsvps" && view !== "contacts"}><summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-[#355f9e]">More Hub tools</summary><nav className="mt-2 flex flex-wrap gap-2" aria-label="Manage this event">{views.filter(v => v !== "rsvps" && v !== "contacts").map((v) => <Link key={v} href={`/admin/events/${id}/guests?view=${v}`} aria-current={v === view ? "page" : undefined} className={`inline-flex min-h-11 items-center rounded-full border border-[#355f9e]/25 px-4 text-sm ${v === view ? "bg-[#e9f2f8]" : ""}`}>{labels[v]}</Link>)}</nav></details>
     {view !== "rsvps" && view !== "contacts" && !event.features[view] && <p className="mb-5 rounded-xl bg-[#fff4d8] p-4 text-sm">This feature is currently hidden on the public Hub. Existing content remains manageable here.</p>}
     <HostEventProvider slug={slug} timeZone={event.timeZone} contentLive={publication.visibility === "published" && view !== "rsvps" && view !== "contacts" && event.features[view]}>{content}</HostEventProvider>
   </ContentShell>;

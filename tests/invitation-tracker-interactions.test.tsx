@@ -9,6 +9,8 @@ vi.mock("react", async original => {
 });
 vi.mock("../app/admin/invitations/actions", () => ({ changeInvitation: actions.change, refreshInvitationTracker: actions.refresh }));
 import { InvitationTrackerPanel } from "../components/admin/invitation-tracker";
+import { EventSetupNavigation } from "../components/admin/event-setup-navigation";
+import { EventGuestsNavigation } from "../components/admin/event-guests-navigation";
 import type { InvitationTracker, Invitee } from "../lib/invitation-tracker";
 const entry: Invitee = { id: "af4506d7-215a-4d08-9b39-f6c380f4a8f4", revision: 1, guestName: "Household", email: "host-entered@example.test", phone: null, invited: false, response: null };
 const response = { id: "bf4506d7-215a-4d08-9b39-f6c380f4a8f4", guestName: "RSVP name", attending: true, partySize: 2 };
@@ -28,6 +30,32 @@ beforeEach(() => { h.slots = []; h.cursor = 0; h.tasks = []; h.pending = false; 
 afterEach(() => vi.unstubAllGlobals());
 
 describe("private tracker interactions", () => {
+  it("guards both workspace navigation levels while editing or saving an invitation", async () => {
+    vi.stubGlobal("window", { confirm: vi.fn(() => false) });
+    const workspace = { id: entry.id, publishedBefore: true };
+    const component = () => InvitationTrackerPanel({ ...props, workspace });
+    const navigate = (type: typeof EventSetupNavigation | typeof EventGuestsNavigation) => {
+      const event = { defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+      (find(n => n.type === type)!.props.onNavigate as (e: typeof event) => void)(event);
+      return event.defaultPrevented;
+    };
+    render(component);
+    expect(navigate(EventSetupNavigation)).toBe(false);
+    click("+ Add invitee"); render(component);
+    for (const type of [EventSetupNavigation, EventGuestsNavigation]) expect(navigate(type)).toBe(true);
+    expect(window.confirm).toHaveBeenCalledWith("Leave without finishing this invitation entry?");
+    vi.mocked(window.confirm).mockReturnValue(true);
+    expect(navigate(EventSetupNavigation)).toBe(false);
+    // Fresh panel; pending mutations must block navigation without a confirmation.
+    h.slots = []; render(component); vi.mocked(window.confirm).mockClear();
+    let finish!: (value: unknown) => void;
+    actions.change.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+    click("Mark invited"); render(component);
+    expect(navigate(EventSetupNavigation)).toBe(true); expect(navigate(EventGuestsNavigation)).toBe(true);
+    expect(window.confirm).not.toHaveBeenCalled();
+    finish({ ok: true, data: initial }); await Promise.all(h.tasks); render(component);
+    expect(navigate(EventSetupNavigation)).toBe(false);
+  });
   it("ignores rapid repeated status clicks, disables controls in flight and uses saved data", async () => {
     actions.change.mockResolvedValue({ ok: true, data: { ...initial, invitees: [{ ...entry, invited: true, revision: 2 }] } });
     render(); click("Mark invited"); click("Mark invited");

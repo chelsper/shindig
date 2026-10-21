@@ -39,6 +39,10 @@ export function EventSetupOverview({ draft, artwork, settings, coordinates, live
     { title: "Share", status: published ? "Ready" : "After publishing", description: published ? "Your invitation, Event Hub links and downloadable QR codes are ready. They show the live version, not private edits." : "Invitation and Event Hub links, plus QR codes, become available after you publish. No invitations are sent automatically.", href: `${base}/publish${published ? "#share-event" : ""}`, action: published ? "Get links & QR codes" : archived ? "Restore & review" : "Review & publish" },
   ];
   const link = "inline-flex min-h-11 items-center text-sm font-semibold text-[#355f9e] underline underline-offset-4";
+  const publicationNotes = <>
+    <p className="mt-3 text-sm leading-6 text-[#202523]/75">{archived ? "Private and safely retained. Restore from Publish & share when you need this gathering again; restoring does not publish it." : published ? live.hasUnpublishedChanges ? "Unpublished changes. Guests still see your last published version of the details, artwork and settings. Saving those editors does not update live pages." : "Your saved draft matches the live version. New edits to details, artwork and settings stay private until you publish again." : live ? "This event is unpublished. Shared links are unavailable. Review and publish to make it live again." : "Only you can see this draft. Saving details, artwork or settings never makes them public."}</p>
+    <p className="mt-2 text-xs leading-5 text-[#202523]/65">Hub Content is managed separately: edits to already-live sections take effect immediately. Private preview never submits or publishes anything.</p>
+  </>;
   return <div className="space-y-6 pb-10">
     <EventSetupNavigation id={draft.id} current="setup" />
     {justSaved && <p role="status" className="rounded-2xl bg-[#e4eee1] p-4 text-sm leading-6 text-[#285630]">Draft saved privately. Let’s bring the rest together.</p>}
@@ -46,17 +50,23 @@ export function EventSetupOverview({ draft, artwork, settings, coordinates, live
     <section aria-label="Publication status" className="rounded-3xl border border-[#355f9e]/20 bg-[#e9f2f8]/65 p-5 sm:p-7">
       <p className="text-xs font-bold uppercase tracking-wider text-[#355f9e]">{eventStatus(live)}</p>
       <h2 className="mt-2 break-words font-serif text-3xl">{draft.title}</h2>
-      <p className="mt-3 text-sm leading-6 text-[#202523]/75">{archived ? "Private and safely retained. Restore from Publish & share when you need this gathering again; restoring does not publish it." : published ? live.hasUnpublishedChanges ? "Unpublished changes. Guests still see your last published version of the details, artwork and settings. Saving those editors does not update live pages." : "Your saved draft matches the live version. New edits to details, artwork and settings stay private until you publish again." : live ? "This event is unpublished. Shared links are unavailable. Review and publish to make it live again." : "Only you can see this draft. Saving details, artwork or settings never makes them public."}</p>
-      <p className="mt-2 text-xs leading-5 text-[#202523]/65">Hub Content is managed separately: edits to already-live sections take effect immediately. Private preview never submits or publishes anything.</p>
-      {live && <Link href={`${base}/guests`} className={`${link} mt-2`}>Manage saved guests &amp; content →</Link>}
+      {published ? <details className="mt-2"><summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-[#355f9e]">{live.hasUnpublishedChanges ? "Unpublished changes · review status" : "Publication & saved changes"}</summary>{publicationNotes}</details> : publicationNotes}
+      {live && <div className="mt-2 flex flex-wrap gap-x-5"><Link href={`${base}/guests`} className={link}>Manage saved guests &amp; content →</Link>{published && <Link href={`${base}/publish#share-event`} className={link}>Share your event →</Link>}</div>}
     </section>
-    {hosting}
+    {live && hosting}
     {!archived && <section aria-labelledby="setup-next-heading" className="px-1">
       <p className="text-xs font-bold uppercase tracking-wider text-[#355f9e]">Your next step</p>
       <h2 id="setup-next-heading" className="mt-2 font-serif text-2xl">{missing.length ? `${missing.length} ${missing.length === 1 ? "detail" : "details"} to finish` : published && !live.hasUnpublishedChanges ? "All set for your gathering" : "Ready for your final review"}</h2>
       {missing.length ? <ul className="mt-2 space-y-1">{missing.map(({ message, href }) => <li key={message}><Link href={href} className={link}>{message}</Link></li>)}</ul> : <p className="mt-2 text-sm leading-6 text-[#202523]/65">The saved essentials are ready. Nothing publishes automatically.</p>}
       <Link className="primary-button mt-4 inline-flex min-h-12 items-center px-5 text-sm" href={missing[0]?.href ?? `${base}/publish${published && !live.hasUnpublishedChanges ? "#share-event" : ""}`}>{missing.length ? "Continue setup →" : published && !live.hasUnpublishedChanges ? "Share your event →" : "Review & publish →"}</Link>
     </section>}
+    {published && <section aria-label="Edit saved event" className="rounded-2xl border border-[#202523]/10 bg-[#fffaf1]/70 p-5">
+      <h2 className="font-serif text-2xl">Need to change the plans?</h2>
+      <p className="mt-2 text-sm leading-6 text-[#202523]/65">Find your details, artwork, RSVP rules and Hub Content under Edit Event. Preview saved changes before publishing them.</p>
+      <Link className={link} href={base}>Edit event →</Link>
+      {live.hasUnpublishedChanges && content && <details className="mt-2"><summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-[#355f9e]">Review saved Hub readiness</summary><HubContentReadiness id={draft.id} content={content} features={settings.settings.features} /></details>}
+    </section>}
+    {!published && <>
     {content && <HubContentReadiness id={draft.id} content={content} features={settings.settings.features} />}
     <ol aria-label="Event setup checklist" className="divide-y divide-[#202523]/10 rounded-3xl border border-[#202523]/10 bg-[#fffaf1]/90 px-5 sm:px-7">
       {steps.map((step, index) => <li key={step.title} className="py-6">
@@ -65,6 +75,8 @@ export function EventSetupOverview({ draft, artwork, settings, coordinates, live
         <div className="mt-2 flex flex-wrap gap-x-5"><Link className={link} href={step.href}>{step.action} →</Link>{step.title === "Preview & publish" && <Link className={link} href={`${base}/publish`}>{archived ? "Restore event" : "Review & publish"} →</Link>}</div>
       </li>)}
     </ol>
+    </>}
+    {!live && hosting && <details className="rounded-2xl border border-[#202523]/10 bg-[#fffaf1]/70 p-5"><summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-[#355f9e]">Plan invitations &amp; hosting</summary><div className="mt-3">{hosting}</div></details>}
     <section className="px-1" aria-label="Reuse this setup"><h2 className="font-serif text-2xl">Another gathering like this?</h2><p className="mt-2 text-sm leading-6 text-[#202523]/65">Reuse the saved setup in a new private draft, with fresh dates and no guest activity.</p><Link className={link} href={duplicateEventPath(draft.id)}>Duplicate Event →</Link></section>
   </div>;
 }

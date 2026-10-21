@@ -1,5 +1,26 @@
 # Shindig
 
+## Consistent host workspace
+
+Host-created events share four primary destinations: **Overview**, **Edit Event**,
+**Guests**, and **Share**. The existing owner-checked routes remain unchanged.
+
+- Overview leads with setup for new drafts and hosting activity after first
+  publication. Published events no longer repeat the completed setup checklist.
+- Edit Event contains Details, Location, Artwork & design, RSVP & Hub,
+  Hub Content, and Private preview. Mobile editors retain their compact section
+  picker, Back/Next controls, and existing unsaved-change guards.
+- Guests groups Invitation Tracker, RSVP Responses, and Private Contacts.
+  These remain separate private datasets: invitation entries do not imply an
+  RSVP or permission for updates. Drafts can plan invitations; responses and
+  contacts become accessible after first publication and remain manageable if
+  the event is later unpublished or archived.
+- Share uses the existing explicit review/publish flow and live sharing tools.
+  Navigation never publishes, sends invitations, or changes RSVP records.
+
+No schema, environment, or package changes are needed. Jasper’s legacy admin
+tools and all guest-facing pages are unchanged.
+
 ## Private invitation tracker
 
 Apply **`db/migrations/026_private_invitation_tracker.sql` before deploying**.

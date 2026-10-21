@@ -1,5 +1,7 @@
 "use client";
-import { useRef, useState, useTransition, type FormEvent } from "react";
+import { useRef, useState, useTransition, type FormEvent, type MouseEvent } from "react";
+import { EventSetupNavigation } from "./event-setup-navigation";
+import { EventGuestsNavigation } from "./event-guests-navigation";
 import { changeInvitation, refreshInvitationTracker, type TrackerResult } from "../../app/admin/invitations/actions";
 import { filterInvitees, invitationReminder, invitationStatus, INVITATION_STATUS_LABELS, type InvitationChange, type InvitationFilter, type InvitationTracker, type Invitee, type TrackerResponse } from "../../lib/invitation-tracker";
 
@@ -50,7 +52,7 @@ function MatchResponse({ entry, data, pending, onSave, onCancel }: { entry: Invi
   </section>;
 }
 
-export function InvitationTrackerPanel({ initial, title, invitationUrl, eventSlug }: { initial: InvitationTracker; title: string; invitationUrl: string | null; eventSlug?: string }) {
+export function InvitationTrackerPanel({ initial, title, invitationUrl, eventSlug, workspace }: { initial: InvitationTracker; title: string; invitationUrl: string | null; eventSlug?: string; workspace?: { id: string; publishedBefore: boolean } }) {
   const [data, setData] = useState(initial), [filter, setFilter] = useState<InvitationFilter>("all"), [query, setQuery] = useState("");
   const [editor, setEditor] = useState<{ mode: "edit" | "link" | "remove"; entry: Invitee } | null>(null);
   const [notice, setNotice] = useState<string | null>(null), [fallback, setFallback] = useState<string | null>(null);
@@ -79,7 +81,11 @@ export function InvitationTrackerPanel({ initial, title, invitationUrl, eventSlu
     try { await navigator.clipboard.writeText(text); setFallback(null); setNotice("Copied. Paste into your own app — nothing has been sent or marked as invited."); }
     catch { setFallback(text); setNotice("Select and copy the text below. Nothing has been sent."); }
   }
+  function leave(event: MouseEvent<HTMLAnchorElement>) {
+    if (busy.current || (editor && !window.confirm("Leave without finishing this invitation entry?"))) event.preventDefault();
+  }
   return <div className="space-y-5 pb-8">
+    {workspace && <><EventSetupNavigation id={workspace.id} current="guests" onNavigate={leave} /><EventGuestsNavigation id={workspace.id} current="invitations" publishedBefore={workspace.publishedBefore} onNavigate={leave} /></>}
     <section className="rounded-2xl border border-[#355f9e]/15 bg-[#e9f2f8]/50 p-5 text-sm leading-6">
       <h2 className="font-semibold">Your list, just for this gathering</h2>
       <p className="mt-1">Keep track of invitations you send yourself. Names and contact details stay private to you; they never appear on the public guest list.</p>

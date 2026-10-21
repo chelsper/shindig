@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useActionState, useEffect, useState } from "react";
+import { FormEvent, type MouseEvent, useActionState, useEffect, useState } from "react";
 
 import {
   createAdminGuest,
@@ -13,6 +13,8 @@ import type { AdminRsvp } from "../../lib/server/rsvps";
 import { DashboardLink } from "./dashboard-link";
 import { createEventGuest, updateEventGuest, deleteEventGuest } from "../../app/admin/events/[id]/guests/actions";
 import { eventGuestsPath, type EventGuestFormContext } from "../../lib/admin-guests";
+import { EventSetupNavigation } from "./event-setup-navigation";
+import { EventGuestsNavigation } from "./event-guests-navigation";
 
 type AdminGuestFormProps = { event?: EventGuestFormContext } & (
   | { mode: "create"; rsvp?: never }
@@ -84,7 +86,8 @@ export function AdminGuestForm({ mode, rsvp, event }: AdminGuestFormProps) {
   const maxPartySize = event?.maxPartySize ?? 20;
   const defaultVisible = event?.guestListDefaultVisible ?? true;
   const [guestName, setGuestName] = useState(rsvp?.guestName ?? "");
-  const [partySize, setPartySize] = useState(rsvp?.partySize && rsvp.partySize > maxPartySize ? "" : String(rsvp?.partySize ?? 1));
+  const initialPartySize = rsvp?.partySize && rsvp.partySize > maxPartySize ? "" : String(rsvp?.partySize ?? 1);
+  const [partySize, setPartySize] = useState(initialPartySize);
   const [comment, setComment] = useState(rsvp?.comment ?? "");
   const [deleting, setDeleting] = useState(false);
   const [attending, setAttending] = useState(rsvp?.attending ?? true);
@@ -101,6 +104,10 @@ export function AdminGuestForm({ mode, rsvp, event }: AdminGuestFormProps) {
     initialState,
   );
   const busy = isPending || deleting;
+  const changed = guestName !== (rsvp?.guestName ?? "") || partySize !== initialPartySize || comment !== (rsvp?.comment ?? "") || attending !== (rsvp?.attending ?? true) || displayOnGuestList !== (rsvp?.displayOnGuestList ?? defaultVisible);
+  const leave = (navigation: MouseEvent<HTMLAnchorElement>) => {
+    if (busy || (changed && !window.confirm("Leave without saving this RSVP?"))) navigation.preventDefault();
+  };
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#f7f0e3] px-4 py-6 text-[#202523] sm:px-6 sm:py-9">
@@ -128,6 +135,7 @@ export function AdminGuestForm({ mode, rsvp, event }: AdminGuestFormProps) {
           {event && <p className="mt-2 text-xs leading-5 text-[#202523]/58">Saved guest changes appear immediately. No invitation or message is sent.</p>}
         </section>
 
+        {event && <><EventSetupNavigation id={event.id} current="guests" onNavigate={leave} /><EventGuestsNavigation id={event.id} current="rsvps" publishedBefore onNavigate={leave} /></>}
         <section className="rounded-[1.75rem] border border-[#202523]/10 bg-[#fffaf1]/90 p-5 shadow-[0_18px_50px_rgba(41,56,53,0.10)] sm:p-8">
           <form action={formAction} onReset={(reset) => reset.preventDefault()}>
             <fieldset disabled={busy}>

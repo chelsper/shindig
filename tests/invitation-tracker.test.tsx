@@ -70,8 +70,8 @@ describe("private invitation tracker routes", () => {
   it("uses published aliases and hides links for unpublished or archived events", async () => {
     mocks.publication.mockResolvedValue({ ...publication, publicAlias: "garden-supper" });
     const page = await EventPage({ params: Promise.resolve({ id: eventId }) });
-    const children = page.props.children as React.ReactElement<{ invitationUrl: string | null }>[];
-    expect(children[1].props.invitationUrl).toBe("https://www.haveashindig.com/e/garden-supper");
+    const panel = page.props.children as React.ReactElement<{ invitationUrl: string | null }>;
+    expect(panel.props.invitationUrl).toBe("https://www.haveashindig.com/e/garden-supper");
     for (const visibility of ["unpublished", "archived"]) {
       mocks.publication.mockResolvedValue({ ...publication, visibility });
       expect(renderToStaticMarkup(await EventPage({ params: Promise.resolve({ id: eventId }) }))).not.toContain("Copy invitation link");

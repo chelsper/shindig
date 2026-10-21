@@ -60,7 +60,7 @@ describe("mobile setup navigation", () => {
     expect(trigger().props["aria-expanded"]).toBe(false); expect(trigger().props["aria-controls"]).toBe("setup-sections");
     (trigger().props.onClick as () => void)(); render(); expect(trigger().props["aria-expanded"]).toBe(true);
     const focus = vi.fn(); (trigger().props.ref as { current: unknown }).current = { focus };
-    (find(el => el.type === "nav").props.onKeyDown as (e: { key: string }) => void)({ key: "Escape" }); render();
+    (find(el => typeof el.props.onKeyDown === "function").props.onKeyDown as (e: { key: string }) => void)({ key: "Escape" }); render();
     expect(trigger().props["aria-expanded"]).toBe(false); expect(focus).toHaveBeenCalledOnce();
   });
   it("runs the existing leave guard on every section, Back/Next and checklist link", () => {

@@ -64,13 +64,19 @@ describe("event guest editor and list", () => {
     expect(guestListQuery({ q: "a".repeat(300) }).q).toHaveLength(120);
   });
   it("queries filtered records in this scope without filtering headline totals", async () => {
-    await GuestPage({ params: Promise.resolve({ id: eventId }), searchParams: Promise.resolve({ filter: "declined", q: "  Test  " }) });
+    const page = await GuestPage({ params: Promise.resolve({ id: eventId }), searchParams: Promise.resolve({ filter: "declined", q: "  Test  " }) });
     expect(mocks.list).toHaveBeenCalledWith("declined", scope, "Test"); expect(mocks.summary).toHaveBeenCalledWith(scope);
+    const html = renderToStaticMarkup(page);
+    expect(html).toContain('aria-label="Event workspace"'); expect(html).toContain('aria-label="Guest management"');
+    for (const path of ["setup", "invitations", "publish", "guests?view=contacts", "guests?view=questions", "content"]) expect(html).toContain(`/admin/events/${eventId}/${path}`);
+    expect(html).toContain("More Hub tools"); expect(html).not.toContain('<details class="mb-6" open');
   });
   it("protects both editors before reading event or guest records", async () => {
     mocks.auth.mockResolvedValue(false);
     for (const guestId of [undefined, otherEventId]) await expect(EventGuestEditorPage({ id: eventId, guestId })).rejects.toThrow("REDIRECT");
+    await expect(GuestPage({ params: Promise.resolve({ id: eventId }), searchParams: Promise.resolve({}) })).rejects.toThrow("REDIRECT");
     expect(mocks.resolve).not.toHaveBeenCalled(); expect(mocks.guest).not.toHaveBeenCalled();
+    expect(mocks.list).not.toHaveBeenCalled(); expect(mocks.summary).not.toHaveBeenCalled();
   });
   it("scopes edit lookup, returning 404 when a guest belongs elsewhere", async () => {
     mocks.guest.mockResolvedValue(null);

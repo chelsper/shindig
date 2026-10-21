@@ -11,7 +11,7 @@ export function EventHostingOverview({ id, data, features, publication }: {
 }) {
   const base = `/admin/events/${id}`;
   if (!data) return <section aria-label="Hosting overview unavailable" className="rounded-3xl border border-[#355f9e]/20 bg-[#fffaf1]/90 p-5">
-    <h2 className="font-serif text-2xl">Hosting at a glance</h2><p className="mt-2 text-sm leading-6">Activity couldn’t load. Your event setup is still available below; no guest data has changed.</p>
+    <h2 className="font-serif text-2xl">Hosting at a glance</h2><p className="mt-2 text-sm leading-6">Activity couldn’t load. Your event setup is still available under Edit Event; no guest data has changed.</p>
     <a className={link} href={`${base}/setup`}>Refresh overview →</a>
   </section>;
   const { rsvps, potluck, questions, playlist, polls, updates } = data;
