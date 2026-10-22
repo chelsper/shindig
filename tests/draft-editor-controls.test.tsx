@@ -24,6 +24,7 @@ import { EventDraftArtworkEditor } from "../components/admin/event-draft-artwork
 import { EventDraftSettingsEditor } from "../components/admin/event-draft-settings-editor";
 import { DraftDesignControls } from "../components/admin/draft-design-controls";
 import { DraftArtworkFraming } from "../components/admin/draft-artwork-framing";
+import { DraftArtworkImageControls } from "../components/admin/draft-artwork-image-controls";
 import { DraftEditorActionBar } from "../components/admin/draft-editor-action-bar";
 import { EditorViewToggle } from "../components/admin/editor-view-toggle";
 import { EventDraftPreview } from "../components/admin/event-draft-preview";
@@ -39,7 +40,14 @@ function render() { harness.cursor = 0; tree = kind === "artwork" ? EventDraftAr
 function find(predicate: (el: Element) => boolean, value: ReactNode = tree): Element | undefined {
   if (Array.isArray(value)) { for (const child of value) { const found = find(predicate, child ?? null); if (found) return found; } }
   if (!isValidElement<Record<string, unknown>>(value)) return;
-  return predicate(value) ? value : find(predicate, value.props.children as ReactNode ?? null);
+  if (predicate(value)) return value;
+  if (value.type === DraftArtworkImageControls) {
+    // These controls now live in their own component. Expand only that boundary;
+    // keep the parent hooks stable while exercising the real child handlers.
+    harness.cursor = harness.slots.length;
+    return find(predicate, DraftArtworkImageControls(value.props as Parameters<typeof DraftArtworkImageControls>[0]));
+  }
+  return find(predicate, value.props.children as ReactNode ?? null);
 }
 function text(value: ReactNode): string {
   if (Array.isArray(value)) return value.map(text).join("");
@@ -51,6 +59,7 @@ function control(label: string) {
   if (!parent) throw new Error(`No label ${label}`);
   return find(el => ["input", "select", "textarea"].includes(el.type as string), parent)!;
 }
+function invitationUpload() { return find(el => el.type === "input" && el.props.id === "artwork-invitation-upload")!; }
 function change(label: string, value: string | boolean) {
   (control(label).props.onChange as (e: { target: { value?: string; checked?: boolean } }) => void)({ target: typeof value === "boolean" ? { checked: value } : { value } }); render();
 }
@@ -69,6 +78,7 @@ afterEach(() => vi.unstubAllGlobals());
 describe("Artwork & Design editor safeguards", () => {
   it("previews and saves a header adjustment separately from the invitation", async () => {
     load("artwork");
+    (find(el => el.type === "button" && text(el) === "Event Hub header")!.props.onClick as () => void)(); render();
     const framing = () => find(el => el.type === DraftArtworkFraming && el.props.kind === "header")!;
     const next = { ...art, header: { ...art.header, focalX: 20, focalY: 70, zoomPercent: 160 } };
     (framing().props.onChange as (value: DraftArtwork) => void)(next); render();
@@ -138,7 +148,7 @@ describe("Artwork & Design editor safeguards", () => {
     const close = vi.fn(); vi.stubGlobal("createImageBitmap", vi.fn().mockResolvedValue({ width: 800, height: 1200, close }));
     let finish!: (value: unknown) => void;
     const fetch = vi.fn().mockReturnValue(new Promise(resolve => { finish = resolve; })); vi.stubGlobal("fetch", fetch);
-    const upload = control("Upload invitation artwork").props.onChange as (e: unknown) => void;
+    const upload = invitationUpload().props.onChange as (e: unknown) => void;
     const file = new File(["test"], "flowers.png", { type: "image/png" });
     upload({ target: { files: [file], value: "flowers.png" } }); render();
     upload({ target: { files: [file], value: "flowers.png" } }); await submit();
@@ -155,7 +165,7 @@ describe("Artwork & Design editor safeguards", () => {
   it("leaves existing art untouched on upload failure or an unsafe returned path", async () => {
     load("artwork"); vi.stubGlobal("createImageBitmap", vi.fn().mockResolvedValue({ width: 800, height: 1200, close() {} }));
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ path: "https://unsafe.example/art.png" }) }));
-    (control("Upload invitation artwork").props.onChange as (e: unknown) => void)({ target: { files: [new File(["test"], "art.png", { type: "image/png" })], value: "art.png" } });
+    (invitationUpload().props.onChange as (e: unknown) => void)({ target: { files: [new File(["test"], "art.png", { type: "image/png" })], value: "art.png" } });
     await vi.waitFor(() => { render(); expect(bar().error).toBeTruthy(); });
     expect(find(el => el.type === EventDraftPreview)!.props.artwork).toEqual(art); expect(bar().dirty).toBe(false);
   });

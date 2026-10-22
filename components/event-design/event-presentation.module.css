@@ -6,6 +6,7 @@
 .invitation { padding: 9px; background: var(--design-decoration); border: 1px solid var(--design-rule); border-radius: 18px; }
 .invitationInner { padding: 18px; border: 1px solid var(--design-rule); border-radius: 12px; background: var(--design-surface); }
 .identity, .content { min-width: 0; }
+.typographicArt, .hubIdentity { position: relative; }
 .content { padding-top: 26px; }
 .content h1, .hubContent h1 { font: 42px/1.05 var(--design-heading-font); font-style: var(--design-title-style); font-weight: var(--design-title-weight); letter-spacing: -.04em; overflow-wrap: anywhere; margin: 12px 0 20px; }
 .eyebrow { color: var(--design-accent); text-transform: uppercase; letter-spacing: .18em; font-size: 11px; font-weight: 650; }

@@ -88,7 +88,7 @@ describe("independent inline draft artwork framing", () => {
   });
   it("disables drag, sliders, reset and size actions during a pending save or conflict", () => {
     const { props, tree, onChange, onDeviceChange } = setup({ disabled: true });
-    expect(renderToStaticMarkup(<DraftArtworkFraming {...props} />)).toContain('<fieldset disabled=""');
+    expect(renderToStaticMarkup(<DraftArtworkFraming {...props} />)).toMatch(/<fieldset[^>]*disabled=""/);
     expect(find(el => el.type === ArtworkCrop, tree)!.props.onChange).toBeUndefined();
     (find(el => el.type === "input", tree)!.props.onChange as (e: { target: { value: string } }) => void)({ target: { value: "140" } });
     (find(el => el.type === "button", tree)!.props.onClick as () => void)();

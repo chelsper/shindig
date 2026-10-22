@@ -1407,10 +1407,17 @@ The integration test rejects non-test database names and rolls back all test row
 
 After saving event basics, choose **Invitation & artwork** at `/admin/events/[id]`.
 The protected `/admin/events/[id]/artwork` editor supports separate invitation and
-Hub header images, accessible descriptions, header focal point/zoom, and a
-phone-width invitation/Hub preview. Invitations show the whole image; the header
-can reuse that image or use its own. Previewed artwork is not saved until **Save
-draft artwork**. Saved event basics supply the preview text and event-local date.
+Hub header images, accessible descriptions, focal point/zoom, and phone/desktop
+previews. Tap either preview image (or its keyboard-accessible **Edit** button)
+to open the matching **Editing invitation image** or **Editing Event Hub header**
+controls. On mobile, this returns to the edit panel and focuses the selected
+section. **Replace image**, **Reposition**, and **Reset crop** affect only the
+selected image; selecting an image alone does not change the draft. The original
+invitation layout stays uncropped; styled invitations support their own crop.
+The Hub can reuse invitation artwork with an independent crop or use a separate
+image. Phone and desktop header previews still share one saved crop.
+Previewed artwork is not saved until **Save draft** and does not go live until
+**Review & publish**. Saved event basics supply the preview text and local date.
 The preview has no working RSVP form, calendar, public URL or publish action.
 
 Setup for this step (separate from the deployed draft foundation):

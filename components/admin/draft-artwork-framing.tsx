@@ -5,9 +5,10 @@ import type { DesignPreviewDevice } from "../../lib/design-preview";
 import { draftImageUrl, type DraftArtwork, type DraftImageKind } from "../../lib/event-draft-artwork";
 import { ArtworkCrop } from "../design-studio/artwork-crop";
 
-export function DraftArtworkFraming({ id, settings, kind, device, disabled, onChange, onDeviceChange }: {
+export function DraftArtworkFraming({ id, settings, kind, device, disabled, onChange, onDeviceChange, showReset = true }: {
   id: string; settings: DraftArtwork; kind: DraftImageKind; device: DesignPreviewDevice; disabled: boolean;
   onChange: (next: DraftArtwork) => void; onDeviceChange: (device: DesignPreviewDevice) => void;
+  showReset?: boolean;
 }) {
   const header = kind === "header";
   const image = header && settings.header.path ? settings.header : settings.invitation;
@@ -24,7 +25,7 @@ export function DraftArtworkFraming({ id, settings, kind, device, disabled, onCh
   }
   // The original invitation is deliberately shown in full, without cropping.
   if (!header && !settings.design) return null;
-  return <fieldset disabled={disabled} className="mt-5 min-w-0 border-t border-[#202523]/10 pt-4">
+  return <fieldset id={`artwork-${kind}-framing`} tabIndex={-1} disabled={disabled} className="mt-5 min-w-0 scroll-mt-24 border-t border-[#202523]/10 pt-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#355f9e]">
     <legend className="pr-2 text-sm font-semibold">Adjust {header ? "header" : "invitation"} image</legend>
     {image.path ? <>
       <p className="mb-3 text-xs leading-5 text-[#202523]/65">{header
@@ -42,7 +43,7 @@ export function DraftArtworkFraming({ id, settings, kind, device, disabled, onCh
         <span className="flex justify-between gap-3">{name}<output>{crop[key]}%</output></span>
         <input aria-label={`${label} ${name.toLowerCase()}`} type="range" min={min} max={max} value={crop[key]} className="min-h-11 w-full accent-[#355f9e]" onChange={event => update({ ...crop, [key]: Number(event.target.value) })} />
       </label>)}</div>
-      <button type="button" onClick={() => update(defaultArtworkCrop())} className="min-h-11 text-xs text-[#355f9e] underline underline-offset-4">Reset {header ? "header" : "invitation"} crop</button>
+      {showReset && <button type="button" onClick={() => update(defaultArtworkCrop())} className="min-h-11 text-xs text-[#355f9e] underline underline-offset-4">Reset {header ? "header" : "invitation"} crop</button>}
     </> : <p className="text-sm leading-6 text-[#202523]/65">{header ? "Upload a header above, or add invitation artwork to use here. Then adjust its framing." : "Upload invitation artwork above to adjust its framing."}</p>}
   </fieldset>;
 }

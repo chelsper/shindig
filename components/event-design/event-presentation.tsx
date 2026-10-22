@@ -7,7 +7,7 @@ import styles from "./event-presentation.module.css";
 
 export type PresentationDetails = { title: string; eyebrow: string; date: string; time: string; venue: string; address: string; description: string };
 type Image = { url: string; alt: string; crop: ArtworkCrop };
-type Props = { appearance: EventAppearance; details: PresentationDetails; image: Image; children?: ReactNode; actions?: ReactNode; guestTools?: ReactNode; hubEyebrow?: string; preview?: boolean };
+type Props = { appearance: EventAppearance; details: PresentationDetails; image: Image; children?: ReactNode; actions?: ReactNode; guestTools?: ReactNode; hubEyebrow?: string; preview?: boolean; artworkAction?: ReactNode };
 
 export function EventDesignSurface({ appearance, children, fullHeight = false }: { appearance: EventAppearance; children: ReactNode; fullHeight?: boolean }) {
   const design = resolveEventAppearance(appearance);
@@ -16,9 +16,10 @@ export function EventDesignSurface({ appearance, children, fullHeight = false }:
 export function EventGuestContent({ children }: { children: ReactNode }) {
   return <div className={styles.guestContent}>{children}</div>;
 }
-export function EventArtwork({ image, view }: { image: Image; view: "invitation" | "hub" }) {
+export function EventArtwork({ image, view, children }: { image: Image; view: "invitation" | "hub"; children?: ReactNode }) {
   return <div className={`${styles.image} ${view === "invitation" ? styles.invitationImage : styles.hubImage}`}>
     <img src={image.url} alt={image.alt} style={artworkImageStyle(image.crop)} />
+    {children}
   </div>;
 }
 function Details({ details }: { details: PresentationDetails }) {
@@ -27,12 +28,12 @@ function Details({ details }: { details: PresentationDetails }) {
     <div><dt>Where</dt><dd>{details.venue}</dd>{details.address && <dd>{details.address}</dd>}</div>
   </dl>;
 }
-export function DesignedInvitation({ appearance, details, image, children, actions, guestTools, preview }: Props) {
+export function DesignedInvitation({ appearance, details, image, children, actions, guestTools, preview, artworkAction }: Props) {
   return <EventDesignSurface appearance={appearance} fullHeight={!preview}><div className={styles.page}>
     <div className={styles.wordmark}><span>Shindig.</span><div className={styles.guestContent}>{preview ? "Private preview" : actions}</div></div>
     {!preview && guestTools && <EventGuestContent>{guestTools}</EventGuestContent>}
     <div className={styles.invitation}><div className={styles.invitationInner}>
-      <div className={styles.identity}>{image.url ? <EventArtwork image={image} view="invitation" /> : <div className={styles.typographicArt} aria-hidden="true"><span>✳</span>Good people.<br />A little time together.</div>}</div>
+      <div className={styles.identity}>{image.url ? <EventArtwork image={image} view="invitation">{preview && artworkAction}</EventArtwork> : <div className={styles.typographicArt} aria-hidden={preview && artworkAction ? undefined : true}><span>✳</span>Good people.<br />A little time together.{preview && artworkAction}</div>}</div>
       <div className={styles.content}>
         <p className={styles.eyebrow}>{details.eyebrow}</p><h1>{details.title}</h1>
         <Details details={details} />
@@ -42,12 +43,12 @@ export function DesignedInvitation({ appearance, details, image, children, actio
     </div></div><p className={styles.footer}>Good people. Great gatherings.</p>
   </div></EventDesignSurface>;
 }
-export function DesignedHub({ appearance, details, image, children, actions, guestTools, hubEyebrow, preview }: Props) {
+export function DesignedHub({ appearance, details, image, children, actions, guestTools, hubEyebrow, preview, artworkAction }: Props) {
   return <EventDesignSurface appearance={appearance} fullHeight={!preview}><div className={`${styles.page} ${styles.hubPage}`}>
     <div className={styles.wordmark}><span>Shindig.</span><span>{preview ? "Private preview" : "Good people. Great gatherings."}</span></div>
     {!preview && guestTools && <EventGuestContent>{guestTools}</EventGuestContent>}
     <header className={styles.hubHeader}>
-      {image.url ? <EventArtwork image={image} view="hub" /> : <div className={styles.hubIdentity} aria-hidden="true">A reason to gather <span>✳</span></div>}
+      {image.url ? <EventArtwork image={image} view="hub">{preview && artworkAction}</EventArtwork> : <div className={styles.hubIdentity} aria-hidden={preview && artworkAction ? undefined : true}>A reason to gather <span>✳</span>{preview && artworkAction}</div>}
       <div className={styles.hubContent}><div><p className={styles.eyebrow}>{hubEyebrow ?? "The Event Hub"}</p><h1>{details.title}</h1><p className={styles.hosts}>{details.eyebrow}</p></div><Details details={details} />
         <div className={`${styles.actions} ${styles.guestContent}`}>{actions}</div>
       </div>
