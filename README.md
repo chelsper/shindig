@@ -1,5 +1,69 @@
 # Shindig
 
+## Per-host saved-event limit
+
+Hosts have **10 saved event spaces by default**. A draft, live, unpublished or
+archived event uses one space; publishing a draft does not use another. Copies
+use a space too. Usage is private and scoped to the signed-in owner. The separate
+password-protected workspace has its own limit for created events; the original
+Jasper/Oyster Roast is not a stored `events` row and remains outside this count.
+
+`Your events` shows usage and explains when no spaces remain. New-event and copy
+pages stop before offering a form when full or usage is unavailable. All writes
+are checked again server-side, including forms already open in another tab.
+Existing events, editing, publication, RSVPs, exports, and permanent deletion
+remain available even if an operator lowers the limit below current usage.
+Archiving/unpublishing does not free a space; permanent event deletion does.
+Export only what you need before deleting; the RSVP CSV is not a complete backup.
+
+Migration 028 was applied to Shindig's production `neondb` on October 27, 2026.
+The admission function was verified present, and all 23 checked event/guest
+tables retained identical row counts and content checksums. No production test
+events were created or deleted. Production uses the default 10-event limit.
+
+### Deployment in another environment
+
+1. Apply `db/migrations/028_host_event_limits.sql` to the intended Neon database
+   after migrations 001–027, **before deploying**. It adds a rerunnable admission
+   function only: no rows are deleted, seeded, reassigned or rewritten.
+2. Optionally set server-only `HOST_EVENT_LIMIT=10` in Vercel for the intended
+   environment. Accepted values are whole numbers 1–1000. Missing defaults to 10;
+   empty/invalid values pause new creation/copies, not existing-event editing.
+   Change this setting and redeploy to adjust the cap. It is a shared policy
+   applied separately to each host, not a per-account plan or billing system.
+3. Keep Google, database, Blob and registration settings unchanged. This does not
+   open public registration. No new dependencies or external services are needed.
+4. After deployment, use disposable test events/accounts to check creation and
+   copying at the cap. Do not delete real events to test the limit.
+
+Both creation paths call `shindig_check_event_capacity` in the same SQL statement
+as the insert. A per-owner transaction advisory lock serializes competing drafts
+and copies. A VOLATILE PL/pgSQL function takes a fresh READ COMMITTED snapshot after
+waiting, so the second request sees the first committed event. Identical creation
+and completed-copy retries remain idempotent at the cap. Copying checks usage
+before private artwork work and checks atomically again afterward. Failed database
+writes roll back without consuming a space. This limit does **not** implement an
+artwork storage quota or rapid-action throttling; copied files from failed copies
+still follow the existing private-storage lifecycle.
+
+Tests cover policy parsing, ownership, archived/live counts, lowered limits,
+deletion freeing a space, duplicate retries, copy rollback, failures and private
+UI states. `tests/host-event-limits-postgres.test.ts` supports disposable PGlite
+via `SHINDIG_TEST_PGLITE`. For the independent-connection race test, use a fresh
+database named `shindig_host_limits_test` on a local Unix-socket-only PostgreSQL
+instance (port 55449) and set `SHINDIG_TEST_HOST_LIMITS_PG_SOCKET` to its
+`/private/tmp/shindig-host-limits-pg.<id>` socket directory. It refuses a nonempty
+database. It installs all migrations into that isolated test database; **never
+point it at production**. PGlite alone does not verify lock-wait concurrency.
+
+Verified locally on October 27, 2026: lint, typecheck and production build pass;
+133 test files / 2,018 tests pass with PGlite and QR fixtures. The two native-only
+cases are skipped in that run and were verified separately: all 11 host-limit
+tests and all 12 existing RSVP-limit tests passed against isolated PostgreSQL 18.
+The latter's native-only row serializer was corrected to preserve a column named
+`result`; no production RSVP implementation changed. Mobile previews were checked
+at 320px and 390px, plus desktop at 1280px, without horizontal overflow.
+
 ## Host Account & Privacy
 
 Migration 027 was applied to Shindig's production `neondb` on October 27, 2026.

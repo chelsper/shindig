@@ -9,6 +9,8 @@ import { getDraftSettings } from "./event-draft-settings";
 import { getInvitationSettings } from "./invitation-settings";
 import { getEventHubHeaderSettings } from "./event-hub-settings";
 import { copyEventArtwork, type CopyArtworkSource } from "./duplicate-artwork";
+import { getHostEventUsage, rethrowHostEventLimit } from "./host-event-limits";
+import { HostEventLimitError } from "../host-event-limits";
 import { validateEventDraft, type EventDraftFields } from "../event-drafts";
 import { DEFAULT_DRAFT_SETTINGS, validateDraftSettings, type DraftSettings } from "../event-draft-settings";
 import { resolveEventConfiguration } from "../invitation-settings";
@@ -81,6 +83,14 @@ export async function duplicateEventRecord(value: unknown): Promise<string> {
   const source = await getDuplicationSource(input.source);
   if (!source) throw new EventDuplicationError("The source event is no longer available. Return to your events.");
   if (source.fingerprint !== input.fingerprint) throw new EventDuplicationError("The source setup changed. Reopen Duplicate Event to review the latest saved version.");
+  // Avoid copying private files when already full. This is only a preflight;
+  // atomic admission below rechecks capacity after any concurrent creations.
+  const usage = await getHostEventUsage();
+  if (usage.used >= usage.limit) {
+    const completed = await receipt(input);
+    if (completed?.eventId) return completed.eventId;
+    throw new HostEventLimitError(usage.limit);
+  }
   const sql = database();
   // Bind ID + source + version + requested name before touching private storage.
   await sql`INSERT INTO event_duplication_requests (id, source_key, source_fingerprint, requested_title, owner_host_id)
@@ -98,9 +108,11 @@ export async function duplicateEventRecord(value: unknown): Promise<string> {
       SELECT id FROM event_duplication_requests WHERE id = ${input.requestId}::uuid AND completed_event_id IS NULL
         AND owner_host_id IS NOT DISTINCT FROM ${principal.ownerId}::text
         AND source_key = ${input.source} AND source_fingerprint = ${input.fingerprint} AND requested_title = ${input.title} FOR UPDATE
+    ), admission AS MATERIALIZED (
+      SELECT id FROM request WHERE shindig_check_event_capacity(${principal.ownerId}::text, id, ${usage.limit}::integer)
     ), created AS (
       INSERT INTO events (id, status, title, description, host_name, venue, address, city_label, time_zone, starts_at, ends_at, owner_host_id)
-      SELECT id, 'draft', ${f.title}, ${f.description}, ${f.hostName}, ${f.venue}, ${f.address}, ${f.cityLabel}, ${f.timeZone}, NULL, NULL, ${principal.ownerId}::text FROM request
+      SELECT id, 'draft', ${f.title}, ${f.description}, ${f.hostName}, ${f.venue}, ${f.address}, ${f.cityLabel}, ${f.timeZone}, NULL, NULL, ${principal.ownerId}::text FROM admission
       ON CONFLICT (id) DO NOTHING RETURNING id
     ), artwork AS (
       INSERT INTO event_draft_artwork (event_id, settings) SELECT id, ${JSON.stringify(artwork)}::jsonb FROM created RETURNING event_id
@@ -110,7 +122,7 @@ export async function duplicateEventRecord(value: unknown): Promise<string> {
       FROM created WHERE ${source.settingsSaved} RETURNING event_id
     ) UPDATE event_duplication_requests r SET completed_event_id = created.id, completed_at = now()
       FROM created, artwork WHERE r.id = created.id AND artwork.event_id = created.id
-        AND (NOT ${source.settingsSaved} OR EXISTS (SELECT 1 FROM settings WHERE event_id = created.id)) RETURNING r.completed_event_id AS id`;
+        AND (NOT ${source.settingsSaved} OR EXISTS (SELECT 1 FROM settings WHERE event_id = created.id)) RETURNING r.completed_event_id AS id`.catch(error => rethrowHostEventLimit(error, usage.limit));
   if (rows[0]?.id) return rows[0].id as string;
   const completed = await receipt(input);
   if (completed?.eventId) return completed.eventId;

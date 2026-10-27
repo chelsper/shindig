@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 vi.mock("../lib/server/event-dashboard", () => ({ listHostEventCards: mocks.cards }));
 vi.mock("../lib/server/invitation-settings", () => ({ getEventConfiguration: mocks.legacy }));
-const mocks = vi.hoisted(() => ({ auth: vi.fn(), account: vi.fn(), save: vi.fn(), get: vi.fn(), artwork: vi.fn(), settings: vi.fn(), list: vi.fn(), cards: vi.fn(), legacy: vi.fn(), revalidate: vi.fn(), redirect: vi.fn(), notFound: vi.fn(), replace: vi.fn() }));
+const mocks = vi.hoisted(() => ({ usage: vi.fn(), auth: vi.fn(), account: vi.fn(), save: vi.fn(), get: vi.fn(), artwork: vi.fn(), settings: vi.fn(), list: vi.fn(), cards: vi.fn(), legacy: vi.fn(), revalidate: vi.fn(), redirect: vi.fn(), notFound: vi.fn(), replace: vi.fn() }));
+vi.mock("../lib/server/host-event-limits", () => ({ getHostEventUsage: mocks.usage }));
 vi.mock("../lib/server/event-draft-artwork", () => ({ getDraftArtwork: mocks.artwork }));
 vi.mock("../lib/server/event-draft-settings", () => ({ getDraftSettings: mocks.settings }));
 vi.mock("../lib/server/admin-session", () => ({ isAdminAuthenticated: mocks.auth }));
@@ -21,6 +22,7 @@ import { OYSTER_ROAST_EVENT } from "../lib/oyster-roast-event";
 import type { HostEventCard } from "../lib/event-dashboard";
 import { EMPTY_DRAFT_ARTWORK } from "../lib/event-draft-artwork";
 import { DEFAULT_DRAFT_SETTINGS } from "../lib/event-draft-settings";
+import { HostEventLimitError } from "../lib/host-event-limits";
 
 const id = "5199b7de-d731-4bb1-8e55-3380e2f0e365";
 const fields = { ...EMPTY_EVENT_DRAFT, title: "Birthday", startsAtLocal: "2026-11-07T17:00", endsAtLocal: "" };
@@ -37,6 +39,7 @@ const props = { params: Promise.resolve({ id }), searchParams: Promise.resolve({
 beforeEach(() => {
   vi.resetAllMocks(); mocks.auth.mockResolvedValue(true); mocks.save.mockResolvedValue({ id, revision: 1 }); mocks.get.mockResolvedValue(draft); mocks.list.mockResolvedValue([]);
   mocks.cards.mockResolvedValue([]); mocks.legacy.mockResolvedValue(OYSTER_ROAST_EVENT);
+  mocks.usage.mockResolvedValue({ used: 1, limit: 10 });
   mocks.artwork.mockResolvedValue({ settings: EMPTY_DRAFT_ARTWORK, revision: 0 });
   mocks.settings.mockResolvedValue({ settings: DEFAULT_DRAFT_SETTINGS, revision: 0 });
   mocks.redirect.mockImplementation(() => { throw new Error("redirect"); }); mocks.notFound.mockImplementation(() => { throw new Error("not found"); });
@@ -45,6 +48,33 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("private event draft actions and pages", () => {
+  it("shows usage, blocks only new creation at the limit and keeps saved-event links", async () => {
+    mocks.usage.mockResolvedValue({ used: 12, limit: 10 });
+    mocks.cards.mockResolvedValue([card("Existing gathering", "published")]);
+    const html = renderToStaticMarkup(await EventsPage({}));
+    expect(html).toContain("12 of 10 event spaces used");
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>\+ Create event/);
+    for (const text of ["Edit event", "Manage guests", "View live", "Share", "Privacy &amp; data", "original Oyster Roast"]) expect(html).toContain(text);
+    const newHtml = renderToStaticMarkup(await NewPage({}));
+    expect(newHtml).not.toContain("Save draft"); expect(newHtml).toContain("Back to your events");
+    expect(renderToStaticMarkup(await EditPage(props))).toContain('value="Private party"');
+    expect(mocks.save).not.toHaveBeenCalled();
+  });
+  it("keeps saved events accessible when usage cannot be checked, without claiming zero usage", async () => {
+    mocks.usage.mockRejectedValue(new Error("postgresql://secret"));
+    mocks.cards.mockResolvedValue([card("Saved gathering")]);
+    for (const page of [await EventsPage({}), await NewPage({})]) {
+      const html = renderToStaticMarkup(page);
+      expect(html).toContain("Event availability couldn’t be checked");
+      expect(html).not.toMatch(/0 of|postgresql|Save draft/);
+    }
+    expect(renderToStaticMarkup(await EventsPage({}))).toContain("Saved gathering");
+  });
+  it("returns actionable capacity guidance without pretending a new draft was saved", async () => {
+    mocks.save.mockRejectedValue(new HostEventLimitError(10));
+    expect(await saveEventDraft({ id, revision: 0, fields })).toEqual({ ok: false, message: new HostEventLimitError(10).message });
+    expect(mocks.revalidate).not.toHaveBeenCalled();
+  });
   it("carries only a canonical playground style into a new private draft", async () => {
     const page = await NewPage({ searchParams: Promise.resolve({ style: "coastal" }) });
     expect(page.props.requestedDesign).toBe("coastal");

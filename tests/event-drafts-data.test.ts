@@ -48,7 +48,9 @@ describe("host-only draft storage", () => {
     const [query, ...values] = mocks.sql.mock.calls[0];
     expect(query.join("?")).toContain("ON CONFLICT (id) DO NOTHING");
     expect(query.join("?")).toContain("'draft'");
-    expect(values).toEqual([id, "Birthday", "", "", "", "", "", "America/New_York", null, null, null]);
+    expect(query.join("?")).toContain("shindig_check_event_capacity");
+    expect(query.join("?")).toContain("FROM admission WHERE allowed");
+    expect(values).toEqual([null, id, 10, id, "Birthday", "", "", "", "", "", "America/New_York", null, null, null]);
     expect(query.join("?")).not.toMatch(/rsvps|invitation_settings|published/);
   });
   it("acknowledges duplicate creation only when all saved fields match", async () => {

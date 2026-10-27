@@ -46,6 +46,7 @@ describe.skipIf(!modulePath)("private RSVP contact storage on PostgreSQL", () =>
     const { PGlite } = await import(/* @vite-ignore */ modulePath); db = new PGlite();
     for (const file of (await readdir("db/migrations")).filter(f => f.endsWith(".sql")).sort()) await db.exec(await readFile(`db/migrations/${file}`, "utf8"));
     vi.stubEnv("DATABASE_URL", "postgresql://unused@localhost/disposable_contacts");
+    vi.stubEnv("HOST_EVENT_LIMIT", "1000"); // This suite retains many unrelated fixture events.
   }, 30000);
   beforeEach(() => { state.auth = true; state.fail = false; });
   afterAll(async () => { await db?.close(); vi.unstubAllEnvs(); });

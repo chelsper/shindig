@@ -49,7 +49,9 @@ async function query(parts: TemplateStringsArray, ...values: unknown[]) {
   if (state.failure) throw new Error("Synthetic database unavailable: private details must stay private");
   const statement = parts.reduce((text, part, i) => text + part + (i < values.length ? db ? `$${i + 1}` : literal(values[i]) : ""), "");
   queries.push(statement);
-  return db ? (await db.query(statement, values)).rows : JSON.parse(await native(`WITH result AS (${statement}) SELECT coalesce(json_agg(result),'[]') FROM result`));
+  // A returned column can also be named "result". Use a distinct row alias so
+  // native Postgres serializes the whole row, just like the Neon driver does.
+  return db ? (await db.query(statement, values)).rows : JSON.parse(await native(`WITH result AS (${statement}) SELECT coalesce(json_agg(row_to_json(native_row)),'[]') FROM result AS native_row`));
 }
 async function event(limits: RsvpLimits = {}) {
   const id = randomUUID(), slug = `event-${id}`;
@@ -79,6 +81,7 @@ describe.skipIf(!embeddedModule && !socket)("real PostgreSQL RSVP deadlines and 
       const sql = await readFile(`db/migrations/${file}`, "utf8"); if (db) await db.exec(sql); else await native(sql);
     }
     vi.stubEnv("DATABASE_URL", "postgresql://unused@localhost/shindig_limits_test");
+    vi.stubEnv("HOST_EVENT_LIMIT", "1000"); // This suite retains many unrelated fixture events.
   }, 30000);
   beforeEach(() => { state.auth = true; state.failure = false; queries.length = 0; });
   afterAll(async () => { await db?.close(); vi.unstubAllEnvs(); });

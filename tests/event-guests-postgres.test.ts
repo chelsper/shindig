@@ -80,6 +80,7 @@ describe.skipIf(!socket && !embeddedModule)("real local publish → RSVP → hos
       expect(await sql("SHOW standard_conforming_strings")).toBe("on");
     }
     vi.stubEnv("DATABASE_URL", "postgresql://unused@localhost/shindig_drafts_test");
+    vi.stubEnv("HOST_EVENT_LIMIT", "1000"); // This suite retains many unrelated fixture events.
     legacyBefore = await getRsvpSummary(OYSTER_ROAST_SCOPE);
   }, 30000);
   afterAll(async () => {

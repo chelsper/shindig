@@ -53,6 +53,7 @@ describe.skipIf(!embeddedModule)("real PostgreSQL private event duplication", ()
     db = new PGlite();
     for (const file of (await readdir("db/migrations")).filter((name) => name.endsWith(".sql")).sort()) await db.exec(await readFile(`db/migrations/${file}`, "utf8"));
     vi.stubEnv("DATABASE_URL", "postgresql://unused@localhost/duplication_test");
+    vi.stubEnv("HOST_EVENT_LIMIT", "1000"); // Capacity boundaries are covered in host-event-limits-postgres.
   }, 30000);
   afterAll(async () => { if (db) await db.close(); vi.unstubAllEnvs(); });
   beforeEach(() => {

@@ -39,6 +39,7 @@ describe.skipIf(!modulePath)("Bring something PostgreSQL boundaries", () => {
     const { PGlite } = await import(/* @vite-ignore */ modulePath); db = new PGlite();
     for (const file of (await readdir("db/migrations")).filter(n => n.endsWith(".sql")).sort()) await db.exec(await readFile(`db/migrations/${file}`, "utf8"));
     vi.stubEnv("DATABASE_URL", "postgresql://unused@localhost/potluck_test");
+    vi.stubEnv("HOST_EVENT_LIMIT", "1000"); // This suite retains many unrelated fixture events.
   }, 30000);
   beforeEach(() => { state.auth = true; state.fail = false; });
   afterAll(async () => { if (db) await db.close(); vi.unstubAllEnvs(); });

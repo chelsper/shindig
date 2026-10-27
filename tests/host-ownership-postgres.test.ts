@@ -55,6 +55,7 @@ describe.skipIf(!embedded)("host ownership with real PostgreSQL", () => {
     for (const file of (await readdir("db/migrations")).filter((f) => f.endsWith(".sql")).sort()) await db.exec(await readFile(`db/migrations/${file}`, "utf8"));
     await db.exec(`INSERT INTO host_users(id,name,email,"emailVerified") VALUES ('alice','Alice','alice@example.test',true),('bob','Bob','bob@example.test',true)`);
     vi.stubEnv("DATABASE_URL", "postgresql://unused@localhost/ownership_test");
+    vi.stubEnv("HOST_EVENT_LIMIT", "1000"); // This suite retains many unrelated fixture events.
     vi.stubEnv("EVENT_DRAFT_BLOB_READ_WRITE_TOKEN", "synthetic-private-store");
   }, 30000);
   beforeEach(() => { as("alice"); state.blob.mockReset(); });

@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { isHostAuthenticated } from "../../../../lib/server/host-access";
 import { duplicateEventRecord } from "../../../../lib/server/event-duplication";
+import { HostEventLimitError } from "../../../../lib/host-event-limits";
 import { EventDuplicationError, validateDuplicateEventInput } from "../../../../lib/event-duplication";
 
 export async function duplicateEvent(input: unknown): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
@@ -14,7 +15,7 @@ export async function duplicateEvent(input: unknown): Promise<{ ok: true; id: st
     revalidatePath(`/admin/events/${id}`, "layout");
     return { ok: true, id };
   } catch (error) {
-    if (error instanceof EventDuplicationError) return { ok: false, message: error.message };
+    if (error instanceof EventDuplicationError || error instanceof HostEventLimitError) return { ok: false, message: error.message };
     console.error("Event copy could not be confirmed.");
     return { ok: false, message: "We couldn’t confirm the copy. Retry here safely to check or finish the same copy. Your original event hasn’t changed." };
   }

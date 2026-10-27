@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { isHostAuthenticated } from "../../../lib/server/host-access";
 import { saveEventDraftRecord } from "../../../lib/server/event-drafts";
+import { HostEventLimitError } from "../../../lib/host-event-limits";
 import { isDraftId, isDraftRevision, validateDraftForm } from "../../../lib/event-drafts";
 
 export type SaveDraftResult = { ok: true; id: string; revision: number } | { ok: false; message: string; conflict?: boolean };
@@ -20,7 +21,8 @@ export async function saveEventDraft(input: unknown): Promise<SaveDraftResult> {
     revalidatePath("/admin/events");
     revalidatePath(`/admin/events/${saved.id}`, "layout");
     return { ok: true, ...saved };
-  } catch {
+  } catch (error) {
+    if (error instanceof HostEventLimitError) return { ok: false, message: error.message };
     console.error("Event draft save could not be confirmed.");
     return { ok: false, message: "We couldn’t confirm your draft was saved. Your changes are still here; please try again shortly." };
   }

@@ -2,6 +2,7 @@ import "server-only";
 import { neon } from "@neondatabase/serverless";
 import { parseEventLocation } from "../event-location";
 import { requireHostPrincipal } from "./host-access";
+import { getHostEventLimit, rethrowHostEventLimit } from "./host-event-limits";
 import { isDraftId, isDraftRevision, validateEventDraft, type EventDraft, type EventDraftFields, type EventDraftSummary } from "../event-drafts";
 
 async function adminDatabase() {
@@ -45,9 +46,13 @@ export async function saveEventDraftRecord(id: string, revision: number, input: 
   if (!isDraftId(id) || !isDraftRevision(revision) || !parsed.ok) throw new Error("Invalid event draft.");
   const f = parsed.fields;
   if (revision === 0) {
-    const rows = await sql`INSERT INTO events (id, status, title, description, host_name, venue, address, city_label, time_zone, starts_at, ends_at, owner_host_id)
-      VALUES (${id}::uuid, 'draft', ${f.title}, ${f.description}, ${f.hostName}, ${f.venue}, ${f.address}, ${f.cityLabel}, ${f.timeZone}, ${f.startsAtUtc}::timestamptz, ${f.endsAtUtc}::timestamptz, ${principal.ownerId}::text)
-      ON CONFLICT (id) DO NOTHING RETURNING id, revision`;
+    const limit = getHostEventLimit();
+    const rows = await sql`WITH admission AS MATERIALIZED (
+        SELECT shindig_check_event_capacity(${principal.ownerId}::text, ${id}::uuid, ${limit}::integer) AS allowed
+      ) INSERT INTO events (id, status, title, description, host_name, venue, address, city_label, time_zone, starts_at, ends_at, owner_host_id)
+      SELECT ${id}::uuid, 'draft', ${f.title}, ${f.description}, ${f.hostName}, ${f.venue}, ${f.address}, ${f.cityLabel}, ${f.timeZone}, ${f.startsAtUtc}::timestamptz, ${f.endsAtUtc}::timestamptz, ${principal.ownerId}::text
+      FROM admission WHERE allowed
+      ON CONFLICT (id) DO NOTHING RETURNING id, revision`.catch(error => rethrowHostEventLimit(error, limit));
     if (rows.length) return { id: rows[0].id, revision: rows[0].revision };
     // A retry after a lost response can acknowledge the identical saved draft,
     // but never overwrite a newer/different draft using the creation request.

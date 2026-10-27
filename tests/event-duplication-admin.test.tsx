@@ -1,7 +1,8 @@
 vi.mock("server-only", () => ({}));
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-const mocks = vi.hoisted(() => ({ auth: vi.fn(), source: vi.fn(), copy: vi.fn(), revalidate: vi.fn(), redirect: vi.fn(), notFound: vi.fn(), replace: vi.fn() }));
+const mocks = vi.hoisted(() => ({ usage: vi.fn(), auth: vi.fn(), source: vi.fn(), copy: vi.fn(), revalidate: vi.fn(), redirect: vi.fn(), notFound: vi.fn(), replace: vi.fn() }));
+vi.mock("../lib/server/host-event-limits", () => ({ getHostEventUsage: mocks.usage }));
 vi.mock("../lib/server/admin-session", () => ({ isAdminAuthenticated: mocks.auth }));
 vi.mock("../lib/server/event-duplication", () => ({ getDuplicationSource: mocks.source, duplicateEventRecord: mocks.copy }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
@@ -10,17 +11,28 @@ import Page, { dynamic, metadata } from "../app/admin/events/duplicate/[source]/
 import { duplicateEvent } from "../app/admin/events/duplicate/actions";
 import { EventDuplicateForm } from "../components/admin/event-duplicate-form";
 import { EventDuplicationError } from "../lib/event-duplication";
+import { HostEventLimitError } from "../lib/host-event-limits";
 import { draft, eventId, otherEventId, snapshot } from "./fixtures/publication";
 const input = { source: eventId, requestId: otherEventId, fingerprint: "a".repeat(64), title: " A new party ", confirmed: true };
 const props = { params: Promise.resolve({ source: eventId }) };
 beforeEach(() => {
   vi.resetAllMocks(); mocks.auth.mockResolvedValue(true); mocks.copy.mockResolvedValue(otherEventId);
+  mocks.usage.mockResolvedValue({ used: 1, limit: 10 });
   mocks.source.mockResolvedValue({ key: eventId, details: draft, settings: snapshot.settings, settingsSaved: true, fingerprint: input.fingerprint, images: { invitation: { locator: "private-sensitive-path", alt: "Private" }, header: null } });
   mocks.redirect.mockImplementation(() => { throw new Error("redirect"); }); mocks.notFound.mockImplementation(() => { throw new Error("not found"); });
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 afterEach(() => vi.restoreAllMocks());
 describe("host-only duplication screen and action", () => {
+  it("stops at a friendly capacity screen before offering a new copy", async () => {
+    mocks.usage.mockResolvedValue({ used: 10, limit: 10 });
+    const html = renderToStaticMarkup(await Page(props));
+    expect(html).toContain("10 of 10 event spaces used");
+    expect(html).not.toContain("Create private copy"); expect(mocks.copy).not.toHaveBeenCalled();
+    mocks.copy.mockRejectedValue(new HostEventLimitError(10));
+    expect(await duplicateEvent(input)).toEqual({ ok: false, message: new HostEventLimitError(10).message });
+    expect(mocks.revalidate).not.toHaveBeenCalled();
+  });
   it("authenticates before reading a source or writing a copy", async () => {
     mocks.auth.mockResolvedValue(false);
     await expect(Page(props)).rejects.toThrow("redirect"); expect(mocks.redirect).toHaveBeenCalledWith("/host/sign-in");

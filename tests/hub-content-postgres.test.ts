@@ -59,6 +59,7 @@ describe.skipIf(!modulePath)("private Hub Content preparation and publication", 
     for (const name of (await readdir("db/migrations")).filter(n => n.endsWith(".sql")).sort()) await db.exec(await readFile(`db/migrations/${name}`, "utf8"));
     await db.exec(`INSERT INTO host_users(id,name,email,"emailVerified") VALUES ('alice','Alice','alice@example.test',true),('bob','Bob','bob@example.test',true)`);
     vi.stubEnv("DATABASE_URL", "postgresql://unused@localhost/hub_content_test");
+    vi.stubEnv("HOST_EVENT_LIMIT", "1000"); // This suite retains many unrelated fixture events.
   }, 30000);
   beforeEach(() => { state.host = "alice"; });
   afterAll(async () => { await db?.close(); vi.unstubAllEnvs(); });

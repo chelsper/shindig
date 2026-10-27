@@ -3,6 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ContentShell } from "../../../components/admin/content-shell";
 import { HostEventList } from "../../../components/admin/host-event-list";
+import { HostEventUsageNotice } from "../../../components/admin/host-event-usage";
+import { getHostEventUsage } from "../../../lib/server/host-event-limits";
 import { getHostPrincipal } from "../../../lib/server/host-access";
 import { HostAccountButton } from "../../../components/admin/host-account-button";
 import { logoutAdmin } from "../actions";
@@ -17,9 +19,10 @@ export default async function AdminEventsPage({ searchParams }: { searchParams?:
   if (!principal) redirect("/host/sign-in");
   const showLegacy = principal.ownerId === null;
   const archivedView = (await searchParams)?.view === "archived";
-  const [cards, legacy] = await Promise.all([
+  const [cards, legacy, usage] = await Promise.all([
     listHostEventCards().catch(() => null),
     showLegacy && !archivedView ? getEventConfiguration().then(legacyEventCard).catch(() => null) : Promise.resolve(null),
+    getHostEventUsage().catch(() => null),
   ]);
   const archivedCount = cards?.filter(({ status }) => status === "archived").length;
   const visibleCards = cards?.filter(({ status }) => archivedView ? status === "archived" : status !== "archived");
@@ -34,8 +37,11 @@ export default async function AdminEventsPage({ searchParams }: { searchParams?:
         <Link href="/admin/events" aria-current={!archivedView ? "page" : undefined} className={`inline-flex min-h-12 items-center rounded-full border border-[#355f9e]/25 px-5 text-sm font-semibold ${!archivedView ? "bg-[#e9f2f8] text-[#214e91]" : "text-[#202523]/65"}`}>Active events</Link>
         <Link href="/admin/events?view=archived" aria-current={archivedView ? "page" : undefined} className={`inline-flex min-h-12 items-center rounded-full border border-[#355f9e]/25 px-5 text-sm font-semibold ${archivedView ? "bg-[#e9f2f8] text-[#214e91]" : "text-[#202523]/65"}`}>Archived{archivedCount !== undefined && ` (${archivedCount})`}</Link>
       </nav>
-      <Link href="/admin/events/new" className="primary-button inline-flex min-h-12 items-center px-5 text-sm">+ Create event</Link>
+      {usage && usage.used < usage.limit
+        ? <Link href="/admin/events/new" className="primary-button inline-flex min-h-12 items-center px-5 text-sm">+ Create event</Link>
+        : <button disabled className="primary-button inline-flex min-h-12 items-center px-5 text-sm">+ Create event</button>}
     </div>
+    <HostEventUsageNotice usage={usage} legacy={showLegacy} />
     <p className="mb-6 text-sm leading-6 text-[#202523]/65">{archivedView ? "Past plans and people, safely saved. Restore an event privately when you need it again." : "Each event appears once. Edit its private draft, manage its guests, or share what’s live."}</p>
     {showLegacy && !archivedView && !legacy && <aside role="status" className="mb-5 rounded-2xl border border-[#b78228]/25 bg-[#fff4d8] p-5 text-sm leading-6">Oyster Roast details couldn’t load. Your event has not changed. <Link href="/admin" className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4">Manage Oyster Roast →</Link></aside>}
     {events ? <HostEventList events={events} archived={archivedView} /> : <>

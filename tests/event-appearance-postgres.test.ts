@@ -35,6 +35,7 @@ describe.skipIf(!modulePath)("saved style → preview → explicit publication P
     const { PGlite } = await import(/* @vite-ignore */ modulePath); db = new PGlite();
     for (const file of (await readdir("db/migrations")).filter((name) => name.endsWith(".sql")).sort()) await db.exec(await readFile(`db/migrations/${file}`, "utf8"));
     vi.stubEnv("DATABASE_URL", "postgresql://unused@localhost/design_test"); vi.stubEnv("EVENT_DRAFT_BLOB_READ_WRITE_TOKEN", "private-test-token");
+    vi.stubEnv("HOST_EVENT_LIMIT", "1000"); // This suite retains many unrelated fixture events.
   }, 30000);
   afterAll(async () => { if (db) await db.close(); vi.unstubAllEnvs(); });
   beforeEach(() => { state.authenticated = true; });

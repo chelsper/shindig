@@ -46,6 +46,7 @@ describe.skipIf(!modulePath)("private invitation tracker PostgreSQL", () => {
     for (const file of (await readdir("db/migrations")).filter(f => f.endsWith(".sql")).sort()) await db.exec(await readFile(`db/migrations/${file}`, "utf8"));
     await db.exec(`INSERT INTO host_users(id,name,email,"emailVerified") VALUES ('alice','Alice','alice@example.test',true),('bob','Bob','bob@example.test',true)`);
     vi.stubEnv("DATABASE_URL", "postgresql://unused@localhost/disposable_invitation_tracker");
+    vi.stubEnv("HOST_EVENT_LIMIT", "1000"); // This suite retains many unrelated fixture events.
   }, 30000);
   beforeEach(() => { state.host = "alice"; state.operator = false; state.fail = false; });
   afterAll(async () => { await db?.close(); vi.unstubAllEnvs(); });

@@ -5,6 +5,8 @@ import { ContentShell } from "../../../../../components/admin/content-shell";
 import { isHostAuthenticated } from "../../../../../lib/server/host-access";
 import { getDuplicationSource } from "../../../../../lib/server/event-duplication";
 import { isDuplicationSource } from "../../../../../lib/event-duplication";
+import { getHostEventUsage } from "../../../../../lib/server/host-event-limits";
+import { EventCreationUnavailable } from "../../../../../components/admin/host-event-usage";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -19,5 +21,7 @@ export default async function DuplicateEventPage({ params }: { params: Promise<{
   try { data = await getDuplicationSource(source); }
   catch { return <ContentShell title="This setup couldn’t load" contextLabel="Duplicate event" dashboardHref="/admin/events" description="We couldn’t read the saved source event. Please try again shortly. No copy has been created and your original event is unchanged.">{null}</ContentShell>; }
   if (!data) notFound();
+  const usage = await getHostEventUsage().catch(() => null);
+  if (!usage || usage.used >= usage.limit) return <EventCreationUnavailable usage={usage} />;
   return <EventDuplicateForm source={data.key} sourceTitle={data.details.title} fingerprint={data.fingerprint} requestId={randomUUID()} settingsSaved={data.settingsSaved} hasArtwork={Boolean(data.images.invitation || data.images.header)} />;
 }
