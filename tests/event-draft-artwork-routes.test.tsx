@@ -1,11 +1,11 @@
 vi.mock("server-only", () => ({}));
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-const mocks = vi.hoisted(() => ({ auth: vi.fn(), draft: vi.fn(), getSettings: vi.fn(), save: vi.fn(), token: vi.fn(), get: vi.fn(), put: vi.fn(), revalidate: vi.fn(), redirect: vi.fn(), notFound: vi.fn() }));
+const mocks = vi.hoisted(() => ({ auth: vi.fn(), draft: vi.fn(), getSettings: vi.fn(), save: vi.fn(), token: vi.fn(), get: vi.fn(), put: vi.fn(), del: vi.fn(), revalidate: vi.fn(), redirect: vi.fn(), notFound: vi.fn() }));
 vi.mock("../lib/server/admin-session", () => ({ isAdminAuthenticated: mocks.auth }));
 vi.mock("../lib/server/event-drafts", () => ({ getEventDraft: mocks.draft }));
 vi.mock("../lib/server/event-draft-artwork", () => ({ draftImageStorageToken: mocks.token, getDraftArtwork: mocks.getSettings, saveDraftArtworkRecord: mocks.save }));
-vi.mock("@vercel/blob", () => ({ get: mocks.get, put: mocks.put }));
+vi.mock("@vercel/blob", () => ({ get: mocks.get, put: mocks.put, del: mocks.del }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect, notFound: mocks.notFound }));
 import { GET, POST } from "../app/admin/events/[id]/artwork/image/route";
@@ -33,12 +33,21 @@ beforeEach(() => {
   mocks.getSettings.mockResolvedValue({ settings: EMPTY_DRAFT_ARTWORK, revision: 0 }); mocks.save.mockResolvedValue(1);
   mocks.redirect.mockImplementation(() => { throw new Error("redirect"); }); mocks.notFound.mockImplementation(() => { throw new Error("not found"); });
   mocks.put.mockImplementation(async (pathname: string) => ({ pathname, url: `https://test.private.blob.vercel-storage.com/${pathname}` }));
+  mocks.del.mockResolvedValue(undefined);
   mocks.get.mockResolvedValue({ statusCode: 200, stream: new ReadableStream({ start(controller) { controller.enqueue(png); controller.close(); } }), blob: { size: png.byteLength, contentType: "image/png" } });
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 afterEach(() => vi.restoreAllMocks());
 
 describe("host-only artwork actions, page and image routes", () => {
+  it("rejects uploads when deletion happens while reading the body or uploading", async () => {
+    mocks.draft.mockResolvedValueOnce(draft).mockResolvedValueOnce(null);
+    expect((await POST(await uploadRequest(), context)).status).toBe(404);
+    expect(mocks.put).not.toHaveBeenCalled();
+    mocks.draft.mockResolvedValueOnce(draft).mockResolvedValueOnce(draft).mockResolvedValueOnce(null);
+    expect((await POST(await uploadRequest(), context)).status).toBe(404);
+    expect(mocks.del).toHaveBeenCalledWith(expect.stringContaining(`/event-drafts/${id}/`), { token: "server-private-token" });
+  });
   it("carries a validated style request to the editor without saving it", async () => {
     const page = await ArtworkPage({ ...context, searchParams: Promise.resolve({ style: "coastal" }) });
     expect(page.props.requestedDesign).toBe("coastal");

@@ -74,6 +74,7 @@ async function loadImage(source: CopyArtworkSource, kind: DraftImageKind, token:
 export async function copyEventArtwork(id: string, source: CopyArtworkSource): Promise<DraftArtwork> {
   if (!(await isHostAuthenticated())) throw new Error("Host access required.");
   if (!isDraftId(id) || !isDuplicationSource(source.key) || source.key === id) throw new Error("Invalid artwork copy.");
+  id = id.toLowerCase();
   if (source.key === OYSTER_ROAST_EVENT.slug) {
     if (!(await isAdminAuthenticated())) throw new Error("Event unavailable.");
   } else await requireOwnedEvent(source.key);

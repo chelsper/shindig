@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { get, put } from "@vercel/blob";
+import { get, put, del } from "@vercel/blob";
 import { isHostAuthenticated } from "../../../../../../lib/server/host-access";
 import { getEventDraft } from "../../../../../../lib/server/event-drafts";
 import { draftImageStorageToken } from "../../../../../../lib/server/event-draft-artwork";
@@ -8,6 +8,8 @@ import { isDraftId } from "../../../../../../lib/event-drafts";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+// Deletion's artwork cleanup waits longer than this upload lifetime.
+export const maxDuration = 120;
 type Context = { params: Promise<{ id: string }> };
 const privateHeaders = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff", "X-Robots-Tag": "noindex, nofollow" };
 const error = (message: string, status: number) => Response.json({ error: message }, { status, headers: privateHeaders });
@@ -26,8 +28,9 @@ function imageExtension(bytes: Uint8Array, type: string): string | null {
 export async function POST(request: Request, context: Context) {
   if (!(await isHostAuthenticated())) return error("Host access required.", 401);
   if (request.headers.get("origin") !== new URL(request.url).origin) return error("Please upload from the draft editor.", 403);
-  const { id } = await context.params;
-  if (!isDraftId(id)) return error("Draft not found.", 404);
+  const { id: inputId } = await context.params;
+  if (!isDraftId(inputId)) return error("Draft not found.", 404);
+  const id = inputId.toLowerCase();
   const token = draftImageStorageToken();
   if (!token) return error("Private image storage is not configured yet.", 503);
   const size = Number(request.headers.get("content-length"));
@@ -52,8 +55,14 @@ export async function POST(request: Request, context: Context) {
     const extension = imageExtension(bytes, file.type);
     if (!extension) return error("Choose a valid JPG, PNG, WebP, or AVIF image.", 400);
     const path = `event-drafts/${id}/${kind}/${randomUUID()}.${extension}`;
-    const blob = await put(path, Buffer.from(bytes), { access: "private", token, contentType: file.type, addRandomSuffix: false, allowOverwrite: false });
+    if (!(await getEventDraft(id))) return error("Draft not found.", 404);
+    const blob = await put(path, Buffer.from(bytes), { access: "private", token, contentType: file.type, addRandomSuffix: false, allowOverwrite: false, abortSignal: AbortSignal.timeout(15000) });
     if (!new URL(blob.url).hostname.endsWith(".private.blob.vercel-storage.com") || blob.pathname !== path) throw new Error("Invalid private storage response");
+    if (!(await getEventDraft(id))) {
+      // The durable deletion job also catches this file if cleanup fails here.
+      await del(blob.url, { token }).catch(() => {});
+      return error("The event is no longer available.", 404);
+    }
     return Response.json({ path }, { headers: privateHeaders });
   } catch { return error("The image couldn’t upload. Please try again.", 503); }
 }

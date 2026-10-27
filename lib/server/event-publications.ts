@@ -116,7 +116,7 @@ export async function isEventAliasAvailable(id: string, input: unknown) {
   const existing = await getHostEventPublication(draftEventSlug(id));
   if (existing) throw new EventAliasError("This event’s link is already fixed. Refresh the review to see it.");
   if (!parsed.alias) return true;
-  const rows = await database()`SELECT 1 FROM event_publications WHERE public_alias = ${parsed.alias} LIMIT 1`;
+  const rows = await database()`SELECT 1 FROM event_public_link_reservations WHERE public_alias = ${parsed.alias} LIMIT 1`;
   return rows.length === 0;
 }
 

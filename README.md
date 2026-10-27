@@ -1,6 +1,66 @@
 # Shindig
 
-## Public privacy and support pages (review before deployment)
+## Host Account & Privacy
+
+Migration 027 was applied to Shindig's production `neondb` on October 27, 2026.
+All 16 checked existing event/guest tables retained identical row counts and
+content checksums; the new schema, protection triggers, and alias backfill were
+verified. No production event deletion was performed. For another environment,
+follow the deployment prerequisites below.
+
+`/host/account` is an authenticated Account & Privacy page, linked from **Your
+events**. Each created event's **Overview → Data & privacy** opens an owner-only
+review page at `/admin/events/[id]/privacy`. It explains archive versus delete,
+offers the existing RSVP CSV for previously published events, and requires both
+an acknowledgement and typing `DELETE`. CSV is not a complete backup: it excludes
+optional contact details, invitation-tracker entries, and other Hub content.
+
+Permanent deletion removes the event and its active data in one database
+transaction: RSVPs/contacts, invitation tracker, playlist/applause, questions,
+updates, polls/votes, bring-something items/claims, drafts and publication snapshots.
+It checks ownership and reviewed revisions server-side; failures roll back rather
+than leave partial deletion. Published links stop working. Independent duplicated
+events and the original Jasper Shucks invitation are not deleted.
+
+Uploaded artwork lives outside Postgres. A minimal owner-only deletion receipt
+tracks that separate work. After at least three minutes (longer than the 120-second
+upload/copy request limit), return to **Check & finish artwork cleanup**. This
+checks and deletes only `event-drafts/<authorized-event-id>/` in the private Blob
+store. Provider errors leave the receipt pending and retryable. Account & Privacy
+lists unfinished cleanup. **There is no automatic cleanup worker**; the host must
+finish this step or contact support. Large jobs may require multiple attempts.
+Do not mark cleanup complete manually without verifying storage.
+
+Deleted event IDs and public aliases remain reserved, so stale creation retries
+cannot resurrect a deleted event or send old guests to a different gathering.
+Deletion receipts retain the owner link, event ID, optional public alias, and
+deletion/cleanup timestamps—not event titles, artwork paths, or guest records.
+Provider backups/security logs and externally saved exports/calendar copies are
+not erased by this action. Account closure is a **manual support request**, not
+an automatic account-delete action. Registration remains invite-only.
+
+### Deployment prerequisites
+
+1. Review locally first. Apply `db/migrations/027_event_deletion.sql` to the intended
+   Neon database **before deploying this code**. The migration is additive and
+   rerunnable; applying it does not delete any event. It creates the receipt/link
+   reservation tables, backfills current public aliases, and installs transactional
+   deletion and link/ID protection functions/triggers.
+2. Keep existing server-only `DATABASE_URL` and
+   `EVENT_DRAFT_BLOB_READ_WRITE_TOKEN`. The latter must access the existing private
+   event-artwork store; without it cleanup stays pending. No new environment
+   variables or packages are required. Do not change registration settings.
+3. Deploy only after approval. Smoke-test using an explicitly disposable event,
+   never a real gathering: export, delete, verify all old links are unavailable,
+   wait three minutes, and finish artwork cleanup. Confirm another host cannot
+   access its deletion review or receipt.
+
+Tests use isolated in-memory PostgreSQL (PGlite), mocked storage failures and
+owner sessions. They cover rollback, all related data, stale reviews, lost-response
+retries, alias/ID reservation, cross-owner/anonymous access, confirmation and
+double-click handling. No production records or files are deleted by these tests.
+
+## Public privacy and support pages
 
 `/privacy` and `/support` are static, public pages with no account, database query,
 or third-party request required to render. The main Shindig homepage and host

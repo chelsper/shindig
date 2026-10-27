@@ -27,7 +27,7 @@ export default async function AdminEventsPage({ searchParams }: { searchParams?:
   return <ContentShell title="Your events" contextLabel="Event planning" dashboardHref="/admin/events" description="Your gatherings, from first idea to last goodbye. One place for the plans, the people, and what’s next.">
     <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#202523]/10 px-4 py-3">
       <p className="min-w-0 break-words text-sm text-[#202523]/65">{principal.email ? <>Signed in as <span className="font-semibold text-[#202523]">{principal.email}</span></> : "Site administrator · existing events"}</p>
-      {principal.ownerId ? <HostAccountButton signOut /> : <form action={logoutAdmin}><button className="inline-flex min-h-11 items-center text-sm font-semibold text-[#355f9e] underline underline-offset-4">Sign out</button></form>}
+      <div className="flex flex-wrap items-center gap-4"><Link href="/host/account" className="inline-flex min-h-11 items-center text-sm font-semibold text-[#355f9e] underline underline-offset-4">Account &amp; Privacy</Link>{principal.ownerId ? <HostAccountButton signOut /> : <form action={logoutAdmin}><button className="inline-flex min-h-11 items-center text-sm font-semibold text-[#355f9e] underline underline-offset-4">Sign out</button></form>}</div>
     </div>
     <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
       <nav aria-label="Event lists" className="flex flex-wrap gap-2">

@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
 import { ContentShell } from "../../../../../components/admin/content-shell";
 import { EventSetupOverview } from "../../../../../components/admin/event-setup-overview";
 import { isHostAuthenticated } from "../../../../../lib/server/host-access";
@@ -42,5 +43,6 @@ export default async function EventSetupPage({ params, searchParams }: {
     <EventSetupOverview draft={draft} artwork={artwork} settings={settings} coordinates={savedWeatherCoordinates(draft)} live={live} content={content}
       hosting={<EventHostingOverview id={id} data={hosting} features={settings.settings.features} publication={publication ? { visibility: publication.visibility, rsvpsOpen: publication.rsvpsOpen, rsvp: publication.snapshot.settings.rsvp, features: publication.snapshot.settings.features, timeZone: publication.snapshot.details.timeZone } : null} />}
       justSaved={query?.saved === "1"} justCopied={query?.copied === "1" && !publication} />
+    <div className="border-t border-[#202523]/15 py-5"><Link href={`/admin/events/${id}/privacy`} className="inline-flex min-h-11 items-center text-sm font-semibold text-[#355f9e] underline underline-offset-4">Data &amp; privacy · exports and event deletion →</Link></div>
   </ContentShell>;
 }
