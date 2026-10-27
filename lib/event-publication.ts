@@ -55,6 +55,7 @@ export function publicationEvent(id: string, snapshot: PublicationSnapshot, rsvp
     eventHub: { path: paths.hub, headerImage: {
       url: art.header.path || art.invitation.path ? image("header") : "", alt: art.header.path ? art.header.alt : art.invitation.alt,
       focalX: art.header.focalX, focalY: art.header.focalY, zoomPercent: art.header.zoomPercent,
+      ...(art.header.desktopCrop ? { desktopCrop: art.header.desktopCrop } : {}),
     } },
   };
 }

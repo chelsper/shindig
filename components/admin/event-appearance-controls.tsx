@@ -1,6 +1,6 @@
 "use client";
 import { EVENT_PALETTES, EVENT_TYPOGRAPHY, type EventTypographyId } from "../../lib/event-design";
-import { appearanceChoices, resolveEventAppearance, type EventAppearance } from "../../lib/event-appearance";
+import { appearanceChoices, appearanceForStyle, resolveEventAppearance, type EventAppearance } from "../../lib/event-appearance";
 
 export function EventAppearanceControls({ appearance, onChange, disabled }: {
   appearance: EventAppearance; onChange: (appearance: EventAppearance) => void; disabled: boolean;
@@ -34,7 +34,7 @@ export function EventAppearanceControls({ appearance, onChange, disabled }: {
       <p className="break-words text-3xl leading-tight" style={{ fontFamily: design.headingFont, fontStyle: choices.titleStyle, fontWeight: choices.titleWeight === "bold" ? 700 : 400 }}>You’re invited.</p>
       <p className="mt-2 text-sm leading-6" style={{ color: design.colors.muted, fontFamily: design.bodyFont }}>Good people. A little time together.</p>
     </div>
-    <button type="button" disabled={!customized || disabled} className="mt-2 min-h-11 text-xs font-semibold text-[#355f9e] underline underline-offset-4 disabled:opacity-50" onClick={() => { if (!disabled) onChange({ style: appearance.style, invitationCrop: appearance.invitationCrop }); }}>Reset colors &amp; type to {design.name}</button>
+    <button type="button" disabled={!customized || disabled} className="mt-2 min-h-11 text-xs font-semibold text-[#355f9e] underline underline-offset-4 disabled:opacity-50" onClick={() => { if (!disabled) onChange(appearanceForStyle(appearance.style, appearance)); }}>Reset colors &amp; type to {design.name}</button>
     <p className="text-xs leading-5 text-[#202523]/65">Reset keeps your artwork and crops. Preview changes now; guests see them only after publishing.</p>
   </fieldset>;
 }

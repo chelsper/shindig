@@ -37,4 +37,12 @@ describe("published Hub design keeps the existing public boundary", () => {
     const html = renderToStaticMarkup(await PublishedEventHub({ event: original, scope }));
     expect(html).not.toContain("data-event-design"); expect(html).toContain("Garden Supper");
   });
+  it.each([true, false])("passes both header crops to the real Hub (styled: %s)", async styled => {
+    const art = { ...snapshot.artwork, ...(styled ? { design: event.design } : {}),
+      invitation: { path: `event-drafts/${eventId}/invitation/7ac5edab-22aa-447d-8931-91132a16798a.png`, alt: "Oysters" },
+      header: { ...snapshot.artwork.header, focalX: 12, focalY: 34, zoomPercent: 180, desktopCrop: { x: 56, y: 78, zoom: 125 } } };
+    const html = renderToStaticMarkup(await PublishedEventHub({ event: publicationEvent(eventId, { ...snapshot, artwork: art }), scope }));
+    expect(html).toContain("--art-phone-position:12% 34%"); expect(html).toContain("--art-desktop-position:56% 78%");
+    expect(html).toContain("Get Directions"); expect(html).not.toMatch(/event-drafts\/|\/admin\//);
+  });
 });

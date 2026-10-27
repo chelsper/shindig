@@ -1,0 +1,11 @@
+/* Original-layout public headers follow the existing sm (640px) breakpoint.
+   Fixed-size editor previews explicitly select a device instead of responding
+   to the host's browser width. Legacy inline styles remain unchanged. */
+.frame { position: relative; aspect-ratio: 16 / 9; overflow: hidden; background: #dceaf7; }
+.image { object-position: var(--art-phone-position, 50% 50%); transform-origin: var(--art-phone-position, 50% 50%); transform: scale(var(--art-phone-scale, 1)); }
+@media (min-width: 640px) {
+  .frame:not([data-device="phone"]) { aspect-ratio: 16 / 6; }
+  .frame:not([data-device="phone"]) .image { object-position: var(--art-desktop-position, 50% 50%); transform-origin: var(--art-desktop-position, 50% 50%); transform: scale(var(--art-desktop-scale, 1)); }
+}
+.frame[data-device="desktop"] { aspect-ratio: 16 / 6; }
+.frame[data-device="desktop"] .image { object-position: var(--art-desktop-position, 50% 50%); transform-origin: var(--art-desktop-position, 50% 50%); transform: scale(var(--art-desktop-scale, 1)); }

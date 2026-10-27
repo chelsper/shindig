@@ -1415,10 +1415,24 @@ section. **Replace image**, **Reposition**, and **Reset crop** affect only the
 selected image; selecting an image alone does not change the draft. The original
 invitation layout stays uncropped; styled invitations support their own crop.
 The Hub can reuse invitation artwork with an independent crop or use a separate
-image. Phone and desktop header previews still share one saved crop.
+image. Choose **Phone crop** or **Desktop crop** for independent framing on each
+layout. Drag/sliders and **Reset phone/desktop crop** affect only that size; the
+optional **Copy … crop** action explicitly copies the other size into the selected
+one. The editor preview follows the selected size, even on a phone.
 Previewed artwork is not saved until **Save draft** and does not go live until
 **Review & publish**. Saved event basics supply the preview text and local date.
 The preview has no working RSVP form, calendar, public URL or publish action.
+
+Responsive crops use the existing private JSON artwork and publication snapshot;
+no migration, dependency or environment change is required. Existing crops are
+the phone crop and desktop fallback. A first phone edit freezes the previous
+desktop framing; a desktop edit stores only its independent override. Both are
+validated server-side (integer position 0–100, zoom 100–250 for styled artwork,
+100–200 for original-layout headers), included in publish review and preserved
+when duplicating events or resetting colors/type. Styled public layouts select
+the crop at their existing 700px container breakpoint; original headers retain
+their existing 640px viewport breakpoint. Original invitations remain uncropped.
+Old snapshots are not rewritten, and draft changes stay private until published.
 
 Setup for this step (separate from the deployed draft foundation):
 

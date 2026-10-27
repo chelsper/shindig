@@ -1,13 +1,19 @@
 import { EVENT_DESIGNS, EVENT_PALETTES, EVENT_TYPOGRAPHY, EVENT_STYLE_DEFAULTS, getEventDesign, type EventDesign, type EventDesignId, type EventPaletteId, type EventTypographyId } from "./event-design";
-import { type ArtworkCrop } from "./design-artwork";
+import { defaultArtworkCrop, type ArtworkCrop } from "./design-artwork";
+import { parseArtworkCrop } from "./responsive-artwork";
 
 // Absence means the original presentation. Opting in is an explicit draft edit,
 // never a default applied to an already-published event.
 export type EventAppearance = {
   style: EventDesignId; invitationCrop: ArtworkCrop;
+  invitationDesktopCrop?: ArtworkCrop;
   palette?: EventPaletteId; typography?: EventTypographyId;
   titleWeight?: "regular" | "bold"; titleStyle?: "normal" | "italic";
 };
+export function appearanceForStyle(style: EventDesignId, previous?: EventAppearance): EventAppearance {
+  return { style, invitationCrop: previous?.invitationCrop ?? defaultArtworkCrop(),
+    ...(previous?.invitationDesktopCrop ? { invitationDesktopCrop: previous.invitationDesktopCrop } : {}) };
+}
 
 export function appearanceChoices(appearance: EventAppearance) {
   return {
@@ -33,17 +39,16 @@ export function appearanceSummary(appearance: EventAppearance) {
 export function parseEventAppearance(input: unknown): EventAppearance | null {
   if (!input || typeof input !== "object" || Array.isArray(input)) return null;
   const row = input as Record<string, unknown>;
-  if (!EVENT_DESIGNS.some(({ id }) => id === row.style) || Object.keys(row).some((key) => !["style", "invitationCrop", "palette", "typography", "titleWeight", "titleStyle"].includes(key))) return null;
+  if (!EVENT_DESIGNS.some(({ id }) => id === row.style) || Object.keys(row).some((key) => !["style", "invitationCrop", "invitationDesktopCrop", "palette", "typography", "titleWeight", "titleStyle"].includes(key))) return null;
   if (("palette" in row && !EVENT_PALETTES.some(({ id }) => id === row.palette)) ||
     ("typography" in row && !EVENT_TYPOGRAPHY.some(({ id }) => id === row.typography)) ||
     ("titleWeight" in row && row.titleWeight !== "regular" && row.titleWeight !== "bold") ||
     ("titleStyle" in row && row.titleStyle !== "normal" && row.titleStyle !== "italic")) return null;
-  const crop = row.invitationCrop as Record<string, unknown> | null;
-  if (!crop || typeof crop !== "object" || Array.isArray(crop) || Object.keys(crop).some((key) => !["x", "y", "zoom"].includes(key))) return null;
-  for (const [key, min, max] of [["x", 0, 100], ["y", 0, 100], ["zoom", 100, 250]] as const) {
-    if (typeof crop[key] !== "number" || !Number.isInteger(crop[key]) || crop[key] < min || crop[key] > max) return null;
-  }
-  return { style: row.style as EventDesignId, invitationCrop: { x: crop.x as number, y: crop.y as number, zoom: crop.zoom as number },
+  const crop = parseArtworkCrop(row.invitationCrop);
+  const desktopCrop = "invitationDesktopCrop" in row ? parseArtworkCrop(row.invitationDesktopCrop) : undefined;
+  if (!crop || desktopCrop === null) return null;
+  return { style: row.style as EventDesignId, invitationCrop: crop,
+    ...(desktopCrop ? { invitationDesktopCrop: desktopCrop } : {}),
     ...("palette" in row ? { palette: row.palette as EventPaletteId } : {}),
     ...("typography" in row ? { typography: row.typography as EventTypographyId } : {}),
     ...("titleWeight" in row ? { titleWeight: row.titleWeight as "regular" | "bold" } : {}),

@@ -36,6 +36,14 @@ describe("independently owned private artwork copies", () => {
     expect(mocks.get).toHaveBeenCalledWith(path, expect.objectContaining({ access: "private", useCache: false }));
     expect(mocks.put).toHaveBeenCalledWith(result.invitation.path, png, expect.objectContaining({ access: "private", allowOverwrite: false, addRandomSuffix: false }));
   });
+  it("copies all four crops independently without sharing mutable source objects", async () => {
+    const phone = { x: 30, y: 60, zoom: 120 }, desktop = { x: 75, y: 25, zoom: 180 };
+    const design = { style: "coastal" as const, invitationCrop: phone, invitationDesktopCrop: desktop };
+    const result = await copyEventArtwork(destinationId, { ...source, design, crop: { ...source.crop, desktopCrop: desktop } });
+    expect(result.design).toEqual(design); expect(result.header.desktopCrop).toEqual(desktop);
+    expect(result.header.desktopCrop).not.toBe(desktop); expect(result.design?.invitationDesktopCrop).not.toBe(desktop);
+    expect(result.invitation.path).not.toBe(path);
+  });
   it("uses separate paths for invitation/header and other event copies", async () => {
     const both = { ...source, images: { ...source.images, header: { locator: path.replace("/invitation/", "/header/"), alt: "Header" } } };
     const result = await copyEventArtwork(destinationId, both);

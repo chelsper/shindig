@@ -4,9 +4,10 @@ import { eventDesignVariables } from "../../lib/event-design";
 import { artworkImageStyle, type ArtworkCrop } from "../../lib/design-artwork";
 import { resolveEventAppearance, type EventAppearance } from "../../lib/event-appearance";
 import styles from "./event-presentation.module.css";
+import { responsiveArtworkStyle } from "../../lib/responsive-artwork";
 
 export type PresentationDetails = { title: string; eyebrow: string; date: string; time: string; venue: string; address: string; description: string };
-type Image = { url: string; alt: string; crop: ArtworkCrop };
+type Image = { url: string; alt: string; crop: ArtworkCrop; desktopCrop?: ArtworkCrop };
 type Props = { appearance: EventAppearance; details: PresentationDetails; image: Image; children?: ReactNode; actions?: ReactNode; guestTools?: ReactNode; hubEyebrow?: string; preview?: boolean; artworkAction?: ReactNode };
 
 export function EventDesignSurface({ appearance, children, fullHeight = false }: { appearance: EventAppearance; children: ReactNode; fullHeight?: boolean }) {
@@ -18,7 +19,7 @@ export function EventGuestContent({ children }: { children: ReactNode }) {
 }
 export function EventArtwork({ image, view, children }: { image: Image; view: "invitation" | "hub"; children?: ReactNode }) {
   return <div className={`${styles.image} ${view === "invitation" ? styles.invitationImage : styles.hubImage}`}>
-    <img src={image.url} alt={image.alt} style={artworkImageStyle(image.crop)} />
+    <img src={image.url} alt={image.alt} style={image.desktopCrop ? responsiveArtworkStyle(image.crop, image.desktopCrop) : artworkImageStyle(image.crop)} />
     {children}
   </div>;
 }

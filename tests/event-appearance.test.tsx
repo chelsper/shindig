@@ -59,6 +59,12 @@ describe("saved event appearance", () => {
     const html = renderToStaticMarkup(<EventDraftPreview draft={draft} artwork={artwork} view="hub" />);
     expect(html).toContain("object-position:70% 20%"); expect(html).toContain("scale(2.4)"); expect(html).not.toContain("scale(2.5)");
   });
+  it("passes both responsive crops through the real public invitation", () => {
+    const art = { ...artwork, design: { ...design, invitationDesktopCrop: { x: 22, y: 33, zoom: 144 } } };
+    const html = renderToStaticMarkup(<InvitationPage event={publicationEvent(eventId, { ...snapshot, artwork: art })} persistenceDisabled={false} />);
+    expect(html).toContain("--art-phone-position:12% 82%"); expect(html).toContain("--art-desktop-position:22% 33%");
+    expect(html).toContain("Submit RSVP"); expect(html).not.toMatch(/event-drafts\/|\/admin\//);
+  });
   it("retains legacy Jasper presentation and RSVP functionality", () => {
     const html = renderToStaticMarkup(<InvitationPage persistenceDisabled />);
     expect(html).not.toContain("data-event-design"); expect(html).toContain("oyster-roast-invitation.png");
@@ -79,7 +85,7 @@ describe("saved event appearance", () => {
     const html = renderToStaticMarkup(<DraftDesignControls settings={artwork} disabled={false} onChange={() => {}} />);
     expect(html).toContain('name="event-style"'); expect(html).toContain("Original layout"); expect(html).not.toContain('type="submit"');
     const editor = renderToStaticMarkup(<EventDraftArtworkEditor draft={draft} initial={{ settings: artwork, revision: 2 }} uploadConfigured />);
-    expect(editor).toContain("Reset invitation crop"); expect(editor).toContain("Reset header crop");
+    expect(editor).toContain("Reset phone invitation crop"); expect(editor).toContain("Reset phone header crop");
     expect(editor).toContain('aria-label="Invitation zoom"'); expect(editor).toContain('aria-label="Header zoom"'); expect(editor).toContain('max="250"');
     expect(editor).toContain("Save draft design &amp; artwork"); expect(editor).toContain("Preview saved draft"); expect(editor).toContain("Review &amp; publish"); expect(editor).toContain("Private draft");
   });

@@ -1,6 +1,7 @@
 import { OYSTER_ROAST_WEBSITE } from "./site";
 import type { RsvpLimits, RsvpAvailability } from "./rsvp-policy";
 import type { EventAppearance } from "./event-appearance";
+import type { ArtworkCrop } from "./design-artwork";
 
 export type EventFeatures = {
   guestList: boolean;
@@ -79,7 +80,7 @@ export type EventConfiguration =
     rsvp?: { maxPartySize: number; allowComments: boolean; guestListDefaultVisible: boolean } & RsvpLimits;
     rsvpsOpen?: boolean;
     rsvpAvailability?: RsvpAvailability;
-    eventHub: { path: string; headerImage: { url: string; alt: string; focalX: number; focalY: number; zoomPercent: number } };
+    eventHub: { path: string; headerImage: { url: string; alt: string; focalX: number; focalY: number; zoomPercent: number; desktopCrop?: ArtworkCrop } };
     invitation: {
       eyebrow: string; timeNote: string; rsvpHeading: string;
       imageUrl: string; imageAlt: string; imageWidth: number; imageHeight: number;

@@ -14,7 +14,7 @@ import { getPublishedEvent, getHostEventPublication, publishEventRecord, listHos
 import { compareEventPublication } from "../lib/event-publication-changes";
 import { listHostEventCards } from "../lib/server/event-dashboard";
 import { getDuplicationSource } from "../lib/server/event-duplication";
-import { EMPTY_DRAFT_ARTWORK, type DraftArtwork } from "../lib/event-draft-artwork";
+import { changeDraftArtworkCrop, EMPTY_DRAFT_ARTWORK, type DraftArtwork } from "../lib/event-draft-artwork";
 import { draft, snapshot } from "./fixtures/publication";
 const modulePath = process.env.SHINDIG_TEST_PGLITE;
 let db: { query: (text: string, values?: unknown[]) => Promise<{ rows: Record<string, unknown>[] }>; exec: (text: string) => Promise<unknown>; close: () => Promise<void> };
@@ -62,6 +62,25 @@ describe.skipIf(!modulePath)("saved style → preview → explicit publication P
     expect(await publishEventRecord(f.id, { ...f.versions, artwork: 2, publication: 1 }, null)).toBe(2);
     expect((await getPublishedEvent(f.slug))?.design).toEqual(changed.design);
     expect((await listHostEventCards()).find(({ id }) => id === f.id)?.hasUnpublishedChanges).toBe(false);
+  });
+  it("persists independent desktop crops, keeps them private until publication, and includes them in duplication", async () => {
+    const f = await fixture(); await saveDraftArtworkRecord(f.id, 0, f.artwork); await publishEventRecord(f.id, f.versions, null);
+    const old = await getPublishedEvent(f.slug);
+    const changed = changeDraftArtworkCrop(changeDraftArtworkCrop(f.artwork, "header", "desktop", { x: 11, y: 22, zoom: 133 }), "invitation", "desktop", { x: 44, y: 55, zoom: 166 });
+    expect(await saveDraftArtworkRecord(f.id, 1, changed)).toBe(2);
+    expect((await getDraftArtwork(f.id))?.settings).toEqual(changed);
+    expect(await getPublishedEvent(f.slug)).toEqual(old);
+    const copy = await getDuplicationSource(f.id);
+    expect(copy?.crop.desktopCrop).toEqual(changed.header.desktopCrop);
+    expect(copy?.design?.invitationDesktopCrop).toEqual(changed.design?.invitationDesktopCrop);
+    await expect(saveDraftArtworkRecord(f.id, 2, { ...changed, header: { ...changed.header, desktopCrop: { x: 4, y: 5, zoom: 999 } } })).rejects.toThrow("Invalid draft artwork");
+    expect(await saveDraftArtworkRecord(f.id, 1, f.artwork)).toBeNull();
+    expect(await publishEventRecord(f.id, { ...f.versions, artwork: 2, publication: 1 }, null)).toBe(2);
+    const live = await getPublishedEvent(f.slug);
+    expect(live?.design?.invitationCrop).toEqual(old?.design?.invitationCrop);
+    expect(live?.design?.invitationDesktopCrop).toEqual({ x: 44, y: 55, zoom: 166 });
+    expect(live?.eventHub.headerImage).toMatchObject({ focalX: 80, zoomPercent: 230, desktopCrop: { x: 11, y: 22, zoom: 133 } });
+    expect(JSON.stringify(live)).not.toContain("event-drafts/");
   });
   it("saves and reloads a header-only crop without altering the invitation or live snapshot", async () => {
     const f = await fixture();

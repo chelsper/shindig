@@ -402,7 +402,7 @@ export function InvitationPage({ persistenceDisabled, event: oysterRoastEvent = 
   if (!legacy && oysterRoastEvent.design) return <main><DesignedInvitation
     appearance={oysterRoastEvent.design}
     details={{ title: oysterRoastEvent.title, eyebrow: oysterRoastEvent.invitation.eyebrow, date: oysterRoastEvent.dateLabel, time: oysterRoastEvent.timeLabel, venue: oysterRoastEvent.venue, address: oysterRoastEvent.address, description: oysterRoastEvent.description }}
-    image={{ url: oysterRoastEvent.invitation.imageUrl, alt: oysterRoastEvent.invitation.imageAlt, crop: oysterRoastEvent.design.invitationCrop }}
+    image={{ url: oysterRoastEvent.invitation.imageUrl, alt: oysterRoastEvent.invitation.imageAlt, crop: oysterRoastEvent.design.invitationCrop, desktopCrop: oysterRoastEvent.design.invitationDesktopCrop }}
     actions={<EventHubLink href={oysterRoastEvent.eventHub.path} />}
     guestTools={guestTools}
   >{responseContent}</DesignedInvitation></main>;

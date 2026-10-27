@@ -1,5 +1,5 @@
 import type { PublicationSnapshot } from "./event-publication";
-import { draftImageUrl, isDraftImagePath } from "./event-draft-artwork";
+import { draftArtworkCrop, draftImageUrl, isDraftImagePath } from "./event-draft-artwork";
 import { getEventDesign } from "./event-design";
 import { appearanceChoices, appearanceSummary, resolveEventAppearance } from "./event-appearance";
 import { DRAFT_HUB_MODULES } from "./event-draft-settings";
@@ -77,11 +77,20 @@ export function compareEventPublication(id: string, before: PublicationSnapshot,
   art("invitationAlt", "Invitation image description", oldArt.invitation.alt, newArt.invitation.alt, plain(oldArt.invitation.alt), plain(newArt.invitation.alt));
   art("headerAlt", "Hub image description", oldHeaderAlt, newHeaderAlt, plain(oldHeaderAlt), plain(newHeaderAlt));
 
-  const invitationCrop = (art: typeof oldArt) => art.invitation.path && art.design ? [art.design.invitationCrop.x, art.design.invitationCrop.y, art.design.invitationCrop.zoom] : null;
-  const headerCrop = (art: typeof oldArt) => art.header.path || art.invitation.path ? [art.header.focalX, art.header.focalY, art.header.zoomPercent] : null;
   const cropLabel = (crop: number[] | null, empty: string) => value(crop ? `Horizontal ${crop[0]}% · Vertical ${crop[1]}% · Zoom ${crop[2]}%` : empty);
-  art("invitationCrop", "Invitation framing", invitationCrop(oldArt), invitationCrop(newArt), cropLabel(invitationCrop(oldArt), oldArt.invitation.path ? "Full artwork" : "No artwork"), cropLabel(invitationCrop(newArt), newArt.invitation.path ? "Full artwork" : "No artwork"));
-  art("headerCrop", "Hub framing", headerCrop(oldArt), headerCrop(newArt), cropLabel(headerCrop(oldArt), "No artwork"), cropLabel(headerCrop(newArt), "No artwork"));
+  for (const kind of ["invitation", "header"] as const) {
+    const hasDesktop = kind === "header" ? oldArt.header.desktopCrop || newArt.header.desktopCrop : oldArt.design?.invitationDesktopCrop || newArt.design?.invitationDesktopCrop;
+    for (const device of hasDesktop ? ["phone", "desktop"] as const : ["phone"] as const) {
+      const crop = (artwork: typeof oldArt) => {
+        if (kind === "invitation" ? !artwork.invitation.path || !artwork.design : !artwork.header.path && !artwork.invitation.path) return null;
+        const { x, y, zoom } = draftArtworkCrop(artwork, kind, device);
+        return [x, y, zoom];
+      };
+      const empty = (artwork: typeof oldArt) => kind === "invitation" && artwork.invitation.path ? "Full artwork" : "No artwork";
+      art(`${kind}${device === "desktop" ? "Desktop" : ""}Crop`, `${kind === "header" ? "Hub" : "Invitation"} framing${hasDesktop ? ` · ${device === "phone" ? "Phone" : "Desktop"}` : ""}`,
+        crop(oldArt), crop(newArt), cropLabel(crop(oldArt), empty(oldArt)), cropLabel(crop(newArt), empty(newArt)));
+    }
+  }
 
   const rsvp = group("rsvp", "RSVP rules", "/settings#rsvp-limits");
   const oldRsvp = before.settings.rsvp, newRsvp = after.settings.rsvp;

@@ -1,5 +1,8 @@
 import { isDraftId } from "./event-drafts";
 import { parseEventAppearance, type EventAppearance } from "./event-appearance";
+import { defaultArtworkCrop, type ArtworkCrop } from "./design-artwork";
+import type { DesignPreviewDevice } from "./design-preview";
+import { parseArtworkCrop } from "./responsive-artwork";
 
 export const DRAFT_IMAGE_LIMIT = 4 * 1024 * 1024;
 export const DRAFT_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"] as const;
@@ -8,7 +11,7 @@ export type DraftImage = { path: string | null; alt: string };
 export type DraftArtwork = {
   design?: EventAppearance;
   invitation: DraftImage;
-  header: DraftImage & { focalX: number; focalY: number; zoomPercent: number };
+  header: DraftImage & { focalX: number; focalY: number; zoomPercent: number; desktopCrop?: ArtworkCrop };
 };
 export type DraftArtworkRecord = { settings: DraftArtwork; revision: number };
 export const EMPTY_DRAFT_ARTWORK: DraftArtwork = {
@@ -28,6 +31,22 @@ export function isDraftImagePath(id: string, value: unknown, kind?: DraftImageKi
 export function draftImageUrl(id: string, path: string) {
   return `/admin/events/${id}/artwork/image?path=${encodeURIComponent(path)}`;
 }
+export function draftArtworkCrop(settings: DraftArtwork, kind: DraftImageKind, device: DesignPreviewDevice): ArtworkCrop {
+  if (kind === "header") return device === "desktop" && settings.header.desktopCrop ? settings.header.desktopCrop
+    : { x: settings.header.focalX, y: settings.header.focalY, zoom: settings.header.zoomPercent };
+  return (device === "desktop" ? settings.design?.invitationDesktopCrop : undefined) ?? settings.design?.invitationCrop ?? defaultArtworkCrop();
+}
+export function changeDraftArtworkCrop(settings: DraftArtwork, kind: DraftImageKind, device: DesignPreviewDevice, crop: ArtworkCrop): DraftArtwork {
+  const next = parseArtworkCrop(crop, kind === "header" && !settings.design ? 200 : 250);
+  if (!next || (kind === "invitation" && !settings.design)) return settings;
+  // Freeze the old desktop fallback before the first phone edit. Neither size
+  // silently follows changes made to the other, including reset actions.
+  const desktop = device === "desktop" ? next : { ...draftArtworkCrop(settings, kind, "desktop") };
+  if (kind === "header") return { ...settings, header: { ...settings.header, desktopCrop: desktop,
+    ...(device === "phone" ? { focalX: next.x, focalY: next.y, zoomPercent: next.zoom } : {}) } };
+  return { ...settings, design: { ...settings.design!, invitationDesktopCrop: desktop,
+    ...(device === "phone" ? { invitationCrop: next } : {}) } };
+}
 export function validateDraftArtwork(id: string, input: unknown): { ok: true; settings: DraftArtwork } | { ok: false; message: string } {
   if (!isDraftId(id) || !input || typeof input !== "object" || Array.isArray(input)) return { ok: false, message: "Please check the artwork settings." };
   const source = input as Record<string, unknown>;
@@ -41,12 +60,15 @@ export function validateDraftArtwork(id: string, input: unknown): { ok: true; se
     images[kind] = { path: image.path as string | null, alt: image.path ? image.alt.trim() : "" };
   }
   const header = source.header as Record<string, unknown>;
+  const desktopCrop = "desktopCrop" in header ? parseArtworkCrop(header.desktopCrop, design ? 250 : 200) : undefined;
+  if (desktopCrop === null) return { ok: false, message: "Please check the desktop header position and zoom." };
   for (const [key, min, max] of [["focalX", 0, 100], ["focalY", 0, 100], ["zoomPercent", 100, design ? 250 : 200]] as const) {
     if (typeof header[key] !== "number" || !Number.isInteger(header[key]) || header[key] < min || header[key] > max) return { ok: false, message: "Please check the header position and zoom." };
   }
   return { ok: true, settings: {
     ...(design ? { design } : {}),
     invitation: images.invitation!,
-    header: { ...images.header!, focalX: header.focalX as number, focalY: header.focalY as number, zoomPercent: header.zoomPercent as number },
+    header: { ...images.header!, focalX: header.focalX as number, focalY: header.focalY as number, zoomPercent: header.zoomPercent as number,
+      ...(desktopCrop ? { desktopCrop } : {}) },
   } };
 }

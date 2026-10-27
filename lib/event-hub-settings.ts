@@ -1,4 +1,5 @@
 import { OYSTER_ROAST_EVENT } from "./oyster-roast-event";
+import type { ArtworkCrop } from "./design-artwork";
 
 export type EventHubHeaderSettings = {
   imageUrl: string;
@@ -6,6 +7,8 @@ export type EventHubHeaderSettings = {
   focalX: number;
   focalY: number;
   zoomPercent: number;
+  // Published host-created events only; legacy settings keep their shared crop.
+  desktopCrop?: ArtworkCrop;
 };
 
 export const DEFAULT_EVENT_HUB_HEADER: EventHubHeaderSettings = {

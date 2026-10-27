@@ -17,7 +17,7 @@ import { DraftArtworkFraming } from "../components/admin/draft-artwork-framing";
 import { EventDraftPreview } from "../components/admin/event-draft-preview";
 import { DraftEditorActionBar } from "../components/admin/draft-editor-action-bar";
 import { EditorViewToggle } from "../components/admin/editor-view-toggle";
-import { type DraftArtwork, type DraftImageKind } from "../lib/event-draft-artwork";
+import { draftArtworkCrop, type DraftArtwork, type DraftImageKind } from "../lib/event-draft-artwork";
 import { draft, eventId, otherEventId } from "./fixtures/publication";
 
 const settings: DraftArtwork = {
@@ -42,7 +42,7 @@ function controls(kind: DraftImageKind) {
   h.cursor = h.slots.length;
   return DraftArtworkImageControls(props);
 }
-function button(node: ReactNode, text: string) { return find(el => el.type === "button" && (el.props.children === text || el.props["aria-label"] === text), node)!; }
+function button(node: ReactNode, text: string) { return find(el => el.type === "button" && ([el.props.children].flat().join("") === text || el.props["aria-label"] === text), node)!; }
 function click(node: Element) { (node.props.onClick as () => void)(); render(); }
 function submit() { const promise = (find(el => el.type === "form")!.props.onSubmit as (e: { preventDefault: () => void }) => Promise<void>)({ preventDefault() {} }); render(); return promise; }
 beforeEach(() => {
@@ -63,10 +63,10 @@ describe("direct artwork editor interactions", () => {
     select("invitation"); expect(preview().view).toBe("invitation"); expect(actions().dirty).toBe(false);
   });
   it.each(["header", "invitation"] as const)("resetting the %s changes only its framing and remains an unsaved draft", kind => {
-    select(kind); click(button(controls(kind), "Reset crop"));
+    select(kind); click(button(controls(kind), "Reset phone crop"));
     const next = preview().artwork;
-    if (kind === "header") { expect(next.header).toEqual({ ...settings.header, focalX: 50, focalY: 50, zoomPercent: 100 }); expect(next.design).toEqual(settings.design); }
-    else { expect(next.header).toEqual(settings.header); expect(next.design).toEqual({ ...settings.design, invitationCrop: { x: 50, y: 50, zoom: 100 } }); }
+    if (kind === "header") { expect(next.header).toEqual({ ...settings.header, focalX: 50, focalY: 50, zoomPercent: 100, desktopCrop: { x: 40, y: 80, zoom: 180 } }); expect(next.design).toEqual(settings.design); }
+    else { expect(next.header).toEqual(settings.header); expect(next.design).toEqual({ ...settings.design, invitationCrop: { x: 50, y: 50, zoom: 100 }, invitationDesktopCrop: settings.design!.invitationCrop }); }
     expect(next.invitation).toEqual(settings.invitation); expect(actions().dirty).toBe(true); expect(h.save).not.toHaveBeenCalled();
   });
   it("repositions the header fallback without changing its source or invitation crop", () => {
@@ -110,25 +110,38 @@ describe("direct artwork editor interactions", () => {
   });
   it("keeps original invitations uncropped and handles missing images or storage", () => {
     delete props.initial.settings.design; h.slots = []; render();
-    expect(button(controls("invitation"), "Reposition")).toBeUndefined(); expect(button(controls("invitation"), "Reset crop")).toBeUndefined();
+    expect(button(controls("invitation"), "Reposition")).toBeUndefined(); expect(button(controls("invitation"), "Reset phone crop")).toBeUndefined();
     props.initial.settings.invitation.path = null; props.initial.settings.header.path = null; props.uploadConfigured = false; h.slots = []; render(); select("header");
     const panel = controls("header");
-    for (const name of ["Choose Event Hub header", "Reposition", "Reset crop"]) expect(button(panel, name).props.disabled).toBe(true);
-    click(button(panel, "Reset crop")); expect(actions().dirty).toBe(false);
+    for (const name of ["Choose Event Hub header", "Reposition", "Reset phone crop"]) expect(button(panel, name).props.disabled).toBe(true);
+    click(button(panel, "Reset phone crop")); expect(actions().dirty).toBe(false);
   });
   it("locks preview actions during saves, persists through the existing action and never publishes", async () => {
     let finish!: (value: unknown) => void; h.save.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
-    select("header"); click(button(controls("header"), "Reset crop")); const task = submit();
+    select("header"); click(button(controls("header"), "Reset phone crop")); const task = submit();
     expect(preview().artworkEditingDisabled).toBe(true); select("invitation"); expect(preview().view).toBe("hub");
-    click(button(controls("header"), "Reset crop")); expect(h.save).toHaveBeenCalledOnce();
+    click(button(controls("header"), "Reset phone crop")); expect(h.save).toHaveBeenCalledOnce();
     expect(h.save).toHaveBeenCalledWith({ id: eventId, revision: 4, settings: preview().artwork });
     finish({ ok: true, revision: 5 }); await task; render();
     expect(actions().dirty).toBe(false); expect(actions().status).toContain("Nothing has been published"); expect(preview().artworkEditingDisabled).toBe(false);
   });
   it("preserves edits and blocks preview editing on a revision conflict", async () => {
     h.save.mockResolvedValue({ ok: false, conflict: true, message: "Reopen saved artwork." });
-    select("header"); click(button(controls("header"), "Reset crop")); await submit(); render();
+    select("header"); click(button(controls("header"), "Reset phone crop")); await submit(); render();
     expect(actions().dirty).toBe(true); expect(actions().conflict).toBe(true); expect(preview().artworkEditingDisabled).toBe(true);
     select("invitation"); expect(preview().view).toBe("hub");
+  });
+  it.each(["invitation", "header"] as const)("switches %s size without dirtying, then resets/copies only the selected crop and saves both", async kind => {
+    select(kind); click(button(controls(kind), "Desktop crop"));
+    expect(actions().dirty).toBe(false); expect(preview().device).toBe("desktop");
+    click(button(controls(kind), "Reset desktop crop"));
+    expect(draftArtworkCrop(preview().artwork, kind, "phone")).toEqual(draftArtworkCrop(settings, kind, "phone"));
+    expect(draftArtworkCrop(preview().artwork, kind, "desktop")).toEqual({ x: 50, y: 50, zoom: 100 });
+    click(button(controls(kind), "Phone crop"));
+    click(button(controls(kind), "Copy desktop crop to phone"));
+    expect(draftArtworkCrop(preview().artwork, kind, "phone")).toEqual({ x: 50, y: 50, zoom: 100 });
+    const edited = preview().artwork;
+    await submit(); render(); expect(h.save).toHaveBeenLastCalledWith({ id: eventId, revision: 4, settings: edited });
+    expect(actions().dirty).toBe(false);
   });
 });

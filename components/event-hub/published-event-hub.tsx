@@ -33,14 +33,14 @@ export async function PublishedEventHub({ event, scope }: { event: EventConfigur
   if (event.design) return <main><DesignedHub appearance={event.design}
     guestTools={guestTools} hubEyebrow={timing.label ?? undefined}
     details={{ title: event.title, eyebrow: event.invitation.eyebrow, date: event.dateLabel, time: event.timeLabel, venue: event.venue, address: event.address, description: event.description }}
-    image={{ url: image.url, alt: image.alt, crop: { x: image.focalX, y: image.focalY, zoom: image.zoomPercent } }}
+    image={{ url: image.url, alt: image.alt, crop: { x: image.focalX, y: image.focalY, zoom: image.zoomPercent }, desktopCrop: image.desktopCrop }}
     actions={<>{timing.nearEvent && directions}<a href={calendarPath(event)} download={event.calendarFilename}>Add to Calendar</a>{!timing.nearEvent && directions}<Link href={event.websiteUrl}>Return to invitation</Link></>}
   >{modules}</DesignedHub></main>;
   return <main className="relative min-h-screen overflow-hidden bg-[#f7f0e3] px-4 py-5 text-[#202523] sm:px-6 sm:py-8 lg:px-8 lg:py-10">
     <div aria-hidden="true" className="page-texture" /><div className="relative mx-auto max-w-4xl">
       <div className="mb-5 flex items-center justify-between gap-4 px-1"><p className="font-serif text-2xl">Shindig</p><p className="text-xs text-[#202523]/65">{event.cityLabel}</p></div>
       {guestTools}
-      <EventHubHeader event={event} timing={timing} headerSettings={{ imageUrl: image.url, imageAlt: image.alt, focalX: image.focalX, focalY: image.focalY, zoomPercent: image.zoomPercent }} />
+      <EventHubHeader event={event} timing={timing} headerSettings={{ imageUrl: image.url, imageAlt: image.alt, focalX: image.focalX, focalY: image.focalY, zoomPercent: image.zoomPercent, desktopCrop: image.desktopCrop }} />
       {modules}
       <footer className="mt-8 border-t border-[#202523]/12 py-5 text-center text-xs text-[#202523]/50">Good people. Great gatherings.</footer>
     </div>

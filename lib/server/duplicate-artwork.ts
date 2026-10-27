@@ -15,7 +15,7 @@ export type CopyArtworkSource = {
   design?: DraftArtwork["design"];
   key: string;
   images: Record<DraftImageKind, { locator: string; alt: string } | null>;
-  crop: Pick<DraftArtwork["header"], "focalX" | "focalY" | "zoomPercent">;
+  crop: Pick<DraftArtwork["header"], "focalX" | "focalY" | "zoomPercent" | "desktopCrop">;
 };
 const extensions: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/avif": "avif" };
 

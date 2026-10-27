@@ -11,7 +11,7 @@ import { DraftArtworkImageControls } from "./draft-artwork-image-controls";
 import { PreviewFrame } from "../design-studio/preview-frame";
 import type { DesignPreviewDevice } from "../../lib/design-preview";
 import { getEventDesign, type EventDesignId } from "../../lib/event-design";
-import { defaultArtworkCrop } from "../../lib/design-artwork";
+import { appearanceForStyle } from "../../lib/event-appearance";
 import { EditorViewToggle, type EditorView } from "./editor-view-toggle";
 import { DraftEditorActionBar } from "./draft-editor-action-bar";
 import type { DraftPublicationStatus } from "../../lib/event-save-status";
@@ -108,7 +108,7 @@ export function EventDraftArtworkEditor({ draft, initial, uploadConfigured, requ
             {requestedDesign && <section className={`${panel} border-[#355f9e]/30`} aria-label="Design from the playground">
               <h2 className="font-serif text-2xl">Bring {getEventDesign(requestedDesign).name} to this event</h2>
               <p className="mt-2 text-sm leading-6 text-[#202523]/65">Your style choice came from the playground. Its sample details, local artwork and crops haven’t been copied. Your existing event artwork stays in place.</p>
-              <button type="button" className={`${button} mt-3`} disabled={Boolean(busy) || conflict || settings.design?.style === requestedDesign} onClick={() => { setSettings((current) => ({ ...current, design: { style: requestedDesign, invitationCrop: current.design?.invitationCrop ?? defaultArtworkCrop() } })); setDirty(true); setMessage(null); setError(null); }}>{settings.design?.style === requestedDesign ? `${getEventDesign(requestedDesign).name} selected` : `Apply ${getEventDesign(requestedDesign).name}`}</button>
+              <button type="button" className={`${button} mt-3`} disabled={Boolean(busy) || conflict || settings.design?.style === requestedDesign} onClick={() => { setSettings((current) => ({ ...current, design: appearanceForStyle(requestedDesign, current.design) })); setDirty(true); setMessage(null); setError(null); }}>{settings.design?.style === requestedDesign ? `${getEventDesign(requestedDesign).name} selected` : `Apply ${getEventDesign(requestedDesign).name}`}</button>
               <p className="mt-2 text-xs leading-5 text-[#202523]/60">Choose Save artwork in the bottom bar, then Review &amp; publish. Applying a style here does not save or publish it.</p>
             </section>}
             <DraftDesignControls settings={settings} disabled={Boolean(busy) || conflict} onChange={(next) => { setSettings(next); setDirty(true); setMessage(null); setError(null); }} />
@@ -124,7 +124,7 @@ export function EventDraftArtworkEditor({ draft, initial, uploadConfigured, requ
           <div className="mb-4 mt-3 flex flex-wrap gap-2" role="group" aria-label="Preview screen"><button type="button" className={button} aria-pressed={view === "invitation"} onClick={() => setView("invitation")}>Invitation</button><button type="button" className={button} aria-pressed={view === "hub"} onClick={() => setView("hub")}>Event Hub</button></div>
           <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Preview size">{(["phone", "desktop"] as const).map((size) => <button key={size} type="button" className={button} aria-pressed={device === size} onClick={() => setDevice(size)}>{size === "phone" ? "Phone" : "Desktop"}</button>)}</div>
           <button type="button" className={`${button} mb-4`} disabled={Boolean(busy) || conflict} onClick={() => editArtwork(activeKind)} aria-controls={`artwork-${activeKind}-controls`}>Open {activeKind === "header" ? "header" : "invitation image"} controls</button>
-          <PreviewFrame device={device} label="Private draft"><EventDraftPreview draft={draft} artwork={settings} view={view} fullPage={device === "desktop"} onEditArtwork={editArtwork} artworkEditingDisabled={Boolean(busy) || conflict} /></PreviewFrame>
+          <PreviewFrame device={device} label="Private draft"><EventDraftPreview draft={draft} artwork={settings} view={view} fullPage={device === "desktop"} device={device} onEditArtwork={editArtwork} artworkEditingDisabled={Boolean(busy) || conflict} /></PreviewFrame>
           <div className="mt-4 flex flex-wrap gap-3"><Link className={button} href={`/admin/events/${draft.id}/preview`} onClick={leave}>Preview saved draft</Link></div>
         </section>
       </div>

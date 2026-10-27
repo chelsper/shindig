@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+import headerStyles from "../components/event-hub/header-artwork.module.css";
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), draft: vi.fn(), artwork: vi.fn(), settings: vi.fn(), content: vi.fn(), redirect: vi.fn(), notFound: vi.fn() }));
 vi.mock("server-only", () => ({}));
 vi.mock("../lib/server/admin-session", () => ({ isAdminAuthenticated: mocks.auth }));
@@ -74,7 +75,7 @@ describe("full-page host preview", () => {
     mocks.artwork.mockResolvedValue({ settings: { ...EMPTY_DRAFT_ARTWORK, invitation: { path, alt: "Garden artwork" }, header: { ...EMPTY_DRAFT_ARTWORK.header, focalY: 30, zoomPercent: 120 } }, revision: 1 });
     const html = renderToStaticMarkup(await Preview(context("hub")));
     expect(html).toContain(`/admin/events/${id}/artwork/image?`); expect(html).not.toContain("/_next/image");
-    expect(html).toContain("object-position:50% 30%"); expect(html).toContain("scale(1.2)"); expect(html).toContain("sm:aspect-[16/6]");
+    expect(html).toContain("object-position:50% 30%"); expect(html).toContain("scale(1.2)"); expect(html).toContain(headerStyles.frame);
   });
   it("handles incomplete drafts and failures without falling back to live content", async () => {
     mocks.draft.mockResolvedValue({ ...draft, startsAtUtc: null, address: "" });

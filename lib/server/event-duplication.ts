@@ -50,7 +50,8 @@ export async function getDuplicationSource(key: string): Promise<DuplicationSour
         invitation: artwork.settings.invitation.path ? { locator: artwork.settings.invitation.path, alt: artwork.settings.invitation.alt } : null,
         header: artwork.settings.header.path ? { locator: artwork.settings.header.path, alt: artwork.settings.header.alt } : null,
       },
-      crop: { focalX: artwork.settings.header.focalX, focalY: artwork.settings.header.focalY, zoomPercent: artwork.settings.header.zoomPercent },
+      crop: { focalX: artwork.settings.header.focalX, focalY: artwork.settings.header.focalY, zoomPercent: artwork.settings.header.zoomPercent,
+        ...(artwork.settings.header.desktopCrop ? { desktopCrop: artwork.settings.header.desktopCrop } : {}) },
     };
     versions = { details: draft.revision, artwork: artwork.revision, settings: settings.revision };
   }

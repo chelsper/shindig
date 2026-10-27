@@ -84,7 +84,7 @@ describe("Artwork & Design editor safeguards", () => {
     (framing().props.onChange as (value: DraftArtwork) => void)(next); render();
     expect(find(el => el.type === EventDraftPreview)!.props).toMatchObject({ view: "hub", artwork: next });
     expect(bar().dirty).toBe(true); expect(harness.artwork).not.toHaveBeenCalled();
-    (framing().props.onDeviceChange as (device: string) => void)("desktop"); render();
+    (find(el => el.type === DraftArtworkImageControls && el.props.kind === "header")!.props.onDeviceChange as (device: string) => void)("desktop"); render();
     expect(find(el => el.type === EventDraftPreview)!.props.fullPage).toBe(true);
     toggle("preview"); toggle("edit");
     await submit(); render();
