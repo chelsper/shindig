@@ -1,5 +1,83 @@
 # Shindig
 
+## Host registration controls (public-launch preparation)
+
+Registration is still **invite-only by default**. This change does not open the
+production service, change Google/Vercel settings, or complete the other public
+launch requirements. It adds two server-only environment variables; no migration,
+new dependency, Google scope or guest account is required.
+
+| `HOST_REGISTRATION_MODE` | `HOST_SIGNUPS_ENABLED` | New hosts | Existing hosts |
+| --- | --- | --- | --- |
+| `invite-only` (default) | `true` (default when unset) | Verified Google email on `HOST_ALLOWED_EMAILS` | Must still be verified and allowlisted |
+| `invite-only` | `false` | Nobody, including invited addresses | Verified, allowlisted hosts can still sign in |
+| `public` | `true` | Any verified Google identity | Verified existing hosts can still sign in |
+| `public` | `false` | Nobody | Verified existing hosts can still sign in |
+
+The mode is case-sensitive; unset/blank mode means `invite-only`. Unknown modes
+fail closed for new accounts, Google sign-in and application host sessions, while
+logout and the separate legacy administrator remain available. Only the literal
+`true` enables signups; blank/invalid signup values pause registration. Whitespace
+around values is trimmed. Never prefix these variables with `NEXT_PUBLIC_`.
+
+The new-user hook checks policy at OAuth callback/account-creation time, not just
+when the sign-in button is rendered. Pausing does not disable Google's returning
+host login or revoke eligible sessions. Identity verification, fixed redirects,
+CSRF/state/PKCE checks, database-backed throttling, provider-token removal and
+event ownership checks are unchanged. No public email lookup is introduced.
+
+### Vercel: deploy safely, open deliberately, pause if needed
+
+1. In **Shindig → Settings → Environment Variables → Production**, retain
+   `HOST_REGISTRATION_MODE=invite-only`, `HOST_SIGNUPS_ENABLED=true`, and your
+   existing `HOST_ALLOWED_EMAILS`. Leaving both new variables unset has the same
+   behavior as the current pilot. Deploy the reviewed code normally.
+2. Finish the Google checklist below and the remaining launch safeguards
+   (privacy/data controls, usage limits, operations and provider licensing) before
+   opening public registration. Test changes with a separate non-production
+   database, Google project and stable callback origin—not production guest data.
+3. When ready to open, explicitly set `HOST_REGISTRATION_MODE=public` and
+   `HOST_SIGNUPS_ENABLED=true` in Production and **redeploy**. The allowlist is
+   ignored in public mode; clearing it alone never opens invite-only registration.
+4. To pause new accounts, keep the current mode, set `HOST_SIGNUPS_ENABLED=false`,
+   and **redeploy**. Verify an existing host can still sign in and a new identity
+   cannot create an account. This takes effect when the deployment is active;
+   it is not an instantaneous database kill switch or a reversal of completed
+   account creations. Old Google flows returning to the new deployment are checked
+   against the new policy. Resume by setting `true` and redeploying.
+5. Switching **back to invite-only** restricts even previously public hosts unless
+   their email is added to `HOST_ALLOWED_EMAILS`. Use the signup pause instead if
+   you intend to preserve existing host access. Removing an email from the
+   allowlist has no effect in public mode; individual account suspension is not
+   implemented by these registration controls.
+
+### Google: manual public-launch checklist
+
+- In the **production Google Cloud project → Google Auth Platform**, use an
+  **External** audience and the production publishing status when ready to launch.
+  The current basic identity scopes (`openid`, `email`, `profile`) have a Testing
+  allowlist exception; Google Testing must not be treated as Shindig's access gate.
+  See [Google's app-state guidance](https://developers.google.com/identity/protocols/oauth2/production-readiness/overview).
+- Confirm Branding has the real Shindig name, reachable support/developer contacts,
+  `https://www.haveashindig.com/`, and a real published privacy-policy link.
+  Complete authorized-domain ownership and any brand verification requested for
+  displaying Shindig's name/logo. Privacy/terms pages still need separate review
+  and implementation; do not register placeholder policy URLs.
+  See [Google's brand-verification checklist](https://developers.google.com/identity/protocols/oauth2/production-readiness/brand-verification).
+- Under **Clients → Web application**, retain the exact production redirect URI
+  `https://www.haveashindig.com/api/auth/callback/google`. Keep testing clients in
+  a separate project; keep only basic identity scopes and server-only credentials.
+  See [Google's production policies](https://developers.google.com/identity/protocols/oauth2/production-readiness/policy-compliance).
+- Test a fresh, verified Google identity outside Shindig's allowlist, an existing
+  host, logout, and cross-host access. Workspace administrators may independently
+  restrict Google sign-in. Console configuration/verification is manual and has
+  not been changed or certified by this implementation.
+
+Tests cover all registration modes, invalid configuration, existing-session
+eligibility, sign-in copy, forged client options and simulated signed Google
+callbacks against disposable PostgreSQL. Public and paused registrations never
+weaken the existing host ownership tests. No real Google account is created by tests.
+
 ## Consistent host workspace
 
 ### Faster private invitation tracking
@@ -757,11 +835,11 @@ RSVP fields and guest-module navigation. A browser-extension-added HTML attribut
 produced a development hydration warning; no application hydration mismatch was
 identified. Temporary visual QA routes were removed before production builds.
 
-## Host accounts & event ownership (Step 11 — invite-only pilot)
+## Host accounts & event ownership (invite-only by default)
 
 Hosts can sign in at `/host/sign-in` with Google, then create and manage **only
-their own events** in `/admin/events`. Guests never sign in. This is an invite-only
-pilot, not public registration or a paid launch. No payments, passwords to recover,
+their own events** in `/admin/events`. Guests never sign in. This defaults to an
+invite-only pilot; public registration is explicit (see controls above), not a paid launch. No payments, passwords to recover,
 email delivery, co-hosts, account deletion or ownership-transfer interface is added.
 
 - Better Auth manages the Google authorization-code/PKCE/state flow and server-side
@@ -770,11 +848,11 @@ email delivery, co-hosts, account deletion or ownership-transfer interface is ad
   client identity. Logout revokes the session and clears the browser's private
   navigation cache. Origin checks, fixed return URLs, bounded request bodies and
   database-backed login throttling protect the narrowly exposed auth endpoints.
-- Only verified, explicitly allowlisted Google email addresses can create/use an
-  account. `HOST_ALLOWED_EMAILS` is comma-separated, case-insensitive, exact matching;
+- In invite-only mode, only verified, explicitly allowlisted Google email addresses
+  can create/use an account. `HOST_ALLOWED_EMAILS` is comma-separated, case-insensitive, exact matching;
   empty means nobody, and `*` is not supported. Removing an address and redeploying
   blocks its existing sessions at the Shindig authorization layer as well as new
-  sign-ins. Add an address to invite someone; there is no invitation email service.
+  sign-ins in invite-only mode. Add an address to invite someone; there is no invitation email service.
 - Google is used for identity only (`openid email profile`). Access/refresh/ID tokens
   are discarded after sign-in. No mail, contacts, calendar or offline access.
 - Each event and duplication receipt is bound to the server session's host ID on
@@ -825,6 +903,8 @@ email delivery, co-hosts, account deletion or ownership-transfer interface is ad
    | `GOOGLE_CLIENT_ID` | The Web application client ID |
    | `GOOGLE_CLIENT_SECRET` | Its client secret |
    | `HOST_ALLOWED_EMAILS` | Your approved full Google email addresses, comma-separated |
+   | `HOST_REGISTRATION_MODE` | `invite-only` by default; deliberately set `public` only when ready |
+   | `HOST_SIGNUPS_ENABLED` | `true`; set `false` to pause new accounts without blocking eligible existing hosts |
    | `DATABASE_URL` | Existing server-only Neon connection string, for the migrated database |
 
    Keep existing admin, Blob, music and weather settings unchanged. Host accounts
@@ -848,8 +928,10 @@ Google OAuth is centralized on `BETTER_AUTH_URL`, not every invitation domain.
 
 **Rollback warning:** once customer accounts/events exist, do not deploy pre-020
 application code: its old shared-admin queries do not filter by owner. Pause host
-access by clearing `HOST_ALLOWED_EMAILS` and redeploy this ownership-aware version
-instead. Ownership transfers/data deletion require a separately reviewed migration,
+access by setting `HOST_REGISTRATION_MODE=invite-only`, clearing
+`HOST_ALLOWED_EMAILS`, and redeploying this ownership-aware version instead. To
+pause only new accounts, use `HOST_SIGNUPS_ENABLED=false` without changing the mode.
+Ownership transfers/data deletion require a separately reviewed migration,
 not ad-hoc reassignment. This application-level authorization is not PostgreSQL RLS;
 restrict direct database credentials to trusted operators.
 

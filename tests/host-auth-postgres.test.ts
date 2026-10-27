@@ -21,6 +21,32 @@ function cookie(token: string, secret = config.secret) {
 function request(path: string, body: unknown = {}, extra: Record<string, string> = {}) {
   return new Request(`${config.origin}/api/auth${path}`, { method: "POST", headers: { origin: config.origin, "content-type": "application/json", "x-vercel-forwarded-for": "192.0.2.1", ...extra }, body: JSON.stringify(body) });
 }
+const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+const jwk = { ...publicKey.export({ format: "jwk" }), kid: "synthetic-key", alg: "RS256", use: "sig" };
+let loginAttempt = 90;
+function syntheticGoogle() {
+  let idToken = "";
+  const network = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (url === "https://oauth2.googleapis.com/token") return Response.json({ access_token: "discard-this-access-token", refresh_token: "discard-this-refresh-token", token_type: "Bearer", expires_in: 3600, id_token: idToken });
+    if (url === "https://www.googleapis.com/oauth2/v3/certs") return Response.json({ keys: [jwk] });
+    throw new Error("Unexpected external request in isolated auth test");
+  });
+  async function login(email: string, verified: boolean, beforeCallback?: () => void) {
+    const ip = `192.0.2.${loginAttempt++}`;
+    const start = await auth.handler(request("/sign-in/social", { provider: "google", callbackURL: `${config.origin}/admin/events` }, { "x-vercel-forwarded-for": ip }));
+    expect(start.status).toBe(200);
+    const url = new URL((await start.json()).url);
+    const oauthCookie = start.headers.getSetCookie().map((value) => value.split(";")[0]).join("; ");
+    const now = Math.floor(Date.now() / 1000);
+    const header = Buffer.from(JSON.stringify({ alg: "RS256", kid: jwk.kid, typ: "JWT" })).toString("base64url");
+    const payload = Buffer.from(JSON.stringify({ iss: "https://accounts.google.com", aud: config.clientId, sub: `google-${email}`, email, email_verified: verified, name: "Synthetic host", iat: now, exp: now + 3600, nonce: url.searchParams.get("nonce") })).toString("base64url");
+    idToken = `${header}.${payload}.${sign("RSA-SHA256", Buffer.from(`${header}.${payload}`), privateKey).toString("base64url")}`;
+    beforeCallback?.();
+    return auth.handler(new Request(`${config.origin}/api/auth/callback/google?code=synthetic&state=${url.searchParams.get("state")}`, { headers: { cookie: oauthCookie, "x-vercel-forwarded-for": ip } }));
+  }
+  return { login, network };
+}
 describe.skipIf(!embeddedModule)("real host authentication storage and sessions", () => {
   beforeAll(async () => {
     if (!/^\/private\/tmp\/[a-zA-Z0-9._/@-]+\/dist\/index.js$/.test(embeddedModule!)) throw new Error("Only use a disposable local PGlite installation.");
@@ -33,6 +59,7 @@ describe.skipIf(!embeddedModule)("real host authentication storage and sessions"
       return { rows: result.rows, rowCount: result.affectedRows ?? result.rows.length, command: text.trim().split(/\s/)[0].toUpperCase() };
     }, release() {} }), end: async () => {} } as unknown as Pool;
     vi.stubEnv("HOST_ALLOWED_EMAILS", "alice@example.test"); vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("HOST_REGISTRATION_MODE", "invite-only"); vi.stubEnv("HOST_SIGNUPS_ENABLED", "true");
     auth = betterAuth(hostAuthOptions(pool, config));
     cookieName = (await auth.$context).authCookies.sessionToken.name;
     await db.query(`INSERT INTO host_users (id, name, email, "emailVerified") VALUES ('alice', 'Alice', 'alice@example.test', true)`);
@@ -95,26 +122,7 @@ describe.skipIf(!embeddedModule)("real host authentication storage and sessions"
     expect((await db.query("SELECT count(*)::integer AS count FROM host_auth_rate_limits")).rows[0].count).toBeGreaterThan(0);
   });
   it("completes a simulated Google callback, discards provider tokens, and rejects uninvited/unverified accounts", async () => {
-    const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
-    const jwk = { ...publicKey.export({ format: "jwk" }), kid: "synthetic-key", alg: "RS256", use: "sig" };
-    let idToken = "";
-    const network = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      const url = input instanceof Request ? input.url : String(input);
-      if (url === "https://oauth2.googleapis.com/token") return Response.json({ access_token: "discard-this-access-token", refresh_token: "discard-this-refresh-token", token_type: "Bearer", expires_in: 3600, id_token: idToken });
-      if (url === "https://www.googleapis.com/oauth2/v3/certs") return Response.json({ keys: [jwk] });
-      throw new Error("Unexpected external request in isolated auth test");
-    });
-    async function login(email: string, verified: boolean) {
-      const start = await auth.handler(request("/sign-in/social", { provider: "google", callbackURL: `${config.origin}/admin/events` }, { "x-vercel-forwarded-for": "192.0.2.90" }));
-      expect(start.status).toBe(200);
-      const url = new URL((await start.json()).url);
-      const oauthCookie = start.headers.getSetCookie().map((value) => value.split(";")[0]).join("; ");
-      const now = Math.floor(Date.now() / 1000);
-      const header = Buffer.from(JSON.stringify({ alg: "RS256", kid: jwk.kid, typ: "JWT" })).toString("base64url");
-      const payload = Buffer.from(JSON.stringify({ iss: "https://accounts.google.com", aud: config.clientId, sub: `google-${email}`, email, email_verified: verified, name: "Synthetic host", iat: now, exp: now + 3600, nonce: url.searchParams.get("nonce") })).toString("base64url");
-      idToken = `${header}.${payload}.${sign("RSA-SHA256", Buffer.from(`${header}.${payload}`), privateKey).toString("base64url")}`;
-      return auth.handler(new Request(`${config.origin}/api/auth/callback/google?code=synthetic&state=${url.searchParams.get("state")}`, { headers: { cookie: oauthCookie, "x-vercel-forwarded-for": "192.0.2.90" } }));
-    }
+    const { login, network } = syntheticGoogle();
     try {
       vi.stubEnv("HOST_ALLOWED_EMAILS", "alice@example.test, invited@example.test, unverified@example.test");
       const success = await login("invited@example.test", true);
@@ -136,5 +144,46 @@ describe.skipIf(!embeddedModule)("real host authentication storage and sessions"
       expect(denied.headers.get("location")).toContain("error=");
       expect((await db.query(`SELECT id FROM host_sessions WHERE "userId" = $1`, [session!.user.id])).rows).toHaveLength(1);
     } finally { network.mockRestore(); }
+  });
+  it("supports public signup, pauses callbacks without partial accounts, and keeps existing hosts able to sign in", async () => {
+    const { login, network } = syntheticGoogle();
+    const getCookie = (res: Response) => res.headers.getSetCookie().find(value => value.startsWith(`${cookieName}=`) && !value.includes("Max-Age=0"))?.split(";")[0];
+    const userRows = async (email: string) => (await db.query("SELECT id FROM host_users WHERE email = $1", [email])).rows;
+    const totals = async () => (await db.query("SELECT (SELECT count(*) FROM host_users) AS users, (SELECT count(*) FROM host_accounts) AS accounts, (SELECT count(*) FROM host_sessions) AS sessions")).rows;
+    try {
+      vi.stubEnv("HOST_ALLOWED_EMAILS", ""); vi.stubEnv("HOST_REGISTRATION_MODE", "public");
+      const success = await login("public-host@example.test", true);
+      expect(success.headers.get("location")).toBe(`${config.origin}/admin/events`);
+      const sessionCookie = getCookie(success)!; expect(sessionCookie).toBeTruthy();
+      const session = await auth.api.getSession({ headers: new Headers({ cookie: sessionCookie }) });
+      expect(session?.user).toMatchObject({ email: "public-host@example.test", emailVerified: true });
+      expect(await userRows("public-host@example.test")).toHaveLength(1);
+      expect((await db.query('SELECT "accessToken", "refreshToken", "idToken" FROM host_accounts WHERE "userId" = $1', [session!.user.id])).rows).toEqual([{ accessToken: null, refreshToken: null, idToken: null }]);
+
+      const before = await totals();
+      const unverified = await login("unverified-public@example.test", false);
+      expect(unverified.headers.get("location")).toContain("error="); expect(getCookie(unverified)).toBeUndefined();
+      expect(await totals()).toEqual(before);
+      // Pause after OAuth begins: the callback, not the button, is the boundary.
+      const paused = await login("paused-new@example.test", true, () => vi.stubEnv("HOST_SIGNUPS_ENABLED", "false"));
+      expect(paused.headers.get("location")).toContain("error="); expect(getCookie(paused)).toBeUndefined();
+      expect(await totals()).toEqual(before); expect(await userRows("paused-new@example.test")).toEqual([]);
+
+      expect((await auth.api.getSession({ headers: new Headers({ cookie: sessionCookie }) }))?.user.id).toBe(session!.user.id);
+      const returning = await login("public-host@example.test", true);
+      expect(returning.headers.get("location")).toBe(`${config.origin}/admin/events`); expect(getCookie(returning)).toBeTruthy();
+      expect(await userRows("public-host@example.test")).toHaveLength(1);
+      await auth.handler(request("/sign-out", {}, { cookie: getCookie(returning)! }));
+      expect(await auth.api.getSession({ headers: new Headers({ cookie: getCookie(returning)! }) })).toBeNull();
+
+      vi.stubEnv("HOST_SIGNUPS_ENABLED", "true");
+      expect((await login("paused-new@example.test", true)).headers.get("location")).toBe(`${config.origin}/admin/events`);
+      expect(await userRows("paused-new@example.test")).toHaveLength(1);
+      vi.stubEnv("HOST_REGISTRATION_MODE", "invite-only");
+      const closed = await login("public-host@example.test", true);
+      expect(closed.headers.get("location")).toContain("error="); expect(getCookie(closed)).toBeUndefined();
+    } finally {
+      network.mockRestore(); vi.stubEnv("HOST_REGISTRATION_MODE", "invite-only"); vi.stubEnv("HOST_SIGNUPS_ENABLED", "true"); vi.stubEnv("HOST_ALLOWED_EMAILS", "alice@example.test");
+    }
   });
 });

@@ -1,5 +1,5 @@
 import { getHostAuth } from "../../../../lib/server/host-auth";
-import { hostAuthConfiguration } from "../../../../lib/server/host-auth-config";
+import { hostAuthConfiguration, hostRegistrationPolicy } from "../../../../lib/server/host-auth-config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,6 +14,8 @@ async function handle(request: Request) {
   const path = url.pathname.replace(/^\/api\/auth/, "");
   // Only OAuth and logout: no raw sessions, linking, password or profile APIs.
   if (request.method === "GET" ? path !== "/callback/google" : !["/sign-in/social", "/sign-out"].includes(path)) return failure(404);
+  // Invalid registration configuration fails closed; logout remains available.
+  if (path !== "/sign-out" && hostRegistrationPolicy().mode === null) return failure(503);
   if (request.method === "POST") {
     if (request.headers.get("origin") !== config.origin || request.headers.get("sec-fetch-site") === "cross-site") return failure(403);
     if (!request.headers.get("content-type")?.startsWith("application/json")) return failure(400);

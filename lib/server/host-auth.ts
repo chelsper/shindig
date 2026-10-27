@@ -2,7 +2,7 @@ import "server-only";
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { Pool } from "pg";
 import { headers } from "next/headers";
-import { allowedHostEmail, hostAuthConfiguration, type HostAuthConfiguration } from "./host-auth-config";
+import { canHostSignIn, canRegisterHost, hostAuthConfiguration, type HostAuthConfiguration } from "./host-auth-config";
 
 export function hostAuthOptions(database: Pool, config: HostAuthConfiguration): BetterAuthOptions {
   return {
@@ -25,12 +25,13 @@ export function hostAuthOptions(database: Pool, config: HostAuthConfiguration): 
     },
     databaseHooks: {
       user: { create: { before: async (user) => {
-        if (!user.emailVerified || !allowedHostEmail(user.email)) return false;
+        // Evaluate at creation/callback time, including OAuth begun before a pause.
+        if (user.emailVerified !== true || !canRegisterHost(user.email)) return false;
         return { data: { ...user, image: null } };
       } } },
       session: { create: { before: async (session, context) => {
         const user = await context?.context.internalAdapter.findUserById(session.userId);
-        if (!user?.emailVerified || !allowedHostEmail(user.email)) return false;
+        if (user?.emailVerified !== true || !canHostSignIn(user.email)) return false;
       } } },
       // Provider tokens are not needed after establishing the Google identity.
       account: {
@@ -71,6 +72,6 @@ export async function getHostAccountSession() {
   const auth = getHostAuth();
   if (!auth) return null;
   const session = await auth.api.getSession({ headers: requestHeaders, query: { disableCookieCache: true } });
-  if (!session || !session.user.emailVerified || !allowedHostEmail(session.user.email)) return null;
+  if (!session || session.user.emailVerified !== true || !canHostSignIn(session.user.email)) return null;
   return { id: session.user.id, name: session.user.name, email: session.user.email };
 }
