@@ -5,6 +5,12 @@ export const SHINDIG_SITE = {
   description: "A thoughtful invitation. An easy RSVP. One place for the plans. Shindig brings your people together.",
 } as const;
 
+export const SHINDIG_BUSINESS = {
+  name: "Have A Shindig",
+  location: "Jacksonville, Florida, USA",
+  supportEmail: "support@haveashindig.com",
+} as const;
+
 export const OYSTER_ROAST_WEBSITE = "https://www.jaspershucks.app/";
 
 // The host selects presentation only, never authorization or a database tenant.

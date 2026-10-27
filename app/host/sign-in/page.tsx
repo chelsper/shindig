@@ -3,6 +3,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { HostAccountButton } from "../../../components/admin/host-account-button";
+import { SiteLinks } from "../../../components/site-links";
 import { getHostPrincipal } from "../../../lib/server/host-access";
 import { hostAuthConfiguration, hostRegistrationPolicy } from "../../../lib/server/host-auth-config";
 
@@ -32,6 +33,7 @@ export default async function HostSignIn({ searchParams }: { searchParams: Promi
       {available ? <HostAccountButton /> : <p role="status" className="mt-6 rounded-xl bg-[#e9f2f8] p-4 text-sm leading-6">Host account sign-in isn’t available just yet. Please check back soon.</p>}
       <p className="mt-4 text-xs leading-5 text-[#202523]/60">{available && !publicRegistration && "Host accounts are currently available by invitation. "}Google is used only to verify your identity—not to access your mail, contacts, or calendar.</p>
       <Link href="/admin" className="mt-5 inline-flex min-h-11 items-center text-sm text-[#355f9e] underline underline-offset-4">Existing site administrator →</Link>
+      <div className="mt-5 border-t border-[#202523]/12 pt-3"><SiteLinks /></div>
     </section>
   </main>;
 }

@@ -1,5 +1,34 @@
 # Shindig
 
+## Public privacy and support pages (review before deployment)
+
+`/privacy` and `/support` are static, public pages with no account, database query,
+or third-party request required to render. The main Shindig homepage and host
+sign-in page link to both. The Jasper Shucks invitation and guest RSVP layouts are
+unchanged. Both pages use canonical URLs on `https://www.haveashindig.com`.
+
+Business identity is centralized in `lib/site.ts`: **Have A Shindig**, Jacksonville,
+Florida, USA, and **support@haveashindig.com**. The email link opens the visitor's
+mail app; it does not submit a form or send automatically. Support email forwarding
+uses ImprovMX to a Gmail inbox. Sending as the domain address is not configured by
+these pages; replies may come from the support Gmail account.
+
+The privacy draft describes the current application, including Google identity-only
+sign-in, public versus host-only event information, optional guest contacts,
+host-entered invitation contacts, service providers, browser storage, private edit
+links in calendars, and manual data requests. It does **not** promise automatic
+post-event deletion, deletion of host exports, or self-service account closure.
+No retention automation, account-deletion workflow, new consent gate, database
+migration, environment variable, or dependency is added.
+
+Before publishing, the operator should review the text against actual business
+practices, provider settings/agreements, support handling, and applicable privacy
+requirements, with qualified legal advice as appropriate. This draft is not a
+compliance certification or terms of service. Confirm the policy date when approved.
+After approval and deployment, check both public URLs and the support mailbox, then
+use `https://www.haveashindig.com/privacy` in Google Auth Platform Branding. Keep
+registration invite-only until the separate launch checklist is complete.
+
 ## Host registration controls (public-launch preparation)
 
 Registration is still **invite-only by default**. This change does not open the
@@ -61,8 +90,9 @@ event ownership checks are unchanged. No public email lookup is introduced.
 - Confirm Branding has the real Shindig name, reachable support/developer contacts,
   `https://www.haveashindig.com/`, and a real published privacy-policy link.
   Complete authorized-domain ownership and any brand verification requested for
-  displaying Shindig's name/logo. Privacy/terms pages still need separate review
-  and implementation; do not register placeholder policy URLs.
+  displaying Shindig's name/logo. Review and deploy the privacy draft above before
+  registering its URL; terms of service remain separate future work. Do not
+  register placeholder policy URLs.
   See [Google's brand-verification checklist](https://developers.google.com/identity/protocols/oauth2/production-readiness/brand-verification).
 - Under **Clients → Web application**, retain the exact production redirect URI
   `https://www.haveashindig.com/api/auth/callback/google`. Keep testing clients in

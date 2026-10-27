@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SiteLinks } from "./site-links";
 
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#355f9e]";
 
@@ -60,6 +61,7 @@ export function ShindigHome() {
         <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-[#202523]/15 py-6 text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-[#202523]/50">
           <span>Shindig · Made for getting together</span>
           <span>Come as you are. Stay awhile.</span>
+          <SiteLinks />
         </footer>
       </div>
     </main>

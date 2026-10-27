@@ -15,6 +15,14 @@ afterEach(() => vi.unstubAllEnvs());
 async function page(error?: string) { return renderToStaticMarkup(await HostSignIn({ searchParams: Promise.resolve({ error }) })); }
 
 describe("registration-aware host sign-in", () => {
+  it.each(["invite-only", "public", "typo"])("keeps support and privacy reachable in %s mode", async mode => {
+    vi.stubEnv("HOST_REGISTRATION_MODE", mode);
+    const html = await page();
+    expect(html).toContain('href="/privacy"');
+    expect(html).toContain('href="/support"');
+    expect(html).toContain('aria-label="Help and privacy"');
+    expect(html).not.toMatch(/By signing in.*agree|accept.*privacy/i);
+  });
   it("preserves invitation-only copy and the separate legacy administrator path", async () => {
     const html = await page();
     expect(html).toContain("available by invitation"); expect(html).toContain("Sign in with Google");

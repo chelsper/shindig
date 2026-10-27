@@ -34,6 +34,8 @@ describe("domain separation", () => {
     const html = renderToStaticMarkup(await Home());
     expect(html).toContain("Good people.");
     expect(html).toContain('href="/host/sign-in"');
+    expect(html).toContain('href="/privacy"');
+    expect(html).toContain('href="/support"');
     expect(html).not.toMatch(/Oyster Roast|Belmont|Submit RSVP|guestName|DATABASE_URL|ADMIN_PASSWORD|Create an event/);
     expect(await generateMetadata()).toEqual({ title: SHINDIG_SITE.title, description: SHINDIG_SITE.description, alternates: { canonical: SHINDIG_SITE.url } });
     expect(getEventConfiguration).not.toHaveBeenCalled();
@@ -48,6 +50,7 @@ describe("domain separation", () => {
     expect(html).toContain("Submit RSVP");
     expect(html).toContain('href="/event"');
     expect(html).not.toContain("Good people.");
+    expect(html).not.toContain('aria-label="Help and privacy"');
     expect(await generateMetadata()).toEqual({ title: event.title, description: event.description, alternates: { canonical: "https://www.jaspershucks.app/" } });
   });
   it("keeps host-dependent renders and metadata separate in the same process", async () => {
@@ -71,6 +74,7 @@ describe("domain separation", () => {
     expect(html).toContain("Submit RSVP");
     expect(html).toContain('href="/event"');
     expect((await invitationMetadata()).alternates?.canonical).toBe(OYSTER_ROAST_EVENT.websiteUrl);
+    expect(html).not.toContain('aria-label="Help and privacy"');
     expect(headers).not.toHaveBeenCalled();
   });
 });
