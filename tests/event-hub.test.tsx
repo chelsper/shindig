@@ -65,6 +65,7 @@ describe("Event Hub modules", () => {
     expect(html).toContain("The guest list is taking a quick break.");
     expect(html).toContain("Checking the skies in St. Johns");
     expect(html).not.toContain("0 guests");
+    expect(html).not.toContain("anonymous");
   });
 
   it("renders visible attending guests and the full attending total", () => {
@@ -78,10 +79,49 @@ describe("Event Hub modules", () => {
     );
 
     expect(html).toContain("Who’s Coming");
-    expect(html).toContain("6");
+    expect(html).toContain("6 guests are coming");
     expect(html).toContain("Visible");
+    expect(html).toContain("4 anonymous guests");
+    expect(html).toContain("included in the total");
     expect(html).toContain("See everyone");
     expect(html).not.toContain("Party of 2");
+  });
+
+  it("counts every public party, including households beyond the compact preview", () => {
+    const html = renderToStaticMarkup(
+      <GuestListModule guestList={{ totalGuestCount: 12, guests: [
+        { guestName: "Chelsea & Damon", partySize: 2 },
+        { guestName: "Sarah & Mike", partySize: 2 },
+        { guestName: "Taylor", partySize: 1 },
+        { guestName: "Alex", partySize: 1 },
+        { guestName: "The Smiths", partySize: 5 },
+      ] }} />,
+    );
+
+    expect(html).toContain("12 guests are coming");
+    expect(html).toContain("+ more");
+    expect(html).not.toContain("The Smiths");
+    expect(html).toContain("1 anonymous guest</span>");
+    expect(html).not.toContain("anonymous guests");
+  });
+
+  it.each([
+    { totalGuestCount: 0, guests: [] },
+    { totalGuestCount: 2, guests: [{ guestName: "Public household", partySize: 2 }] },
+    // Separate aggregate/name reads can briefly overlap an RSVP change.
+    { totalGuestCount: 1, guests: [{ guestName: "Public household", partySize: 2 }] },
+  ])("does not show zero or negative anonymous counts: %j", (guestList) => {
+    const html = renderToStaticMarkup(<GuestListModule guestList={guestList} />);
+    expect(html).not.toContain("anonymous");
+  });
+
+  it("does not show counts when guest-list data is unavailable", () => {
+    const html = renderToStaticMarkup(
+      <GuestListModule guestList={{ totalGuestCount: 3, guests: [] }} unavailable />,
+    );
+    expect(html).toContain("The guest list is taking a quick break.");
+    expect(html).not.toContain("anonymous");
+    expect(html).not.toContain("guests are coming");
   });
 
   it("shows a friendly empty state when no names are public", () => {
@@ -91,6 +131,7 @@ describe("Event Hub modules", () => {
 
     expect(html).toContain("Guests are coming!");
     expect(html).toContain("No one has chosen to appear publicly just yet.");
+    expect(html).toContain("3 anonymous guests");
   });
 
   it("does not render guest-list UI when the feature is disabled", () => {
@@ -105,7 +146,7 @@ describe("Event Hub modules", () => {
       <EventModules
         features={features}
         guestList={{
-          totalGuestCount: 2,
+          totalGuestCount: 5,
           guests: [{ guestName: "Should Not Render", partySize: 2 }],
         }}
       />,
@@ -113,6 +154,7 @@ describe("Event Hub modules", () => {
 
     expect(html).not.toContain("Who’s Coming");
     expect(html).not.toContain("Should Not Render");
+    expect(html).not.toContain("anonymous");
     expect(html).not.toContain('id="hub-tab-guestList"');
     expect(html).toContain("Checking the skies in St. Johns");
     expect(html).not.toContain('hidden=""');

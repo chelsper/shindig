@@ -7,6 +7,8 @@ export function GuestListModule({ guestList, unavailable = false }: { guestList:
   const [expanded, setExpanded] = useState(false);
   const total = guestList?.totalGuestCount ?? 0;
   const guests = guestList?.guests ?? [];
+  // Use every public party, not just the names shown in the compact preview.
+  const anonymousCount = Math.max(0, total - guests.reduce((count, guest) => count + guest.partySize, 0));
   const preview = guestListPreview(guests.map((guest) => guest.guestName));
   return <section aria-labelledby="guest-list-heading" className="rounded-[1.75rem] border border-[#202523]/10 bg-white/48 p-5 shadow-[0_14px_40px_rgb(32_37_35_/_0.05)] sm:p-7">
     <p className="text-[0.66rem] font-bold uppercase tracking-[0.2em] text-[#355f9e]">Guest list</p>
@@ -25,6 +27,10 @@ export function GuestListModule({ guestList, unavailable = false }: { guestList:
         </div>
         <button className="mt-2 min-h-11 text-sm font-semibold text-[#355f9e] underline decoration-[#355f9e]/25 underline-offset-4" type="button" aria-expanded={expanded} aria-controls="public-guest-list" onClick={() => setExpanded(!expanded)}>{expanded ? "Show less ↑" : "See everyone →"}</button>
       </> : <p className="mt-3 text-sm leading-6 text-[#202523]/60">{total > 0 ? "Guests are coming! No one has chosen to appear publicly just yet." : "The guest list is ready for its first name. RSVP from the invitation when you know you can join us."}</p>}
+      {anonymousCount > 0 ? <p className="mt-3 text-sm leading-6 text-[#202523]/75">
+        <span className="font-semibold">{anonymousCount} anonymous {anonymousCount === 1 ? "guest" : "guests"}</span>
+        <span className="text-[#202523]/60"> · included in the total</span>
+      </p> : null}
       <p className="mt-2 text-xs leading-5 text-[#202523]/50">Only names shared publicly appear here. The total also includes private guests.</p>
     </>}
   </section>;

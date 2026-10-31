@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 vi.mock("server-only", () => ({}));
 vi.mock("../lib/server/rsvps", () => ({ getPublicGuestList: vi.fn(async () => ({ totalGuestCount: 6, guests: [{ guestName: "Visible household", partySize: 2 }] })) }));
@@ -18,10 +18,16 @@ import type { EventScope } from "../lib/server/event-scope";
 const event = publicationEvent(eventId, { ...snapshot, artwork: { ...snapshot.artwork, design: { style: "after-dark", invitationCrop: { x: 50, y: 50, zoom: 100 } } } });
 const scope = { slug: event.slug } as EventScope;
 describe("published Hub design keeps the existing public boundary", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-01T12:00:00Z"));
+  });
+  afterEach(() => vi.useRealTimers());
   it("uses scoped guest projection, event-specific actions and the reviewed style", async () => {
     const html = renderToStaticMarkup(await PublishedEventHub({ event, scope }));
     expect(getPublicGuestList).toHaveBeenCalledWith(scope);
     expect(html).toContain('data-event-design="after-dark"'); expect(html).toContain("6"); expect(html).toContain("Visible");
+    expect(html).toContain("4 anonymous guests");
     expect(html).toContain("Around the Shindig"); expect(html).not.toContain("Around the Roast");
     expect(html).toContain(`${event.websiteUrl}`); expect(html).toContain(`/e/${event.slug}/calendar.ics`);
     expect(html).toContain("Get Directions"); expect(html).toContain("Return to invitation");
