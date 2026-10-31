@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DuplicateRsvpLink } from "./duplicate-rsvp-link";
 
 import { logoutAdmin } from "../../app/admin/actions";
 import { OYSTER_ROAST_EVENT, type OysterRoastEvent } from "../../lib/oyster-roast-event";
@@ -13,6 +14,7 @@ type AdminDashboardProps = {
   filter: RsvpFilter;
   rsvps: AdminRsvp[];
   summary: RsvpSummary;
+  duplicateCount?: number | null;
 };
 
 const filters: { label: string; value: RsvpFilter }[] = [
@@ -45,7 +47,7 @@ function StatusBadge({ attending }: { attending: boolean }) {
   );
 }
 
-export function AdminDashboard({ filter, rsvps, summary, event = OYSTER_ROAST_EVENT }: AdminDashboardProps) {
+export function AdminDashboard({ filter, rsvps, summary, event = OYSTER_ROAST_EVENT, duplicateCount }: AdminDashboardProps) {
   const summaryCards = [
     { label: "Total Attending", value: summary.totalAttending },
     { label: "RSVP Responses", value: summary.totalResponses },
@@ -119,6 +121,7 @@ export function AdminDashboard({ filter, rsvps, summary, event = OYSTER_ROAST_EV
           ))}
         </section>
 
+        <DuplicateRsvpLink count={duplicateCount} />
         <section className="mt-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>

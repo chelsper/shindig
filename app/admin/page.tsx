@@ -7,6 +7,7 @@ import { AdminDashboard } from "../../components/admin/admin-dashboard";
 import { AdminLoginForm } from "../../components/admin/admin-login-form";
 import { OYSTER_ROAST_EVENT } from "../../lib/oyster-roast-event";
 import { getEventConfiguration } from "../../lib/server/invitation-settings";
+import { listPossibleDuplicateRsvps } from "../../lib/server/rsvp-duplicates";
 import {
   isAdminAuthenticated,
   isAdminConfigured,
@@ -111,6 +112,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       event={await getEventConfiguration()}
       rsvps={dashboardData.rsvps}
       summary={dashboardData.summary}
+      duplicateCount={await listPossibleDuplicateRsvps().then(review => review.total).catch(() => null)}
     />
   );
 }

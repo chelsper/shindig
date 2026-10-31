@@ -1,13 +1,14 @@
 import Link from "next/link";
+import { DuplicateRsvpLink } from "./duplicate-rsvp-link";
 import { eventGuestsPath } from "../../lib/admin-guests";
 import type { AdminRsvp, RsvpFilter, RsvpSummary } from "../../lib/server/rsvps";
 
 const filters = [{ key: "all", label: "All" }, { key: "attending", label: "Attending" }, { key: "declined", label: "Can’t Make It" }] as const;
 const notices = { create: "Guest added.", update: "RSVP updated.", delete: "RSVP deleted." };
 
-export function EventGuestList({ id, timeZone, responses, summary, filter, q, saved }: {
+export function EventGuestList({ id, timeZone, responses, summary, filter, q, saved, duplicateCount }: {
   id: string; timeZone: string; responses: AdminRsvp[]; summary: RsvpSummary;
-  filter: RsvpFilter; q: string; saved?: string;
+  filter: RsvpFilter; q: string; saved?: string; duplicateCount?: number | null;
 }) {
   const base = eventGuestsPath(id);
   const format = new Intl.DateTimeFormat("en-US", { timeZone, dateStyle: "medium", timeStyle: "short" });
@@ -22,6 +23,7 @@ export function EventGuestList({ id, timeZone, responses, summary, filter, q, sa
       <Link href={`${base}/new`} className="primary-button inline-flex px-5">+ Add Guest</Link>
       <a className="inline-flex min-h-11 items-center text-sm text-[#355f9e] underline" href={`${base}/export`}>Export all RSVPs</a>
     </div>
+    <DuplicateRsvpLink id={id} count={duplicateCount} />
     <form action={base} className="mb-4 flex flex-wrap items-end gap-3" role="search">
       <input type="hidden" name="filter" value={filter} />
       <label className="field-label min-w-0 flex-1 basis-48">Search guest names<input className="field-input" type="search" name="q" defaultValue={q} maxLength={120} placeholder="Guest or household name" /></label>

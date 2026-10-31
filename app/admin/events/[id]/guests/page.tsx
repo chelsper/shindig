@@ -13,6 +13,7 @@ import { eventStatus } from "../../../../../lib/event-lifecycle";
 import { isDraftId } from "../../../../../lib/event-drafts";
 import { draftEventSlug } from "../../../../../lib/event-routes";
 import { listRsvps, getRsvpSummary } from "../../../../../lib/server/rsvps";
+import { listPossibleDuplicateRsvps } from "../../../../../lib/server/rsvp-duplicates";
 import { listQuestionsForAdmin } from "../../../../../lib/server/questions";
 import { listHostUpdatesForAdmin } from "../../../../../lib/server/updates";
 import { listPollsForAdmin } from "../../../../../lib/server/polls";
@@ -73,7 +74,8 @@ export default async function EventGuests({ params, searchParams }: { params: Pr
       if (!result) content = failed;
       else {
       const [responses, summary] = result;
-      content = <>{(event.rsvp?.capacity != null || event.rsvp?.deadlineAtUtc) && <section className="mb-5 rounded-2xl bg-[#e9f2f8]/60 p-4 text-sm leading-6" aria-label="Published RSVP limits"><p className="font-semibold">Published RSVP limits</p>{event.rsvp.capacity != null && <p>{summary.totalPartySize} of {event.rsvp.capacity} guest places filled, including hidden guests.</p>}{event.rsvp.deadlineAtUtc && <p>Guest replies and edits close {rsvpDeadlineLabel(event.rsvp.deadlineAtUtc, event.timeZone)}.</p>}<p>Host corrections remain available after closing. Attendance increases must fit the capacity.</p><Link className="inline-flex min-h-11 items-center text-[#355f9e] underline underline-offset-4" href={`/admin/events/${id}/settings#rsvp-limits`}>Adjust limits in the draft, then publish →</Link></section>}<EventGuestList id={id} timeZone={event.timeZone} responses={responses} summary={summary} filter={filter} q={q} saved={search.saved} /></>;
+      const duplicateCount = await listPossibleDuplicateRsvps(scope).then(review => review.total).catch(() => null);
+      content = <>{(event.rsvp?.capacity != null || event.rsvp?.deadlineAtUtc) && <section className="mb-5 rounded-2xl bg-[#e9f2f8]/60 p-4 text-sm leading-6" aria-label="Published RSVP limits"><p className="font-semibold">Published RSVP limits</p>{event.rsvp.capacity != null && <p>{summary.totalPartySize} of {event.rsvp.capacity} guest places filled, including hidden guests.</p>}{event.rsvp.deadlineAtUtc && <p>Guest replies and edits close {rsvpDeadlineLabel(event.rsvp.deadlineAtUtc, event.timeZone)}.</p>}<p>Host corrections remain available after closing. Attendance increases must fit the capacity.</p><Link className="inline-flex min-h-11 items-center text-[#355f9e] underline underline-offset-4" href={`/admin/events/${id}/settings#rsvp-limits`}>Adjust limits in the draft, then publish →</Link></section>}<EventGuestList id={id} timeZone={event.timeZone} responses={responses} summary={summary} filter={filter} q={q} saved={search.saved} duplicateCount={duplicateCount} /></>;
     }
       }
   return <ContentShell title={labels[view]} contextLabel={event.title} description="Only this event’s responses and content. Guest names on private questions stay here." dashboardHref={`/admin/events/${id}/setup`}>

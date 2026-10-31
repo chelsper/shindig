@@ -1,5 +1,51 @@
 # Shindig
 
+## Host-reviewed duplicate RSVPs
+
+**Production migration applied October 31, 2026:**
+`db/migrations/029_rsvp_duplicate_review.sql` is installed in Neon. Checksums for
+all 23 existing event/guest tables were unchanged; no guests were merged or
+reviews dismissed. Apply this migration before deploying to other environments.
+No new packages or environment variables. Never use real guest records for QA.
+
+Guest responses now link to **Review possible duplicate RSVPs** in both the
+original host dashboard and each owned event. Matching ignores case, accents,
+spacing and punctuation; conservative two-part-name spelling suggestions are
+only hints. They are private, event-scoped, and never authorize guest access.
+The host reviews both responses and explicitly confirms **Merge and use latest
+response**, or chooses **Keep separate**. Separate decisions remain suppressed
+until either reviewed record changes. The first 50 pending pairs are shown.
+
+Merging keeps the response with the latest `updated_at` (then submission time),
+including its attendance, party size, name visibility and comment. It permanently
+removes the older response/comment, corrects totals and preserves the kept
+response's update link; **older update links stop working**. Minimal hashed-token
+and ID retirement receipts prevent old CREATE retries from resurrecting it.
+These receipts cascade when the kept RSVP/event is deleted. No raw tokens are
+stored. A second confirmation is required; no automatic merges occur.
+
+Only the kept response's contact choices can survive. If contact preferences
+changed more recently on the older response, the kept opt-ins are cleared
+conservatively; the guest may opt in again. Consent revisions advance so stale
+forms cannot restore pre-merge preferences. Closed contact collection remains
+closed. One linked invitation-tracker entry is moved; if both responses are
+linked to different entries, the host must review/unlink one first. Neither
+planning entry is deleted. Concurrent edits invalidate the review; failures
+roll back, and repeated identical merge requests are safe.
+
+Migration 029 adds two private receipt tables, a review-version helper, a guarded
+merge/dismiss function and an INSERT retirement trigger. Existing public
+guest-list queries, CSV fields and RSVP validation remain unchanged. All review
+reads/writes require the server-resolved host/owner scope; guest pages cannot
+retrieve possible matches, consent data, or these receipts.
+
+`tests/rsvp-duplicates-postgres.test.ts` runs with the existing temporary PGlite
+setup. To verify the three independent-connection race cases, provide a fresh,
+Unix-socket-only PostgreSQL database named `shindig_duplicates_test` on port 55450
+and set `SHINDIG_TEST_DUPLICATES_PG_SOCKET` to its
+`/private/tmp/shindig-duplicates-pg.<id>` directory. The suite refuses a nonempty
+database and installs all migrations there. Do not point this at production.
+
 ## Per-host saved-event limit
 
 Hosts have **10 saved event spaces by default**. A draft, live, unpublished or
